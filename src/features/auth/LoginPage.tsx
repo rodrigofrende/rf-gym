@@ -1,0 +1,160 @@
+import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
+import { Dumbbell, ShieldCheck, User } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useAuth } from '@/providers/AuthProvider'
+import { useToast } from '@/providers/ToastProvider'
+import { env } from '@/config/env'
+import { Button, Card, FormField, Input } from '@/components/ui'
+
+const schema = z.object({
+  name: z.string().optional(),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Mínimo 6 caracteres'),
+})
+type FormValues = z.infer<typeof schema>
+
+export function LoginPage() {
+  const { user, loginEmail, registerEmail, loginGoogle, setDemoIdentity } = useAuth()
+  const { notify } = useToast()
+  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [googleLoading, setGoogleLoading] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+
+  // Ya autenticado (login real o demo) → a la home; HomeRedirect resuelve por rol.
+  if (user) return <Navigate to="/" replace />
+
+  const onSubmit = async (values: FormValues) => {
+    try {
+      if (mode === 'register') {
+        await registerEmail(values.name ?? '', values.email, values.password)
+      } else {
+        await loginEmail(values.email, values.password)
+      }
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'No se pudo iniciar sesión', 'error')
+    }
+  }
+
+  const onGoogle = async () => {
+    setGoogleLoading(true)
+    try {
+      await loginGoogle()
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'No se pudo iniciar sesión', 'error')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100 p-4">
+      <div className="w-full max-w-md">
+        <div className="mb-6 flex flex-col items-center">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
+            <Dumbbell className="size-7" />
+          </div>
+          <h1 className="mt-4 text-2xl font-bold text-slate-900">GymOS</h1>
+          <p className="text-sm text-slate-500">Gestión de gimnasios y entrenamiento</p>
+        </div>
+
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold text-slate-900">
+            {mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+          </h2>
+
+          {env.demoMode && setDemoIdentity && (
+            <div className="mt-4 rounded-xl border border-brand-100 bg-brand-50/60 p-3">
+              <p className="mb-2 text-xs font-medium text-brand-700">
+                Modo demo · datos de ejemplo en memoria (TigerFit)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="secondary"
+                  leftIcon={<ShieldCheck className="size-4" />}
+                  onClick={() => setDemoIdentity('admin')}
+                >
+                  Entrar como Admin
+                </Button>
+                <Button
+                  variant="secondary"
+                  leftIcon={<User className="size-4" />}
+                  onClick={() => setDemoIdentity('socio')}
+                >
+                  Entrar como Socio
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4">
+            {mode === 'register' && (
+              <FormField label="Nombre" error={errors.name?.message} required>
+                <Input placeholder="Tu nombre" {...register('name')} />
+              </FormField>
+            )}
+            <FormField label="Email" error={errors.email?.message} required>
+              <Input type="email" placeholder="vos@email.com" {...register('email')} />
+            </FormField>
+            <FormField label="Contraseña" error={errors.password?.message} required>
+              <Input type="password" placeholder="••••••••" {...register('password')} />
+            </FormField>
+
+            <Button type="submit" fullWidth loading={isSubmitting}>
+              {mode === 'login' ? 'Entrar' : 'Registrarme'}
+            </Button>
+          </form>
+
+          <div className="my-4 flex items-center gap-3 text-xs text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />o<span className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <Button variant="secondary" fullWidth loading={googleLoading} onClick={onGoogle}>
+            <GoogleIcon /> Continuar con Google
+          </Button>
+
+          <p className="mt-4 text-center text-sm text-slate-500">
+            {mode === 'login' ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}
+            <button
+              type="button"
+              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+              className="font-medium text-brand-600 hover:underline"
+            >
+              {mode === 'login' ? 'Registrate' : 'Iniciá sesión'}
+            </button>
+          </p>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function GoogleIcon() {
+  return (
+    <svg className="size-4" viewBox="0 0 24 24">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38Z"
+      />
+    </svg>
+  )
+}

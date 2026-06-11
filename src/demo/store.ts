@@ -1,0 +1,214 @@
+import type {
+  AdminStats,
+  Assignment,
+  Gym,
+  Member,
+  Membership,
+  Note,
+  Routine,
+  WorkoutLog,
+} from '@/types'
+import { buildSeed, DEMO_GYM_ID } from './seed'
+import { isSuperAdminEmail } from '@/config/superAdmins'
+
+/**
+ * Store en memoria para el modo demo. Singleton a nivel módulo: las ediciones
+ * persisten durante la sesión y se resetean al recargar la página (re-import).
+ */
+const data = buildSeed()
+
+// Lista de gyms en memoria. El primero es TigerFit (data.gym, misma referencia),
+// para que las ediciones del seed y de acá queden sincronizadas.
+type DemoGym = Gym & { adminUids: string[] }
+const gyms: DemoGym[] = [data.gym]
+
+let counter = 0
+const nextId = (prefix: string) => `${prefix}-${++counter}-demo`
+
+const ok = <T>(value: T) => Promise.resolve(value)
+
+// ---- Gym (tenant) ----
+const findGym = (gymId: string) => gyms.find((g) => g.id === gymId)
+
+export function listGyms() {
+  return ok(gyms.map((g) => ({ ...g })) as Gym[])
+}
+export function getGym(gymId: string) {
+  const g = findGym(gymId) ?? gyms[0]
+  return ok({ ...g } as Gym)
+}
+export function createGym(payload: Omit<Gym, 'id'>) {
+  const id = nextId('gym')
+  gyms.push({ adminUids: [], ...payload, id })
+  return ok(id)
+}
+export function removeGym(gymId: string) {
+  const i = gyms.findIndex((g) => g.id === gymId)
+  if (i > 0) gyms.splice(i, 1) // nunca borrar TigerFit (índice 0) en demo
+  return ok(undefined)
+}
+export function updateGym(gymId: string, payload: Partial<Gym>) {
+  const g = findGym(gymId)
+  if (g) Object.assign(g, payload)
+  return ok(undefined)
+}
+export function addGymAdmin(gymId: string, uid: string) {
+  const g = findGym(gymId)
+  if (g && !g.adminUids.includes(uid)) g.adminUids.push(uid)
+  return ok(undefined)
+}
+export function removeGymAdmin(gymId: string, uid: string) {
+  const g = findGym(gymId)
+  if (g) g.adminUids = g.adminUids.filter((u) => u !== uid)
+  return ok(undefined)
+}
+
+// ---- Members ----
+export function listMembers(_gymId: string) {
+  return ok([...data.members])
+}
+export function getMember(_gymId: string, memberId: string) {
+  return ok(data.members.find((m) => m.id === memberId) ?? null)
+}
+export function createMember(_gymId: string, payload: Omit<Member, 'id' | 'uid'>) {
+  const id = nextId('member')
+  data.members.push({ ...payload, id, uid: '' })
+  return ok(id)
+}
+export function updateMember(_gymId: string, memberId: string, payload: Partial<Member>) {
+  const m = data.members.find((x) => x.id === memberId)
+  if (m) Object.assign(m, payload)
+  return ok(undefined)
+}
+export function updateMemberProfile(
+  gymId: string,
+  memberId: string,
+  payload: Partial<Member>,
+) {
+  return updateMember(gymId, memberId, payload)
+}
+export function removeMember(_gymId: string, memberId: string) {
+  data.members = data.members.filter((m) => m.id !== memberId)
+  return ok(undefined)
+}
+
+// ---- Routines ----
+export function listRoutines(_gymId: string) {
+  return ok([...data.routines])
+}
+export function getRoutine(_gymId: string, routineId: string) {
+  return ok(data.routines.find((r) => r.id === routineId) ?? null)
+}
+export function createRoutine(_gymId: string, payload: Omit<Routine, 'id'>) {
+  const id = nextId('routine')
+  data.routines.push({ ...payload, id })
+  return ok(id)
+}
+export function updateRoutine(_gymId: string, routineId: string, payload: Partial<Routine>) {
+  const r = data.routines.find((x) => x.id === routineId)
+  if (r) Object.assign(r, payload)
+  return ok(undefined)
+}
+export function removeRoutine(_gymId: string, routineId: string) {
+  data.routines = data.routines.filter((r) => r.id !== routineId)
+  return ok(undefined)
+}
+
+// ---- Assignments ----
+export function listAssignments(_gymId: string) {
+  return ok([...data.assignments])
+}
+export function listMemberAssignments(_gymId: string, memberUid: string) {
+  return ok(data.assignments.filter((a) => a.memberUid === memberUid && a.active))
+}
+export function assignRoutine(_gymId: string, payload: Omit<Assignment, 'id'>) {
+  const id = nextId('asg')
+  data.assignments.push({ ...payload, id })
+  return ok(id)
+}
+export function removeAssignment(_gymId: string, id: string) {
+  data.assignments = data.assignments.filter((a) => a.id !== id)
+  return ok(undefined)
+}
+
+// ---- Notes (solo admin) ----
+export function listNotes(_gymId: string, memberId: string) {
+  const list = data.notes[memberId] ?? []
+  return ok([...list].sort((a, b) => +new Date(b.date as Date) - +new Date(a.date as Date)))
+}
+export function createNote(_gymId: string, memberId: string, payload: Omit<Note, 'id'>) {
+  const id = nextId('note')
+  data.notes[memberId] = [...(data.notes[memberId] ?? []), { ...payload, id }]
+  return ok(id)
+}
+export function removeNote(_gymId: string, memberId: string, noteId: string) {
+  data.notes[memberId] = (data.notes[memberId] ?? []).filter((n) => n.id !== noteId)
+  return ok(undefined)
+}
+
+// ---- Logs ----
+export function listLogs(_gymId: string, memberId: string) {
+  const list = data.logs[memberId] ?? []
+  return ok([...list].sort((a, b) => +new Date(b.date as Date) - +new Date(a.date as Date)))
+}
+export function listExerciseLogs(gymId: string, memberId: string, exerciseName: string) {
+  return listLogs(gymId, memberId).then((l) => l.filter((x) => x.exerciseName === exerciseName))
+}
+export function createLog(_gymId: string, memberId: string, payload: Omit<WorkoutLog, 'id'>) {
+  const id = nextId('log')
+  data.logs[memberId] = [...(data.logs[memberId] ?? []), { ...payload, id }]
+  return ok(id)
+}
+
+// ---- Stats ----
+function compute(): AdminStats {
+  const socios = data.members.filter((m) => m.role === 'user')
+  return {
+    memberCount: socios.length,
+    monthlyRevenue: socios
+      .filter((m) => m.status === 'active')
+      .reduce((sum, m) => sum + (m.monthlyCost ?? 0), 0),
+    routinesSent: data.assignments.filter((a) => a.active).length,
+    overdueCount: socios.filter((m) => m.status === 'overdue').length,
+    updatedAt: data.stats.updatedAt,
+  }
+}
+export function getStats(_gymId: string) {
+  return ok({ id: 'summary', ...data.stats })
+}
+export function recomputeStats(_gymId: string) {
+  data.stats = { ...compute(), updatedAt: new Date() }
+  return ok(data.stats)
+}
+
+// ---- Memberships ----
+export function listMembershipsForUser(uid: string, email?: string | null) {
+  // Super-admin: admin en TODOS los gyms.
+  if (isSuperAdminEmail(email)) {
+    return ok(
+      gyms.map(
+        (g) =>
+          ({
+            gymId: g.id,
+            memberId: uid,
+            gymName: g.name,
+            gymLogoURL: g.logoURL,
+            gymTheme: g.theme,
+            role: 'admin',
+          }) satisfies Membership,
+      ),
+    )
+  }
+  const member = data.members.find((m) => m.uid === uid)
+  if (!member) return ok([] as Membership[])
+  return ok([
+    {
+      gymId: DEMO_GYM_ID,
+      memberId: member.id,
+      gymName: data.gym.name,
+      gymLogoURL: data.gym.logoURL,
+      gymTheme: data.gym.theme,
+      role: member.role,
+    },
+  ] satisfies Membership[])
+}

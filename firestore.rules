@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Super-admin global (cross-tenant). Lista hardcodeada de emails.
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.email in ['rodrigo.frende@gmail.com'];
+    }
+
+    // El gym guarda `adminUids: [...]`. Es la fuente de verdad para "soy admin".
+    function gymAdminUids(gymId) {
+      return get(/databases/$(database)/documents/gyms/$(gymId)).data.adminUids;
+    }
+    function isGymAdmin(gymId) {
+      return isSuperAdmin() || (isSignedIn() && request.auth.uid in gymAdminUids(gymId));
+    }
+
+    // ---- Perfil global ----
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /gyms/{gymId} {
+      // Cualquier usuario autenticado puede leer datos básicos del gym (nombre/logo).
+      allow read: if isSignedIn();
+      // Solo un admin existente puede modificar el gym (incl. adminUids).
+      allow write: if isGymAdmin(gymId);
+
+      // ---- Socios / membresías ----
+      match /members/{memberId} {
+        // Lee: el admin del gym, el dueño del doc, o el invitado por email (para reclamar).
+        allow read: if isGymAdmin(gymId)
+          || (isSignedIn() && resource.data.uid == request.auth.uid)
+          || (isSignedIn() && resource.data.email == request.auth.token.email);
+
+        // Alta/baja/edición completa: solo admin.
+        allow create, delete: if isGymAdmin(gymId);
+
+        allow update: if isGymAdmin(gymId)
+          // Reclamo: el invitado setea su propio uid en una invitación pendiente.
+          || (isSignedIn()
+              && resource.data.uid == ''
+              && resource.data.email == request.auth.token.email
+              && request.resource.data.uid == request.auth.uid)
+          // El socio edita SOLO sus datos personales (no toca rol/precio/estado).
+          || (isSignedIn()
+              && resource.data.uid == request.auth.uid
+              && request.resource.data.role == resource.data.role
+              && request.resource.data.status == resource.data.status
+              && request.resource.data.monthlyCost == resource.data.monthlyCost);
+
+        // ---- Notas privadas: SOLO admin. El socio no puede ni leerlas. ----
+        match /notes/{noteId} {
+          allow read, write: if isGymAdmin(gymId);
+        }
+
+        // ---- Logs de carga: el socio (dueño) y el admin. ----
+        match /logs/{logId} {
+          allow read: if isGymAdmin(gymId)
+            || get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data.uid == request.auth.uid;
+          allow create: if get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data.uid == request.auth.uid;
+        }
+      }
+
+      // ---- Rutinas: el admin escribe; cualquier socio del gym lee. ----
+      match /routines/{routineId} {
+        allow read: if isSignedIn();
+        allow write: if isGymAdmin(gymId);
+      }
+
+      // ---- Asignaciones: el admin escribe; lectura para usuarios autenticados. ----
+      match /assignments/{assignmentId} {
+        allow read: if isSignedIn();
+        allow write: if isGymAdmin(gymId);
+      }
+
+      // ---- Stats agregadas: solo admin. ----
+      match /stats/{docId} {
+        allow read, write: if isGymAdmin(gymId);
+      }
+    }
+  }
+}
