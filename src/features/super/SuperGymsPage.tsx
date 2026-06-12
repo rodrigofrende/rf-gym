@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, LogIn, Plus, ShieldCheck, Trash2, UserPlus } from 'lucide-react'
-import type { Gym, Member } from '@/types'
+import { Building2, LogIn, Plus, ShieldCheck, Trash2, UserPlus, Wallet } from 'lucide-react'
+import type { Gym, GymSubscription, Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -9,6 +9,7 @@ import { useGymAdminActions, useGyms } from '@/hooks/useGyms'
 import { useCreateMember, useMembers, useRemoveMember } from '@/hooks/useMembers'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ROUTES } from '@/routes/routePaths'
+import { addMonths, getPaymentStatus } from '@/utils/payments'
 import {
   Badge,
   Button,
@@ -18,7 +19,9 @@ import {
   FullPageSpinner,
   Input,
   Modal,
+  MoneyInput,
 } from '@/components/ui'
+import { GymPaymentsModal } from './GymPaymentsModal'
 
 export function SuperGymsPage() {
   const { user } = useAuth()
@@ -27,13 +30,24 @@ export function SuperGymsPage() {
   const { create, remove } = useGymAdminActions()
   const [newOpen, setNewOpen] = useState(false)
   const [name, setName] = useState('')
+  const [cuota, setCuota] = useState(0)
 
   const handleCreate = async () => {
     if (name.trim().length < 2) return
+    const subscription: GymSubscription | undefined =
+      cuota > 0
+        ? { monthlyCost: cuota, status: 'active', dueDate: addMonths(new Date(), 1) }
+        : undefined
     try {
-      await create.mutateAsync({ name: name.trim(), ownerUid: user?.uid ?? '', adminUids: [] })
+      await create.mutateAsync({
+        name: name.trim(),
+        ownerUid: user?.uid ?? '',
+        adminUids: [],
+        subscription,
+      })
       notify('Gimnasio creado', 'success')
       setName('')
+      setCuota(0)
       setNewOpen(false)
     } catch {
       notify('No se pudo crear el gimnasio', 'error')
@@ -87,6 +101,9 @@ export function SuperGymsPage() {
               autoFocus
             />
           </FormField>
+          <FormField label="Cuota de suscripción" hint="Opcional · mensual, lo paga el gym a la plataforma">
+            <MoneyInput value={cuota} onChange={setCuota} />
+          </FormField>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
             <Button variant="secondary" onClick={() => setNewOpen(false)}>
               Cancelar
@@ -111,8 +128,11 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
   const { removeAdmin } = useGymAdminActions()
 
   const admins = members.filter((m) => m.role === 'admin')
+  const subStatus = getPaymentStatus(gym.subscription?.dueDate)
+  const suspended = subStatus.state === 'blocked'
 
   const [addOpen, setAddOpen] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
 
@@ -163,10 +183,16 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
           )}
           <div className="min-w-0">
             <h3 className="truncate font-semibold text-slate-900">{gym.name}</h3>
-            <Badge tone="neutral">{admins.length} admin{admins.length === 1 ? '' : 's'}</Badge>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge tone="neutral">{admins.length} admin{admins.length === 1 ? '' : 's'}</Badge>
+              {suspended && <Badge tone="red">Suspendido</Badge>}
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 gap-1">
+          <Button size="sm" variant="secondary" leftIcon={<Wallet className="size-4" />} onClick={() => setPayOpen(true)}>
+            Pagos
+          </Button>
           <Button size="sm" variant="secondary" leftIcon={<LogIn className="size-4" />} onClick={enterGym}>
             Entrar
           </Button>
@@ -239,6 +265,8 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
           </div>
         </div>
       </Modal>
+
+      {payOpen && <GymPaymentsModal gym={gym} onClose={() => setPayOpen(false)} />}
     </Card>
   )
 }

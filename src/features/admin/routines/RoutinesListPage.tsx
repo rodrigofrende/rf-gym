@@ -76,11 +76,6 @@ export function RoutinesListPage() {
           icon={Dumbbell}
           title="Sin rutinas"
           description="Creá rutinas con sus ejercicios y luego asignalas a tus socios."
-          action={
-            <Button leftIcon={<Plus className="size-4" />} onClick={openNew}>
-              Nueva rutina
-            </Button>
-          }
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

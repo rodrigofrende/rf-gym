@@ -13,7 +13,7 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-[var(--radius-card)] border border-dashed border-slate-200 bg-white px-6 py-12 text-center">
+    <div className="flex flex-col items-center justify-center rounded-[var(--radius-card)] border border-dashed border-slate-200 bg-surface px-6 py-12 text-center">
       <div className="flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
         <Icon className="size-6" />
       </div>

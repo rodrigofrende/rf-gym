@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Dumbbell, ShieldCheck, User } from 'lucide-react'
+import { Crown, Dumbbell, ShieldCheck, User } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
+import { APP_NAME } from '@/config/app'
 import { Button, Card, FormField, Input } from '@/components/ui'
 
 const schema = z.object({
@@ -61,7 +62,7 @@ export function LoginPage() {
           <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
             <Dumbbell className="size-7" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-slate-900">GymOS</h1>
+          <h1 className="mt-4 text-2xl font-bold text-slate-900">{APP_NAME}</h1>
           <p className="text-sm text-slate-500">Gestión de gimnasios y entrenamiento</p>
         </div>
 
@@ -75,21 +76,30 @@ export function LoginPage() {
               <p className="mb-2 text-xs font-medium text-brand-700">
                 Modo demo · datos de ejemplo en memoria (TigerFit)
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 <Button
-                  variant="secondary"
-                  leftIcon={<ShieldCheck className="size-4" />}
-                  onClick={() => setDemoIdentity('admin')}
+                  fullWidth
+                  leftIcon={<Crown className="size-4" />}
+                  onClick={() => setDemoIdentity('superadmin')}
                 >
-                  Entrar como Admin
+                  Entrar al management (Super admin)
                 </Button>
-                <Button
-                  variant="secondary"
-                  leftIcon={<User className="size-4" />}
-                  onClick={() => setDemoIdentity('socio')}
-                >
-                  Entrar como Socio
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="secondary"
+                    leftIcon={<ShieldCheck className="size-4" />}
+                    onClick={() => setDemoIdentity('admin')}
+                  >
+                    Entrar como Admin
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    leftIcon={<User className="size-4" />}
+                    onClick={() => setDemoIdentity('socio')}
+                  >
+                    Entrar como Socio
+                  </Button>
+                </div>
               </div>
             </div>
           )}

@@ -29,6 +29,12 @@ export const SUPER_NAV_ITEM: NavItem = {
   icon: Building2,
 }
 
+/** Nav de la plataforma RF Gym (vistas del super-admin, look general). */
+export const PLATFORM_NAV: NavItem[] = [
+  { to: ROUTES.SUPER_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
+  { to: ROUTES.SUPER_GYMS, label: 'Gimnasios', icon: Building2 },
+]
+
 export function navForRole(role: Role): NavItem[] {
   return role === 'admin' ? ADMIN_NAV : USER_NAV
 }

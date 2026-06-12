@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import type { Exercise, LogSet } from '@/types'
-import { Button, Input, Modal } from '@/components/ui'
+import { Button, InfoTooltip, Input, Modal } from '@/components/ui'
+import { loadTypeMeta, SHAPE_FIELDS } from '@/utils/loadTypes'
 
 export function LogExerciseModal({
   open,
@@ -18,54 +19,71 @@ export function LogExerciseModal({
   onSave: (sets: LogSet[]) => void
   saving?: boolean
 }) {
-  // Filas inicializadas según las series planificadas. El padre remonta este
-  // modal por ejercicio (con `key`), así que el initializer corre en cada apertura.
+  const meta = loadTypeMeta(exercise?.loadType)
+  const fields = SHAPE_FIELDS[meta.shape]
+  const Icon = meta.icon
+
+  // Filas vacías según las series planificadas. El padre remonta por ejercicio (key).
   const [sets, setSets] = useState<LogSet[]>(() =>
-    Array.from({ length: Math.max(defaultSets, 1) }, () => ({ weight: 0, reps: 0 })),
+    Array.from({ length: Math.max(defaultSets, 1) }, () => ({}) as LogSet),
   )
 
   const update = (i: number, key: keyof LogSet, value: number) =>
     setSets((prev) => prev.map((s, idx) => (idx === i ? { ...s, [key]: value } : s)))
 
+  const hasValue = (s: LogSet) => fields.some((f) => (s[f.key] ?? 0) > 0)
+
+  // Columnas dinámicas: serie + un input por campo + botón borrar.
+  const gridCols = { gridTemplateColumns: `2.5rem repeat(${fields.length}, 1fr) 2rem` }
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={exercise ? `Registrar — ${exercise.name}` : 'Registrar'}
-    >
+    <Modal open={open} onClose={onClose} title={exercise ? `Registrar — ${exercise.name}` : 'Registrar'}>
       <div className="space-y-2">
-        {/* Títulos de columna: ofician de label de cada input del grid repetido. */}
-        <div className="grid grid-cols-[2.5rem_1fr_1fr_2rem] items-center gap-2 px-2 text-xs font-medium text-slate-400">
+        {/* Tipo de carga + explicación */}
+        <div className="flex items-center gap-1.5 pb-1 text-sm">
+          <Icon className="size-4 text-brand-600" />
+          <span className="font-medium text-slate-700">{meta.label}</span>
+          <InfoTooltip text={meta.tooltip} />
+        </div>
+
+        {/* Encabezados (oficial de label de cada input del grid repetido) */}
+        <div className="grid items-center gap-2 px-2 text-xs font-medium text-slate-400" style={gridCols}>
           <span>Serie</span>
-          <span>Peso (kg)</span>
-          <span>Reps</span>
+          {fields.map((f) => (
+            <span key={f.key}>
+              {f.label}
+              {f.unit ? ` (${f.unit})` : ''}
+              {f.optional ? ' · opc.' : ''}
+            </span>
+          ))}
           <span />
         </div>
+
         {sets.map((s, i) => (
           <div
             key={i}
-            className="grid grid-cols-[2.5rem_1fr_1fr_2rem] items-center gap-2 rounded-lg bg-surface-muted p-2"
+            className="grid items-center gap-2 rounded-lg bg-surface-muted p-2"
+            style={gridCols}
           >
             <span className="flex size-7 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
               {i + 1}
             </span>
-            <div className="relative">
-              <Input
-                type="number"
-                min={0}
-                value={s.weight || ''}
-                onChange={(e) => update(i, 'weight', Number(e.target.value))}
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">
-                kg
-              </span>
-            </div>
-            <Input
-              type="number"
-              min={0}
-              value={s.reps || ''}
-              onChange={(e) => update(i, 'reps', Number(e.target.value))}
-            />
+            {fields.map((f) => (
+              <div key={f.key} className="relative">
+                <Input
+                  type="number"
+                  min={0}
+                  className={f.unit ? 'pr-10' : undefined}
+                  value={s[f.key] || ''}
+                  onChange={(e) => update(i, f.key, Number(e.target.value))}
+                />
+                {f.unit && (
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">
+                    {f.unit}
+                  </span>
+                )}
+              </div>
+            ))}
             <button
               type="button"
               aria-label="Eliminar serie"
@@ -82,7 +100,7 @@ export function LogExerciseModal({
           variant="ghost"
           size="sm"
           leftIcon={<Plus className="size-4" />}
-          onClick={() => setSets((prev) => [...prev, { weight: 0, reps: 0 }])}
+          onClick={() => setSets((prev) => [...prev, {} as LogSet])}
         >
           Agregar serie
         </Button>
@@ -94,7 +112,7 @@ export function LogExerciseModal({
           <Button
             loading={saving}
             onClick={() => {
-              onSave(sets.filter((s) => s.weight > 0 || s.reps > 0))
+              onSave(sets.filter(hasValue))
               setSets([])
             }}
           >

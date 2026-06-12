@@ -31,6 +31,18 @@ export function formatCurrency(amount: number | undefined): string {
   }).format(amount)
 }
 
+/** Entero con `.` de miles, sin símbolo ni decimales (30000 → "30.000"). */
+export function formatThousands(amount: number | undefined): string {
+  if (amount == null || Number.isNaN(amount)) return ''
+  return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(Math.round(amount))
+}
+
+/** Convierte lo tipeado en un input de dinero a número entero (saca todo lo no-dígito). */
+export function parseMoney(value: string): number {
+  const digits = value.replace(/\D/g, '')
+  return digits ? parseInt(digits, 10) : 0
+}
+
 export function initials(name: string): string {
   return name
     .trim()

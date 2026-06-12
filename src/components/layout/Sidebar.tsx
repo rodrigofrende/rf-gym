@@ -1,19 +1,26 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { Dumbbell, LogOut, X } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { ROLE_LABEL } from '@/utils/roles'
 import { cn } from '@/utils/cn'
 import { Avatar } from '@/components/ui'
+import { APP_NAME } from '@/config/app'
 import { TenantSwitcher } from './TenantSwitcher'
-import { navForRole, SUPER_NAV_ITEM } from './navItems'
+import { navForRole, PLATFORM_NAV, SUPER_NAV_ITEM } from './navItems'
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, logout } = useAuth()
   const { role, activeMembership, isSuperAdmin } = useTenant()
-  const items = [...(isSuperAdmin ? [SUPER_NAV_ITEM] : []), ...(role ? navForRole(role) : [])]
-  const gymName = activeMembership?.gymName ?? 'GymOS'
-  const logoURL = activeMembership?.gymLogoURL
+  const { pathname } = useLocation()
+  // Plataforma RF Gym (vistas del super-admin): marca general, sin logo de gym.
+  const isPlatform = pathname.startsWith('/super')
+
+  const items = isPlatform
+    ? PLATFORM_NAV
+    : [...(isSuperAdmin ? [SUPER_NAV_ITEM] : []), ...(role ? navForRole(role) : [])]
+  const gymName = isPlatform ? APP_NAME : (activeMembership?.gymName ?? APP_NAME)
+  const logoURL = isPlatform ? undefined : activeMembership?.gymLogoURL
 
   return (
     <>
@@ -48,9 +55,11 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           </button>
         </div>
 
-        <div className="px-3">
-          <TenantSwitcher />
-        </div>
+        {!isPlatform && (
+          <div className="px-3">
+            <TenantSwitcher />
+          </div>
+        )}
 
         <nav className="mt-4 flex-1 space-y-1 px-3">
           {items.map((item) => (

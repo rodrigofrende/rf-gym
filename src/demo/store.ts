@@ -2,14 +2,25 @@ import type {
   AdminStats,
   Assignment,
   Gym,
+  GymSubscription,
   Member,
   Membership,
   Note,
+  Payment,
   Routine,
   WorkoutLog,
 } from '@/types'
 import { buildSeed, DEMO_GYM_ID } from './seed'
 import { isSuperAdminEmail } from '@/config/superAdmins'
+import { addMonths, getPaymentStatus } from '@/utils/payments'
+import { toDate } from '@/utils/format'
+
+interface NewPaymentInput {
+  amount: number
+  date: Date
+  comment?: string
+  createdBy: string
+}
 
 /**
  * Store en memoria para el modo demo. Singleton a nivel módulo: las ediciones
@@ -21,6 +32,10 @@ const data = buildSeed()
 // para que las ediciones del seed y de acá queden sincronizadas.
 type DemoGym = Gym & { adminUids: string[] }
 const gyms: DemoGym[] = [data.gym]
+
+// Pagos en memoria: por socio (memberId) y por gym (suscripción).
+const memberPayments: Record<string, Payment[]> = { ...data.payments }
+const gymPayments: Record<string, Payment[]> = {}
 
 let counter = 0
 const nextId = (prefix: string) => `${prefix}-${++counter}-demo`
@@ -160,16 +175,82 @@ export function createLog(_gymId: string, memberId: string, payload: Omit<Workou
   return ok(id)
 }
 
+// ---- Pagos ----
+const byDateDesc = <T extends { date: unknown }>(list: T[]) =>
+  [...list].sort((a, b) => +new Date(b.date as Date) - +new Date(a.date as Date))
+
+export function listMemberPayments(_gymId: string, memberId: string) {
+  return ok(byDateDesc(memberPayments[memberId] ?? []))
+}
+export function registerMemberPayment(
+  _gymId: string,
+  memberId: string,
+  p: NewPaymentInput,
+  currentDueDate?: Date,
+) {
+  const id = nextId('pay')
+  const payment: Payment = {
+    id,
+    amount: p.amount,
+    date: p.date,
+    comment: p.comment,
+    createdBy: p.createdBy,
+  }
+  memberPayments[memberId] = [...(memberPayments[memberId] ?? []), payment]
+  const m = data.members.find((x) => x.id === memberId)
+  if (m) {
+    m.lastPaymentDate = p.date
+    m.paymentDate = addMonths(currentDueDate ?? p.date, 1)
+  }
+  return ok(id)
+}
+export function removeMemberPayment(_gymId: string, memberId: string, paymentId: string) {
+  memberPayments[memberId] = (memberPayments[memberId] ?? []).filter((p) => p.id !== paymentId)
+  return ok(undefined)
+}
+
+export function listGymPayments(gymId: string) {
+  return ok(byDateDesc(gymPayments[gymId] ?? []))
+}
+export function registerGymPayment(gymId: string, p: NewPaymentInput, sub: GymSubscription) {
+  const id = nextId('gpay')
+  const payment: Payment = {
+    id,
+    amount: p.amount,
+    date: p.date,
+    comment: p.comment,
+    createdBy: p.createdBy,
+  }
+  gymPayments[gymId] = [...(gymPayments[gymId] ?? []), payment]
+  const g = findGym(gymId)
+  if (g) {
+    g.subscription = {
+      ...sub,
+      lastPaymentDate: p.date,
+      dueDate: addMonths(toDate(sub.dueDate) ?? p.date, 1),
+      status: 'active',
+    }
+  }
+  return ok(id)
+}
+export function removeGymPayment(gymId: string, paymentId: string) {
+  gymPayments[gymId] = (gymPayments[gymId] ?? []).filter((p) => p.id !== paymentId)
+  return ok(undefined)
+}
+
 // ---- Stats ----
 function compute(): AdminStats {
   const socios = data.members.filter((m) => m.role === 'user')
   return {
     memberCount: socios.length,
     monthlyRevenue: socios
-      .filter((m) => m.status === 'active')
+      .filter((m) => m.status !== 'paused')
       .reduce((sum, m) => sum + (m.monthlyCost ?? 0), 0),
     routinesSent: data.assignments.filter((a) => a.active).length,
-    overdueCount: socios.filter((m) => m.status === 'overdue').length,
+    // Vencidos derivados de fechas (excluye pausados).
+    overdueCount: socios.filter(
+      (m) => m.status !== 'paused' && getPaymentStatus(m.paymentDate).state !== 'al_dia',
+    ).length,
     updatedAt: data.stats.updatedAt,
   }
 }

@@ -17,6 +17,13 @@ export const paths = {
   log: (gymId: string, uid: string, logId: string) =>
     `gyms/${gymId}/members/${uid}/logs/${logId}`,
 
+  payments: (gymId: string, memberId: string) => `gyms/${gymId}/members/${memberId}/payments`,
+  payment: (gymId: string, memberId: string, paymentId: string) =>
+    `gyms/${gymId}/members/${memberId}/payments/${paymentId}`,
+
+  gymPayments: (gymId: string) => `gyms/${gymId}/payments`,
+  gymPayment: (gymId: string, paymentId: string) => `gyms/${gymId}/payments/${paymentId}`,
+
   routines: (gymId: string) => `gyms/${gymId}/routines`,
   routine: (gymId: string, routineId: string) => `gyms/${gymId}/routines/${routineId}`,
 

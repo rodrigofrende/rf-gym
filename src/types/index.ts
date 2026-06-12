@@ -25,6 +25,14 @@ export interface GymTheme {
   text: string // color de texto principal (foreground fuerte)
 }
 
+/** Suscripción del gym a la plataforma RF Gym (lo gestiona el super-admin). */
+export interface GymSubscription {
+  monthlyCost: number
+  lastPaymentDate?: DateValue
+  dueDate?: DateValue // próximo vencimiento estipulado
+  status: 'active' | 'suspended'
+}
+
 /** Gimnasio / tenant (colección `gyms`). */
 export interface Gym {
   id: string
@@ -33,6 +41,7 @@ export interface Gym {
   ownerUid: string
   adminUids?: string[] // uids con permisos de admin (fuente de verdad en las rules)
   theme?: GymTheme
+  subscription?: GymSubscription
 }
 
 /**
@@ -54,9 +63,19 @@ export interface Member {
   // datos de negocio (solo admin escribe)
   service?: string
   startDate?: DateValue
-  paymentDate?: DateValue
-  monthlyCost?: number
+  paymentDate?: DateValue // próximo vencimiento estipulado
+  lastPaymentDate?: DateValue // último pago registrado
+  monthlyCost?: number // cuota
   status: MemberStatus
+}
+
+/** Pago registrado de un socio o de la suscripción de un gym. */
+export interface Payment {
+  id: string
+  amount: number
+  date: DateValue
+  comment?: string // nota opcional del pago
+  createdBy: string
 }
 
 /** Membresía resumida para el selector de tenant. */
@@ -80,11 +99,22 @@ export interface Note {
   createdBy: string
 }
 
+/** Tipo de carga del ejercicio → define qué inputs ve el socio al registrar. */
+export type LoadType =
+  | 'weight' // peso total + reps (barra/mancuerna/máquina)
+  | 'cable' // polea: peso + reps
+  | 'barbell' // barra: peso por lado + reps
+  | 'unilateral' // por lado/mano + reps
+  | 'bodyweight' // peso corporal: reps (+ lastre opc.)
+  | 'isometric' // tensión: tiempo (+ peso opc.)
+
 export interface Exercise {
   name: string
   sets: number
   reps: number
-  intensity?: string
+  intensity?: string // RPE / esfuerzo percibido (opcional)
+  weight?: string // carga, ej. "80 kg" / "corporal" (opcional)
+  loadType?: LoadType // tipo de carga (default 'weight')
   restSec?: number
   notes?: string
 }
@@ -107,8 +137,9 @@ export interface Assignment {
 }
 
 export interface LogSet {
-  weight: number
-  reps: number
+  weight?: number
+  reps?: number
+  seconds?: number // para ejercicios isométricos (tiempo de tensión)
 }
 
 /** Registro de carga del propio user (`.../members/{uid}/logs`). */

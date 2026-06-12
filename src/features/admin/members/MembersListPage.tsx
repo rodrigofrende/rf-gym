@@ -99,16 +99,19 @@ export function MembersListPage() {
       {isLoading ? (
         <FullPageSpinner />
       ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="Sin socios"
-          description="Creá el primer socio para empezar a gestionar el gimnasio."
-          action={
-            <Button leftIcon={<Plus className="size-4" />} onClick={() => setModalOpen(true)}>
-              Nuevo socio
-            </Button>
-          }
-        />
+        search.trim() ? (
+          <EmptyState
+            icon={Search}
+            title="Sin resultados"
+            description={`No hay socios que coincidan con "${search.trim()}".`}
+          />
+        ) : (
+          <EmptyState
+            icon={Users}
+            title="Sin socios"
+            description="Creá el primer socio para empezar a gestionar el gimnasio."
+          />
+        )
       ) : (
         <Table
           columns={columns}

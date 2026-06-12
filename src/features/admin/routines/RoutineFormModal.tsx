@@ -3,13 +3,19 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Trash2 } from 'lucide-react'
 import type { Exercise, Routine } from '@/types'
-import { Button, FormField, Input, Modal } from '@/components/ui'
+import { Button, FormField, Input, Modal, Select } from '@/components/ui'
+import { LOAD_TYPE_OPTIONS } from '@/utils/loadTypes'
+
+const LOAD_TYPE_VALUES = ['weight', 'cable', 'barbell', 'unilateral', 'bodyweight', 'isometric'] as const
 
 const exerciseSchema = z.object({
   name: z.string().min(1, 'Nombre'),
   sets: z.number().min(1),
   reps: z.number().min(1),
+  // Intensidad y/o peso: ambos opcionales, el usuario completa el que quiera.
   intensity: z.string().optional(),
+  weight: z.string().optional(),
+  loadType: z.enum(LOAD_TYPE_VALUES).optional(),
   restSec: z.number().min(0),
   notes: z.string().optional(),
 })
@@ -21,7 +27,16 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
-const EMPTY_EXERCISE = { name: '', sets: 3, reps: 10, intensity: '', restSec: 60, notes: '' }
+const EMPTY_EXERCISE = {
+  name: '',
+  sets: 3,
+  reps: 10,
+  intensity: '',
+  weight: '',
+  loadType: 'weight' as const,
+  restSec: 60,
+  notes: '',
+}
 
 type FormExercise = z.infer<typeof exerciseSchema>
 
@@ -32,6 +47,8 @@ function toFormExercises(exercises?: Exercise[]): FormExercise[] {
     sets: e.sets,
     reps: e.reps,
     intensity: e.intensity ?? '',
+    weight: e.weight ?? '',
+    loadType: e.loadType ?? 'weight',
     restSec: e.restSec ?? 0,
     notes: e.notes ?? '',
   }))
@@ -122,27 +139,35 @@ export function RoutineFormModal({
                   <FormField label="Nombre del ejercicio">
                     <Input placeholder="Ej. Press militar" {...register(`exercises.${i}.name`)} />
                   </FormField>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <FormField label="Tipo de carga" hint="Define los campos que carga el socio">
+                    <Select {...register(`exercises.${i}.loadType`)} options={LOAD_TYPE_OPTIONS} />
+                  </FormField>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     <FormField label="Series" hint="Cantidad de veces">
                       <Input type="number" placeholder="4" {...register(`exercises.${i}.sets`, { valueAsNumber: true })} />
                     </FormField>
                     <FormField label="Reps" hint="Por serie">
                       <Input type="number" placeholder="10" {...register(`exercises.${i}.reps`, { valueAsNumber: true })} />
                     </FormField>
-                    <FormField label="Intensidad" hint="RPE 1-10 o peso (kg)">
-                      <Input placeholder="RPE 7 o 20 kg" {...register(`exercises.${i}.intensity`)} />
-                    </FormField>
                     <FormField label="Descanso" hint="En segundos">
                       <Input type="number" placeholder="90" {...register(`exercises.${i}.restSec`, { valueAsNumber: true })} />
+                    </FormField>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <FormField
+                      label="Intensidad"
+                      hint="Opcional"
+                      tooltip="RPE = esfuerzo percibido del 1 al 10 (10 = máximo). Podés usar RPE o dejarlo vacío y completar solo el peso."
+                    >
+                      <Input placeholder="Ej. RPE 7" {...register(`exercises.${i}.intensity`)} />
+                    </FormField>
+                    <FormField label="Peso" hint="Opcional · ej. kg">
+                      <Input placeholder="Ej. 80 kg" {...register(`exercises.${i}.weight`)} />
                     </FormField>
                   </div>
                   <FormField label="Notas (opcional)">
                     <Input placeholder="Ej. Si hay dolor, saltar" {...register(`exercises.${i}.notes`)} />
                   </FormField>
-                  <p className="rounded-md bg-brand-50 px-2.5 py-1.5 text-xs text-brand-700">
-                    <strong>RPE</strong> = esfuerzo percibido del 1 al 10 (10 = máximo).
-                    También podés indicar directamente el peso en kg.
-                  </p>
                 </div>
               </div>
             ))}

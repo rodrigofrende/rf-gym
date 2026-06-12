@@ -9,13 +9,14 @@ import { useMember, useRemoveMember, useUpdateMember } from '@/hooks/useMembers'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, FullPageSpinner } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
-import { formatCurrency, formatDate } from '@/utils/format'
-import { ROLE_LABEL, STATUS_LABEL } from '@/utils/roles'
+import { formatDate } from '@/utils/format'
+import { ROLE_LABEL } from '@/utils/roles'
 import { ROUTES } from '@/routes/routePaths'
 import { cn } from '@/utils/cn'
 import { MemberFormModal } from './MemberFormModal'
 import { NotesTab } from './tabs/NotesTab'
 import { AssignmentsTab } from './tabs/AssignmentsTab'
+import { PaymentsTab } from './tabs/PaymentsTab'
 
 type Tab = 'data' | 'notes' | 'payments' | 'routines'
 const TABS: { key: Tab; label: string; locked?: boolean }[] = [
@@ -146,23 +147,7 @@ export function MemberDetailPage() {
       {tab === 'notes' && <NotesTab gymId={gymId} memberId={memberId} adminUid={user?.uid ?? ''} />}
 
       {tab === 'payments' && (
-        <Card>
-          <CardHeader title="Servicio y pagos" />
-          <CardBody>
-            <InfoGrid
-              items={[
-                { label: 'Servicio', value: member.service || '—' },
-                {
-                  label: 'Estado',
-                  value: <Badge tone="neutral">{STATUS_LABEL[member.status]}</Badge>,
-                },
-                { label: 'Costo mensual', value: formatCurrency(member.monthlyCost) },
-                { label: 'Inicio', value: formatDate(member.startDate) },
-                { label: 'Próximo pago', value: formatDate(member.paymentDate) },
-              ]}
-            />
-          </CardBody>
-        </Card>
+        <PaymentsTab gymId={gymId} member={member} adminUid={user?.uid ?? ''} />
       )}
 
       {tab === 'routines' && <AssignmentsTab gymId={gymId} memberId={memberId} />}

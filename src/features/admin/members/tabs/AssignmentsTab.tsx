@@ -10,6 +10,7 @@ import {
 } from '@/hooks/useRoutines'
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Select, Spinner } from '@/components/ui'
 import { formatDate } from '@/utils/format'
+import { formatLogSet } from '@/utils/loadTypes'
 import { useState } from 'react'
 
 export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: string }) {
@@ -22,6 +23,10 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
   const [routineId, setRoutineId] = useState('')
 
   const byId = (id: string): Routine | undefined => routines.find((r) => r.id === id)
+  // Tipo de carga por nombre de ejercicio (para formatear las cargas del historial).
+  const loadTypeByExercise = new Map(
+    routines.flatMap((r) => r.exercises.map((e) => [e.name, e.loadType] as const)),
+  )
   const assignedIds = new Set(assignments.map((a) => a.routineId))
   const available = routines.filter((r) => !assignedIds.has(r.id))
 
@@ -98,7 +103,7 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
                   <span className="flex items-center gap-2 text-slate-500">
                     {log.sets.map((s, i) => (
                       <Badge key={i} tone="neutral">
-                        {s.weight}kg × {s.reps}
+                        {formatLogSet(s, loadTypeByExercise.get(log.exerciseName))}
                       </Badge>
                     ))}
                     <span className="text-xs text-slate-400">{formatDate(log.date)}</span>

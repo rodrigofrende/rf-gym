@@ -30,7 +30,7 @@ interface AuthContextValue {
   registerEmail: (name: string, email: string, password: string) => Promise<void>
   loginGoogle: () => Promise<void>
   logout: () => Promise<void>
-  /** Solo en modo demo: cambia la identidad activa (admin ↔ socio). */
+  /** Solo en modo demo: cambia la identidad activa (super-admin ↔ admin ↔ socio). */
   setDemoIdentity?: (identity: DemoIdentity) => void
 }
 

@@ -1,9 +1,9 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Timestamp } from 'firebase/firestore'
 import type { Member } from '@/types'
-import { Button, FormField, Input, Modal, Select } from '@/components/ui'
+import { Button, FormField, Input, Modal, MoneyInput, Select } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
 
 const schema = z.object({
@@ -37,6 +37,7 @@ export function MemberFormModal({
 }) {
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({
@@ -109,7 +110,13 @@ export function MemberFormModal({
             <Input placeholder="Ej. Musculación + clases" {...register('service')} />
           </FormField>
           <FormField label="Costo mensual" error={errors.monthlyCost?.message}>
-            <Input type="number" min={0} {...register('monthlyCost', { valueAsNumber: true })} />
+            <Controller
+              control={control}
+              name="monthlyCost"
+              render={({ field }) => (
+                <MoneyInput value={field.value ?? 0} onChange={field.onChange} />
+              )}
+            />
           </FormField>
           <FormField label="Fecha de inicio">
             <Input type="date" {...register('startDate')} />

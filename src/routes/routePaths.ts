@@ -2,7 +2,8 @@ export const ROUTES = {
   LOGIN: '/login',
   SELECT_GYM: '/select-gym',
 
-  // Super-admin (global, cross-tenant)
+  // Super-admin (global, cross-tenant) — plataforma RF Gym
+  SUPER_DASHBOARD: '/super',
   SUPER_GYMS: '/super/gyms',
 
   // Admin

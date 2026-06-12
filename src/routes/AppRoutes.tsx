@@ -11,7 +11,9 @@ import { RoutinesListPage } from '@/features/admin/routines/RoutinesListPage'
 import { BrandingPage } from '@/features/admin/branding/BrandingPage'
 import { ProfilePage } from '@/features/member/profile/ProfilePage'
 import { MyRoutinesPage } from '@/features/member/routines/MyRoutinesPage'
+import { SocioPaymentGate } from '@/features/payments/SocioPaymentGate'
 import { SuperGymsPage } from '@/features/super/SuperGymsPage'
+import { SuperDashboardPage } from '@/features/super/SuperDashboardPage'
 import { PrivateRoute, SuperAdminRoute } from './PrivateRoute'
 import { ROUTES } from './routePaths'
 
@@ -21,7 +23,7 @@ function HomeRedirect() {
   const { isLoading, role, isSuperAdmin } = useTenant()
   if (!isInitialized || isLoading) return <FullPageSpinner />
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />
-  if (isSuperAdmin) return <Navigate to={ROUTES.SUPER_GYMS} replace />
+  if (isSuperAdmin) return <Navigate to={ROUTES.SUPER_DASHBOARD} replace />
   if (!role) return <Navigate to={ROUTES.SELECT_GYM} replace />
   return <Navigate to={role === 'admin' ? ROUTES.ADMIN_DASHBOARD : ROUTES.APP_ROUTINES} replace />
 }
@@ -32,7 +34,15 @@ export function AppRoutes() {
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.SELECT_GYM} element={<TenantSelectPage />} />
 
-      {/* Super-admin */}
+      {/* Super-admin (plataforma RF Gym) */}
+      <Route
+        path={ROUTES.SUPER_DASHBOARD}
+        element={
+          <SuperAdminRoute>
+            <SuperDashboardPage />
+          </SuperAdminRoute>
+        }
+      />
       <Route
         path={ROUTES.SUPER_GYMS}
         element={
@@ -89,7 +99,9 @@ export function AppRoutes() {
         path={ROUTES.APP_ROUTINES}
         element={
           <PrivateRoute allowedRoles={['user']}>
-            <MyRoutinesPage />
+            <SocioPaymentGate>
+              <MyRoutinesPage />
+            </SocioPaymentGate>
           </PrivateRoute>
         }
       />
@@ -97,7 +109,9 @@ export function AppRoutes() {
         path={ROUTES.APP_PROFILE}
         element={
           <PrivateRoute allowedRoles={['user']}>
-            <ProfilePage />
+            <SocioPaymentGate>
+              <ProfilePage />
+            </SocioPaymentGate>
           </PrivateRoute>
         }
       />
