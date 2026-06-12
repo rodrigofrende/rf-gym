@@ -8,12 +8,15 @@ import type {
   Note,
   Payment,
   Routine,
+  SubscriptionPlan,
+  Tariff,
   WorkoutLog,
 } from '@/types'
 import { buildSeed, DEMO_GYM_ID } from './seed'
 import { isSuperAdminEmail } from '@/config/superAdmins'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
 import { toDate } from '@/utils/format'
+import { buildDashboard } from '@/utils/dashboard'
 
 interface NewPaymentInput {
   amount: number
@@ -75,6 +78,44 @@ export function addGymAdmin(gymId: string, uid: string) {
 export function removeGymAdmin(gymId: string, uid: string) {
   const g = findGym(gymId)
   if (g) g.adminUids = g.adminUids.filter((u) => u !== uid)
+  return ok(undefined)
+}
+
+// ---- Planes de suscripción (plataforma) ----
+export function listPlans() {
+  return ok([...data.plans])
+}
+export function createPlan(payload: Omit<SubscriptionPlan, 'id'>) {
+  const id = nextId('plan')
+  data.plans.push({ ...payload, id })
+  return ok(id)
+}
+export function updatePlan(planId: string, payload: Partial<SubscriptionPlan>) {
+  const p = data.plans.find((x) => x.id === planId)
+  if (p) Object.assign(p, payload)
+  return ok(undefined)
+}
+export function removePlan(planId: string) {
+  data.plans = data.plans.filter((p) => p.id !== planId)
+  return ok(undefined)
+}
+
+// ---- Tarifas ----
+export function listTariffs(_gymId: string) {
+  return ok([...data.tariffs])
+}
+export function createTariff(_gymId: string, payload: Omit<Tariff, 'id'>) {
+  const id = nextId('tf')
+  data.tariffs.push({ ...payload, id })
+  return ok(id)
+}
+export function updateTariff(_gymId: string, tariffId: string, payload: Partial<Tariff>) {
+  const t = data.tariffs.find((x) => x.id === tariffId)
+  if (t) Object.assign(t, payload)
+  return ok(undefined)
+}
+export function removeTariff(_gymId: string, tariffId: string) {
+  data.tariffs = data.tariffs.filter((t) => t.id !== tariffId)
   return ok(undefined)
 }
 
@@ -256,6 +297,25 @@ function compute(): AdminStats {
 }
 export function getStats(_gymId: string) {
   return ok({ id: 'summary', ...data.stats })
+}
+
+export function getDashboard(_gymId: string) {
+  return ok(
+    buildDashboard({
+      members: data.members,
+      payments: Object.values(memberPayments).flat(),
+      logs: Object.values(data.logs).flat(),
+      activeAssignments: data.assignments.filter((a) => a.active).length,
+    }),
+  )
+}
+
+export function getPlatformStats() {
+  return ok({
+    socios: data.members.filter((m) => m.role === 'user').length,
+    routines: data.routines.length,
+    logs: Object.values(data.logs).reduce((sum, arr) => sum + arr.length, 0),
+  })
 }
 export function recomputeStats(_gymId: string) {
   data.stats = { ...compute(), updatedAt: new Date() }

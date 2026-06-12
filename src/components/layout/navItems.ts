@@ -1,4 +1,14 @@
-import { LayoutDashboard, Users, Dumbbell, User, ClipboardList, Palette, Building2 } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Users,
+  Dumbbell,
+  User,
+  ClipboardList,
+  Palette,
+  Building2,
+  Tags,
+  Layers,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
 import { ROUTES } from '@/routes/routePaths'
@@ -14,6 +24,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: ROUTES.ADMIN_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
   { to: ROUTES.ADMIN_MEMBERS, label: 'Socios', icon: Users },
   { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
+  { to: ROUTES.ADMIN_TARIFFS, label: 'Tarifas', icon: Tags },
   { to: ROUTES.ADMIN_BRANDING, label: 'Marca', icon: Palette },
 ]
 
@@ -33,6 +44,7 @@ export const SUPER_NAV_ITEM: NavItem = {
 export const PLATFORM_NAV: NavItem[] = [
   { to: ROUTES.SUPER_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
   { to: ROUTES.SUPER_GYMS, label: 'Gimnasios', icon: Building2 },
+  { to: ROUTES.SUPER_PLANS, label: 'Planes', icon: Layers },
 ]
 
 export function navForRole(role: Role): NavItem[] {

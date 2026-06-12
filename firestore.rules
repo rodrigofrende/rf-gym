@@ -26,6 +26,13 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // ---- Planes de suscripción (catálogo de la plataforma) ----
+    // Lectura para autenticados (el gym ve su plan); escritura solo super-admin.
+    match /plans/{planId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
     match /gyms/{gymId} {
       // Cualquier usuario autenticado puede leer datos básicos del gym (nombre/logo).
       allow read: if isSignedIn();

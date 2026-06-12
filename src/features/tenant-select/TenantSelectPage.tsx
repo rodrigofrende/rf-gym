@@ -22,14 +22,14 @@ export function TenantSelectPage() {
   if (isLoading) return <FullPageSpinner />
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100 p-4">
+    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-zinc-100 p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center">
           <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg">
             <Dumbbell className="size-7" />
           </div>
-          <h1 className="mt-4 text-xl font-bold text-slate-900">Elegí un gimnasio</h1>
-          <p className="text-sm text-slate-500">Tenés acceso a estos espacios</p>
+          <h1 className="mt-4 text-xl font-bold text-zinc-900">Elegí un gimnasio</h1>
+          <p className="text-sm text-zinc-500">Tenés acceso a estos espacios</p>
         </div>
 
         {memberships.length === 0 ? (
@@ -44,21 +44,21 @@ export function TenantSelectPage() {
             }
           />
         ) : (
-          <Card className="divide-y divide-slate-100 overflow-hidden">
+          <Card className="divide-y divide-zinc-100 overflow-hidden">
             {memberships.map((m) => (
               <button
                 key={m.gymId}
                 onClick={() => selectGym(m.gymId)}
-                className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-slate-50"
+                className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-zinc-50"
               >
                 <div className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
                   <Building2 className="size-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-slate-900">{m.gymName}</p>
-                  <p className="text-xs text-slate-500">{ROLE_LABEL[m.role]}</p>
+                  <p className="font-medium text-zinc-900">{m.gymName}</p>
+                  <p className="text-xs text-zinc-500">{ROLE_LABEL[m.role]}</p>
                 </div>
-                <ChevronRight className="size-5 text-slate-400" />
+                <ChevronRight className="size-5 text-zinc-400" />
               </button>
             ))}
           </Card>

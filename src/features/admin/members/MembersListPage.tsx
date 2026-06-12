@@ -6,8 +6,18 @@ import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useCreateMember, useMembers } from '@/hooks/useMembers'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Avatar, Badge, Button, EmptyState, FullPageSpinner, Input, Table, type Column } from '@/components/ui'
-import { formatCurrency } from '@/utils/format'
+import {
+  Avatar,
+  Badge,
+  Button,
+  EmptyState,
+  FullPageSpinner,
+  Input,
+  Money,
+  Sensitive,
+  Table,
+  type Column,
+} from '@/components/ui'
 import { STATUS_LABEL } from '@/utils/roles'
 import { adminMemberDetail } from '@/routes/routePaths'
 import { MemberFormModal } from './MemberFormModal'
@@ -44,8 +54,8 @@ export function MembersListPage() {
         <div className="flex items-center gap-3">
           <Avatar name={m.fullName} src={m.photoURL} size="sm" />
           <div>
-            <p className="font-medium text-slate-900">{m.fullName}</p>
-            <p className="text-xs text-slate-500">{m.email}</p>
+            <p className="font-medium text-zinc-900">{m.fullName}</p>
+            <Sensitive className="block text-xs text-zinc-500">{m.email}</Sensitive>
           </div>
         </div>
       ),
@@ -54,7 +64,7 @@ export function MembersListPage() {
     {
       key: 'cost',
       header: 'Mensual',
-      render: (m) => formatCurrency(m.monthlyCost),
+      render: (m) => <Money value={m.monthlyCost} />,
     },
     {
       key: 'status',
@@ -80,20 +90,23 @@ export function MembersListPage() {
   }
 
   return (
-    <AppLayout title="Socios">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-xs flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            className="pl-9"
-            placeholder="Buscar por nombre o email"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+    <AppLayout
+      title="Socios"
+      subtitle="Gestioná las altas, pagos y rutinas de tus socios."
+      actions={
         <Button leftIcon={<Plus className="size-4" />} onClick={() => setModalOpen(true)}>
           Nuevo socio
         </Button>
+      }
+    >
+      <div className="mb-5 relative max-w-xs">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+        <Input
+          className="pl-9"
+          placeholder="Buscar por nombre o email"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       {isLoading ? (

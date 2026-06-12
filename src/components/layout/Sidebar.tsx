@@ -1,17 +1,19 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Dumbbell, LogOut, X } from 'lucide-react'
+import { Dumbbell, Eye, EyeOff, LogOut, X } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
+import { usePrivacy } from '@/providers/PrivacyProvider'
 import { ROLE_LABEL } from '@/utils/roles'
 import { cn } from '@/utils/cn'
 import { Avatar } from '@/components/ui'
-import { APP_NAME } from '@/config/app'
+import { APP_NAME, APP_VERSION } from '@/config/app'
 import { TenantSwitcher } from './TenantSwitcher'
 import { navForRole, PLATFORM_NAV, SUPER_NAV_ITEM } from './navItems'
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, logout } = useAuth()
-  const { role, activeMembership, isSuperAdmin } = useTenant()
+  const { role, activeMembership, memberships, isSuperAdmin } = useTenant()
+  const { blurred, toggle } = usePrivacy()
   const { pathname } = useLocation()
   // Plataforma RF Gym (vistas del super-admin): marca general, sin logo de gym.
   const isPlatform = pathname.startsWith('/super')
@@ -19,49 +21,50 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const items = isPlatform
     ? PLATFORM_NAV
     : [...(isSuperAdmin ? [SUPER_NAV_ITEM] : []), ...(role ? navForRole(role) : [])]
-  const gymName = isPlatform ? APP_NAME : (activeMembership?.gymName ?? APP_NAME)
+  const brandName = isPlatform ? APP_NAME : (activeMembership?.gymName ?? APP_NAME)
   const logoURL = isPlatform ? undefined : activeMembership?.gymLogoURL
+  // El switcher solo tiene sentido si hay más de un gym (evita duplicar el nombre).
+  const showSwitcher = !isPlatform && memberships.length > 1
+  // Modo discreto: por ahora solo para el admin del gym.
+  const showDiscreto = role === 'admin' && !isPlatform
 
   return (
     <>
-      {/* Overlay mobile */}
-      {open && (
-        <div className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" onClick={onClose} />
-      )}
+      {open && <div className="fixed inset-0 z-30 bg-zinc-900/40 lg:hidden" onClick={onClose} />}
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-surface transition-transform lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-zinc-200 bg-surface transition-transform lg:static lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex min-w-0 items-center gap-2">
+        {/* Marca: logo grande + nombre del gym */}
+        <div className="flex items-center justify-between gap-2 px-4 py-5">
+          <div className="flex min-w-0 items-center gap-3">
             {logoURL ? (
-              <img
-                src={logoURL}
-                alt={gymName}
-                className="size-9 rounded-xl object-cover"
-              />
+              <img src={logoURL} alt={brandName} className="size-11 shrink-0 rounded-xl object-cover" />
             ) : (
-              <div className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-                <Dumbbell className="size-5" />
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white">
+                <Dumbbell className="size-6" />
               </div>
             )}
-            <span className="truncate text-lg font-bold text-slate-900">{gymName}</span>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-bold leading-tight text-zinc-900">{brandName}</p>
+              {!isPlatform && <p className="text-[11px] text-zinc-400">by {APP_NAME}</p>}
+            </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 lg:hidden">
+          <button onClick={onClose} className="shrink-0 text-zinc-400 lg:hidden" aria-label="Cerrar menú">
             <X className="size-5" />
           </button>
         </div>
 
-        {!isPlatform && (
-          <div className="px-3">
+        {showSwitcher && (
+          <div className="px-3 pb-1">
             <TenantSwitcher />
           </div>
         )}
 
-        <nav className="mt-4 flex-1 space-y-1 px-3">
+        <nav className="mt-2 flex-1 space-y-1 px-3">
           {items.map((item) => (
             <NavLink
               key={item.to}
@@ -73,7 +76,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
                     ? 'bg-brand-50 text-brand-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                    : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
                 )
               }
             >
@@ -83,25 +86,43 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           ))}
         </nav>
 
-        <div className="border-t border-slate-100 p-3">
-          <div className="flex items-center gap-3 px-2 py-2">
+        {/* Usuario + acciones */}
+        <div className="border-t border-zinc-100 p-3">
+          <div className="flex items-center gap-3 rounded-xl bg-surface-muted px-3 py-2.5">
             <Avatar name={user?.displayName || user?.email || '?'} src={user?.photoURL ?? undefined} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-slate-800">
+              <p className="truncate text-sm font-semibold text-zinc-800">
                 {user?.displayName || user?.email}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="truncate text-xs text-zinc-500">
                 {isSuperAdmin ? 'Super administrador' : role ? ROLE_LABEL[role] : ''}
               </p>
             </div>
           </div>
-          <button
-            onClick={() => logout()}
-            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            <LogOut className="size-5" />
-            Cerrar sesión
-          </button>
+
+          <div className="mt-1 space-y-0.5">
+            {showDiscreto && (
+              <button
+                onClick={toggle}
+                aria-pressed={blurred}
+                title="Blurea montos y datos sensibles (para compartir pantalla)"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
+              >
+                {blurred ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                <span className="flex-1 text-left">Modo discreto</span>
+                <span className={cn('size-2 rounded-full', blurred ? 'bg-brand-500' : 'bg-zinc-300')} />
+              </button>
+            )}
+            <button
+              onClick={() => logout()}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
+            >
+              <LogOut className="size-5" />
+              Cerrar sesión
+            </button>
+          </div>
+
+          <p className="mt-2 px-3 text-[11px] text-zinc-400">v{APP_VERSION}</p>
         </div>
       </aside>
     </>

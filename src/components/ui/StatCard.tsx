@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Card } from './Card'
 
@@ -5,11 +6,13 @@ export function StatCard({
   icon: Icon,
   label,
   value,
+  hint,
   tone = 'brand',
 }: {
   icon: LucideIcon
   label: string
-  value: string | number
+  value: ReactNode
+  hint?: string
   tone?: 'brand' | 'green' | 'amber' | 'red'
 }) {
   const tones = {
@@ -24,9 +27,10 @@ export function StatCard({
         <div className={`flex size-12 items-center justify-center rounded-xl ${tones[tone]}`}>
           <Icon className="size-6" />
         </div>
-        <div>
-          <p className="text-sm text-slate-500">{label}</p>
-          <p className="text-2xl font-bold text-slate-900">{value}</p>
+        <div className="min-w-0">
+          <p className="text-sm text-zinc-500">{label}</p>
+          <p className="text-2xl font-bold text-zinc-900">{value}</p>
+          {hint && <p className="text-xs text-zinc-400">{hint}</p>}
         </div>
       </div>
     </Card>

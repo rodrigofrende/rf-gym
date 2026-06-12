@@ -21,7 +21,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function
 ) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400">
         $
       </span>
       <input
@@ -30,12 +30,12 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function
         value={value ? formatThousands(value) : ''}
         onChange={(e) => onChange(parseMoney(e.target.value))}
         className={cn(
-          'h-10 w-full rounded-lg border bg-surface pl-7 pr-3 text-sm text-slate-900 transition-colors',
-          'placeholder:text-slate-400 focus:outline-none focus:ring-2',
+          'h-10 w-full rounded-lg border bg-surface pl-7 pr-3 text-sm text-zinc-900 transition-colors',
+          'placeholder:text-zinc-400 focus:outline-none focus:ring-2',
           invalid
             ? 'border-red-400 focus:ring-red-300'
-            : 'border-slate-200 focus:border-brand-400 focus:ring-brand-200',
-          'disabled:cursor-not-allowed disabled:bg-slate-50',
+            : 'border-zinc-200 focus:border-brand-400 focus:ring-brand-200',
+          'disabled:cursor-not-allowed disabled:bg-zinc-50',
           className,
         )}
         {...props}

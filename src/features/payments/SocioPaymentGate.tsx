@@ -58,13 +58,13 @@ function PaymentBlockedScreen({ member, status }: { member: Member; status: Paym
   const { logout } = useAuth()
   return (
     <div className="flex min-h-full items-center justify-center bg-surface-muted p-4">
-      <div className="w-full max-w-md rounded-[var(--radius-card)] border border-slate-200 bg-surface p-8 text-center shadow-sm">
+      <div className="w-full max-w-md rounded-[var(--radius-card)] border border-zinc-200 bg-surface p-8 text-center shadow-sm">
         <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
           <Lock className="size-7" />
         </div>
-        <h1 className="mt-4 text-xl font-bold text-slate-900">Acceso suspendido</h1>
-        <p className="mt-2 text-sm text-slate-600">{MESSAGE}</p>
-        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-slate-700">{owedText(member, status)}</div>
+        <h1 className="mt-4 text-xl font-bold text-zinc-900">Acceso suspendido</h1>
+        <p className="mt-2 text-sm text-zinc-600">{MESSAGE}</p>
+        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-zinc-700">{owedText(member, status)}</div>
         <Button
           variant="secondary"
           fullWidth

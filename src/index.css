@@ -14,11 +14,14 @@
   --color-brand-900: #312e81;
 
   --color-surface: #ffffff;
-  --color-surface-muted: #f8fafc;
-  --color-border: #e2e8f0;
+  --color-surface-muted: #fafafa;
+  --color-border: #e4e4e7;
 
   --radius-card: 0.875rem;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* Montserrat es la tipografía de toda la app (cargada en index.html). Al
+     definirla como --font-sans, la usan tanto el body como las utilidades
+     `font-sans` de Tailwind. */
+  --font-sans: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
 }
 
 html,
@@ -30,7 +33,7 @@ body,
 body {
   margin: 0;
   background-color: var(--color-surface-muted);
-  color: #0f172a;
+  color: #18181b;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }

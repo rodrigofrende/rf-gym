@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
-import { ChevronDown, ClipboardList, History, Dumbbell } from 'lucide-react'
+import { ChevronDown, ClipboardList, History, Dumbbell, Lock } from 'lucide-react'
 import type { Exercise, LogSet, Routine, WorkoutLog } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useCreateLog, useLogs } from '@/hooks/useLogs'
 import { useMemberAssignments, useRoutines } from '@/hooks/useRoutines'
+import { useGym } from '@/hooks/useGym'
+import { usePlans } from '@/hooks/usePlans'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, EmptyState, FullPageSpinner } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatDate } from '@/utils/format'
 import { formatLogSet, loadTypeMeta } from '@/utils/loadTypes'
+import { canMemberLog } from '@/utils/plans'
 import { LogExerciseModal } from './LogExerciseModal'
 
 export function MyRoutinesPage() {
@@ -22,7 +25,13 @@ export function MyRoutinesPage() {
   const { data: assignments = [], isLoading: loadingA } = useMemberAssignments(gymId, memberId)
   const { data: routines = [], isLoading: loadingR } = useRoutines(gymId)
   const { data: logs = [] } = useLogs(gymId, memberId)
+  const { data: gym } = useGym(gymId)
+  const { data: plans = [] } = usePlans()
   const createLog = useCreateLog(gymId, memberId)
+
+  // El plan del gym define si el alumno puede registrar cargas y hasta cuántas.
+  const plan = plans.find((p) => p.id === gym?.subscription?.planId)
+  const logGate = canMemberLog(plan, logs.length)
 
   const [active, setActive] = useState<{ routine: Routine; exercise: Exercise } | null>(null)
   // Rutinas colapsables: arrancan cerradas para ocupar poco (clave en mobile).
@@ -49,6 +58,11 @@ export function MyRoutinesPage() {
 
   const saveLog = async (sets: LogSet[]) => {
     if (!active || sets.length === 0) {
+      setActive(null)
+      return
+    }
+    if (!logGate.allowed) {
+      notify(logGate.reason ?? 'No podés registrar cargas con tu plan actual', 'error')
       setActive(null)
       return
     }
@@ -84,6 +98,12 @@ export function MyRoutinesPage() {
         />
       ) : (
         <div className="space-y-3">
+          {!logGate.allowed && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+              <Lock className="mt-0.5 size-4 shrink-0" />
+              <p>{logGate.reason}</p>
+            </div>
+          )}
           {myRoutines.map((routine) => {
             const isOpen = openIds.has(routine.id)
             return (
@@ -98,34 +118,34 @@ export function MyRoutinesPage() {
                     <Dumbbell className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-slate-900">{routine.name}</p>
+                    <p className="truncate font-semibold text-zinc-900">{routine.name}</p>
                     {routine.description && (
-                      <p className="truncate text-xs text-slate-500">{routine.description}</p>
+                      <p className="truncate text-xs text-zinc-500">{routine.description}</p>
                     )}
                   </div>
                   <Badge tone="brand">{routine.exercises.length} ej.</Badge>
                   <ChevronDown
                     className={cn(
-                      'size-5 shrink-0 text-slate-400 transition-transform',
+                      'size-5 shrink-0 text-zinc-400 transition-transform',
                       isOpen && 'rotate-180',
                     )}
                   />
                 </button>
 
                 {isOpen && (
-                  <div className="space-y-2 border-t border-slate-100 px-4 pb-4 pt-3 sm:px-5">
+                  <div className="space-y-2 border-t border-zinc-100 px-4 pb-4 pt-3 sm:px-5">
                     {routine.exercises.map((ex, i) => {
                       const last = lastByExercise.get(ex.name)
                       return (
                         <div
                           key={`${ex.name}-${i}`}
-                          className="flex flex-col gap-2 rounded-lg border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between"
+                          className="flex flex-col gap-2 rounded-lg border border-zinc-100 p-3 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="flex items-start gap-3">
                             <Dumbbell className="mt-0.5 size-5 shrink-0 text-brand-500" />
                             <div className="min-w-0">
-                              <p className="font-medium text-slate-900">{ex.name}</p>
-                              <p className="text-sm text-slate-500">
+                              <p className="font-medium text-zinc-900">{ex.name}</p>
+                              <p className="text-sm text-zinc-500">
                                 {ex.sets} series × {ex.reps} reps
                                 {ex.loadType && ex.loadType !== 'weight'
                                   ? ` · ${loadTypeMeta(ex.loadType).label}`
@@ -135,10 +155,10 @@ export function MyRoutinesPage() {
                                 {ex.restSec ? ` · ${ex.restSec}s descanso` : ''}
                               </p>
                               {last && (
-                                <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-slate-400">
+                                <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-zinc-400">
                                   <History className="size-3.5" /> Último ({formatDate(last.date)}):
                                   {last.sets.map((s, idx) => (
-                                    <span key={idx} className="font-medium text-slate-600">
+                                    <span key={idx} className="font-medium text-zinc-600">
                                       {formatLogSet(s, ex.loadType)}
                                       {idx < last.sets.length - 1 ? ',' : ''}
                                     </span>
@@ -152,6 +172,8 @@ export function MyRoutinesPage() {
                             variant="secondary"
                             fullWidth
                             className="sm:w-auto"
+                            disabled={!logGate.allowed}
+                            title={logGate.allowed ? undefined : logGate.reason}
                             onClick={() => setActive({ routine, exercise: ex })}
                           >
                             Registrar carga

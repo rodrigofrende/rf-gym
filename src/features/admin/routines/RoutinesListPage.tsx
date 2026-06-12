@@ -11,7 +11,7 @@ import {
   useUpdateRoutine,
 } from '@/hooks/useRoutines'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, EmptyState, FullPageSpinner } from '@/components/ui'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
 import { RoutineFormModal } from './RoutineFormModal'
 
 export function RoutinesListPage() {
@@ -26,6 +26,7 @@ export function RoutinesListPage() {
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Routine | null>(null)
+  const [toDelete, setToDelete] = useState<Routine | null>(null)
 
   const openNew = () => {
     setEditing(null)
@@ -51,24 +52,27 @@ export function RoutinesListPage() {
     }
   }
 
-  const handleDelete = async (r: Routine) => {
-    if (!confirm(`¿Eliminar la rutina "${r.name}"?`)) return
+  const confirmDelete = async () => {
+    if (!toDelete) return
     try {
-      await removeRoutine.mutateAsync(r.id)
+      await removeRoutine.mutateAsync(toDelete.id)
       notify('Rutina eliminada', 'success')
+      setToDelete(null)
     } catch {
       notify('No se pudo eliminar', 'error')
     }
   }
 
   return (
-    <AppLayout title="Rutinas">
-      <div className="mb-5 flex justify-end">
+    <AppLayout
+      title="Rutinas"
+      subtitle="Plantillas de entrenamiento que asignás a tus socios."
+      actions={
         <Button leftIcon={<Plus className="size-4" />} onClick={openNew}>
           Nueva rutina
         </Button>
-      </div>
-
+      }
+    >
       {isLoading ? (
         <FullPageSpinner />
       ) : routines.length === 0 ? (
@@ -88,20 +92,22 @@ export function RoutinesListPage() {
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEdit(r)}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label={`Editar ${r.name}`}
+                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     <Pencil className="size-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(r)}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-500"
+                    onClick={() => setToDelete(r)}
+                    aria-label={`Eliminar ${r.name}`}
+                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
                     <Trash2 className="size-4" />
                   </button>
                 </div>
               </div>
-              <h3 className="mt-3 font-semibold text-slate-900">{r.name}</h3>
-              {r.description && <p className="mt-1 text-sm text-slate-500">{r.description}</p>}
+              <h3 className="mt-3 font-semibold text-zinc-900">{r.name}</h3>
+              {r.description && <p className="mt-1 text-sm text-zinc-500">{r.description}</p>}
               <div className="mt-3">
                 <Badge tone="neutral">{r.exercises.length} ejercicios</Badge>
               </div>
@@ -117,6 +123,15 @@ export function RoutinesListPage() {
         initial={editing}
         createdBy={user?.uid ?? ''}
         saving={createRoutine.isPending || updateRoutine.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar rutina"
+        description={`¿Querés eliminar la rutina "${toDelete?.name}"? Esta acción no se puede deshacer.`}
+        loading={removeRoutine.isPending}
       />
     </AppLayout>
   )

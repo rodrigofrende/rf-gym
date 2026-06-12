@@ -109,10 +109,10 @@ const VARS_TO_CLEAR = [
   ...SHADES.map((s) => `--color-brand-${s}`),
   '--color-surface',
   '--color-surface-muted',
-  // Foreground fuerte (color de texto del tenant). Las demás slate quedan fijas.
-  '--color-slate-900',
-  '--color-slate-800',
-  '--color-slate-700',
+  // Foreground fuerte (color de texto del tenant). Las demás zinc quedan fijas.
+  '--color-zinc-900',
+  '--color-zinc-800',
+  '--color-zinc-700',
 ]
 
 /** Mapa de variables CSS para un theme. Útil para aplicar a `:root` o a un preview. */
@@ -126,10 +126,10 @@ export function buildThemeVars(theme: GymTheme): Record<string, string> {
 
   // Color de texto: solo el foreground fuerte (títulos, valores, texto base).
   // El 800/700 se atenúan hacia el contenedor para textos secundarios.
-  const text = theme.text || '#0f172a'
-  vars['--color-slate-900'] = text
-  vars['--color-slate-800'] = lerpHex(text, theme.container, 0.12)
-  vars['--color-slate-700'] = lerpHex(text, theme.container, 0.24)
+  const text = theme.text || '#18181b'
+  vars['--color-zinc-900'] = text
+  vars['--color-zinc-800'] = lerpHex(text, theme.container, 0.12)
+  vars['--color-zinc-700'] = lerpHex(text, theme.container, 0.24)
   return vars
 }
 

@@ -7,7 +7,7 @@ import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useMember, useRemoveMember, useUpdateMember } from '@/hooks/useMembers'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Avatar, Badge, Button, Card, CardBody, CardHeader, FullPageSpinner } from '@/components/ui'
+import { Avatar, Badge, Button, Card, CardBody, CardHeader, FullPageSpinner, Sensitive } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
 import { formatDate } from '@/utils/format'
 import { ROLE_LABEL } from '@/utils/roles'
@@ -51,7 +51,7 @@ export function MemberDetailPage() {
   if (!member) {
     return (
       <AppLayout title="Socio">
-        <p className="text-sm text-slate-500">No se encontró el socio.</p>
+        <p className="text-sm text-zinc-500">No se encontró el socio.</p>
       </AppLayout>
     )
   }
@@ -81,7 +81,7 @@ export function MemberDetailPage() {
     <AppLayout title="Detalle de socio">
       <button
         onClick={() => navigate(ROUTES.ADMIN_MEMBERS)}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700"
       >
         <ArrowLeft className="size-4" /> Volver a socios
       </button>
@@ -91,8 +91,8 @@ export function MemberDetailPage() {
           <div className="flex items-center gap-4">
             <Avatar name={member.fullName} src={member.photoURL} size="lg" />
             <div>
-              <h2 className="text-xl font-bold text-slate-900">{member.fullName}</h2>
-              <p className="text-sm text-slate-500">{member.email}</p>
+              <h2 className="text-xl font-bold text-zinc-900">{member.fullName}</h2>
+              <Sensitive className="block text-sm text-zinc-500">{member.email}</Sensitive>
               <div className="mt-2 flex items-center gap-2">
                 <Badge tone="brand">{ROLE_LABEL[member.role]}</Badge>
                 {!member.uid && <Badge tone="amber">Invitación pendiente</Badge>}
@@ -109,7 +109,7 @@ export function MemberDetailPage() {
           </div>
         </div>
 
-        <div className="flex gap-1 overflow-x-auto border-t border-slate-100 px-3">
+        <div className="flex gap-1 overflow-x-auto border-t border-zinc-100 px-3">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -118,7 +118,7 @@ export function MemberDetailPage() {
                 'flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors',
                 tab === t.key
                   ? 'border-brand-600 text-brand-700'
-                  : 'border-transparent text-slate-500 hover:text-slate-700',
+                  : 'border-transparent text-zinc-500 hover:text-zinc-700',
               )}
             >
               {t.locked && <Lock className="size-3.5" />}
@@ -135,8 +135,8 @@ export function MemberDetailPage() {
             <InfoGrid
               items={[
                 { label: 'Nombre', value: member.fullName },
-                { label: 'Email', value: member.email },
-                { label: 'Teléfono', value: member.phone || '—' },
+                { label: 'Email', value: <Sensitive>{member.email}</Sensitive> },
+                { label: 'Teléfono', value: <Sensitive>{member.phone || '—'}</Sensitive> },
                 { label: 'Nacimiento', value: formatDate(member.birthDate) },
               ]}
             />

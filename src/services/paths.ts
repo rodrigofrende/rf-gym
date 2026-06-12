@@ -6,6 +6,10 @@ export const paths = {
   gyms: () => 'gyms',
   gym: (gymId: string) => `gyms/${gymId}`,
 
+  // Planes de suscripción de la plataforma (top-level).
+  plans: () => 'plans',
+  plan: (planId: string) => `plans/${planId}`,
+
   members: (gymId: string) => `gyms/${gymId}/members`,
   member: (gymId: string, uid: string) => `gyms/${gymId}/members/${uid}`,
 
@@ -26,6 +30,9 @@ export const paths = {
 
   routines: (gymId: string) => `gyms/${gymId}/routines`,
   routine: (gymId: string, routineId: string) => `gyms/${gymId}/routines/${routineId}`,
+
+  tariffs: (gymId: string) => `gyms/${gymId}/tariffs`,
+  tariff: (gymId: string, tariffId: string) => `gyms/${gymId}/tariffs/${tariffId}`,
 
   assignments: (gymId: string) => `gyms/${gymId}/assignments`,
   assignment: (gymId: string, id: string) => `gyms/${gymId}/assignments/${id}`,

@@ -5,9 +5,12 @@ import { Timestamp } from 'firebase/firestore'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useMember, useUpdateMemberProfile } from '@/hooks/useMembers'
+import { useTariffs } from '@/hooks/useTariffs'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Input } from '@/components/ui'
-import { toDateInput } from '@/utils/format'
+import { cn } from '@/utils/cn'
+import { formatCurrency, toDateInput } from '@/utils/format'
+import { frequencyLabel } from '@/utils/tariffs'
 import { STATUS_LABEL } from '@/utils/roles'
 
 const schema = z.object({
@@ -28,6 +31,7 @@ export function ProfilePage() {
   const { notify } = useToast()
 
   const { data: member, isLoading } = useMember(gymId, memberId)
+  const { data: tariffs = [] } = useTariffs(gymId)
   const updateProfile = useUpdateMemberProfile(gymId, memberId)
 
   const {
@@ -70,10 +74,10 @@ export function ProfilePage() {
         <Card className="p-6 lg:col-span-1">
           <div className="flex flex-col items-center text-center">
             <Avatar name={member?.fullName ?? '?'} src={member?.photoURL} size="lg" />
-            <h2 className="mt-3 font-semibold text-slate-900">{member?.fullName}</h2>
-            <p className="text-sm text-slate-500">{member?.email}</p>
+            <h2 className="mt-3 font-semibold text-zinc-900">{member?.fullName}</h2>
+            <p className="text-sm text-zinc-500">{member?.email}</p>
             {member && (
-              <div className="mt-4 w-full space-y-2 border-t border-slate-100 pt-4 text-left text-sm">
+              <div className="mt-4 w-full space-y-2 border-t border-zinc-100 pt-4 text-left text-sm">
                 <Row label="Servicio" value={member.service || '—'} />
                 <Row
                   label="Estado"
@@ -108,6 +112,41 @@ export function ProfilePage() {
           </CardBody>
         </Card>
       </div>
+
+      {tariffs.length > 0 && (
+        <Card className="mt-5">
+          <CardHeader title="Planes del gimnasio" subtitle="Tarifas disponibles" />
+          <CardBody>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {tariffs
+                .filter((t) => t.active || t.id === member?.tariffId)
+                .map((t) => {
+                  const current = t.id === member?.tariffId
+                  return (
+                    <div
+                      key={t.id}
+                      className={cn(
+                        'rounded-lg border p-4',
+                        current ? 'border-brand-300 bg-brand-50' : 'border-zinc-200',
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-zinc-900">{t.name}</p>
+                        <Badge tone="neutral">{frequencyLabel(t.weeklyFrequency)}</Badge>
+                        {current && <Badge tone="brand">Tu plan</Badge>}
+                      </div>
+                      {t.description && <p className="mt-1 text-sm text-zinc-500">{t.description}</p>}
+                      <p className="mt-2 font-semibold text-zinc-900">
+                        {formatCurrency(t.price)}
+                        <span className="text-sm font-normal text-zinc-400"> /mes</span>
+                      </p>
+                    </div>
+                  )
+                })}
+            </div>
+          </CardBody>
+        </Card>
+      )}
     </AppLayout>
   )
 }
@@ -115,8 +154,8 @@ export function ProfilePage() {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-medium text-slate-800">{value}</span>
+      <span className="text-zinc-500">{label}</span>
+      <span className="font-medium text-zinc-800">{value}</span>
     </div>
   )
 }

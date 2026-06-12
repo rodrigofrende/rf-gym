@@ -42,12 +42,12 @@ export function LogExerciseModal({
         {/* Tipo de carga + explicación */}
         <div className="flex items-center gap-1.5 pb-1 text-sm">
           <Icon className="size-4 text-brand-600" />
-          <span className="font-medium text-slate-700">{meta.label}</span>
+          <span className="font-medium text-zinc-700">{meta.label}</span>
           <InfoTooltip text={meta.tooltip} />
         </div>
 
         {/* Encabezados (oficial de label de cada input del grid repetido) */}
-        <div className="grid items-center gap-2 px-2 text-xs font-medium text-slate-400" style={gridCols}>
+        <div className="grid items-center gap-2 px-2 text-xs font-medium text-zinc-400" style={gridCols}>
           <span>Serie</span>
           {fields.map((f) => (
             <span key={f.key}>
@@ -78,7 +78,7 @@ export function LogExerciseModal({
                   onChange={(e) => update(i, f.key, Number(e.target.value))}
                 />
                 {f.unit && (
-                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-zinc-400">
                     {f.unit}
                   </span>
                 )}
@@ -88,7 +88,7 @@ export function LogExerciseModal({
               type="button"
               aria-label="Eliminar serie"
               onClick={() => setSets((prev) => prev.filter((_, idx) => idx !== i))}
-              className="flex items-center justify-center text-slate-400 hover:text-red-500"
+              className="flex items-center justify-center text-zinc-400 hover:text-red-500"
             >
               <Trash2 className="size-4" />
             </button>
@@ -105,7 +105,7 @@ export function LogExerciseModal({
           Agregar serie
         </Button>
 
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
           <Button variant="secondary" onClick={onClose}>
             Cancelar
           </Button>

@@ -1,18 +1,18 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Dumbbell } from 'lucide-react'
 import type { GymTheme } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useGym, useUpdateGymBranding } from '@/hooks/useGym'
-import { buildThemeVars } from '@/utils/theme'
+import { applyTenantTheme, buildThemeVars } from '@/utils/theme'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Input } from '@/components/ui'
 
 const DEFAULT_THEME: GymTheme = {
   accent: '#4f46e5',
-  background: '#f8fafc',
+  background: '#fafafa',
   container: '#ffffff',
-  text: '#0f172a',
+  text: '#18181b',
 }
 
 export function BrandingPage() {
@@ -25,6 +25,14 @@ export function BrandingPage() {
   // Estado local del formulario; se inicializa una vez que llega el gym.
   const [theme, setTheme] = useState<GymTheme | null>(null)
   const [logoURL, setLogoURL] = useState<string | null>(null)
+
+  // Preview en vivo en TODA la app mientras se editan los colores (no solo el
+  // recuadro de muestra). Al salir sin guardar, se restaura el theme guardado.
+  useEffect(() => {
+    if (!gym) return
+    applyTenantTheme(theme ?? gym.theme ?? DEFAULT_THEME)
+    return () => applyTenantTheme(gym.theme ?? null)
+  }, [theme, gym])
 
   if (isLoading || !gym) {
     return (
@@ -93,12 +101,12 @@ export function BrandingPage() {
               value={current.text}
               onChange={(v) => setColor('text', v)}
               quickChoices={[
-                { label: 'Negro', value: '#0f172a' },
+                { label: 'Negro', value: '#18181b' },
                 { label: 'Blanco', value: '#ffffff' },
               ]}
             />
 
-            <div className="flex justify-end border-t border-slate-100 pt-3">
+            <div className="flex justify-end border-t border-zinc-100 pt-3">
               <Button loading={save.isPending} onClick={handleSave}>
                 Guardar
               </Button>
@@ -108,10 +116,10 @@ export function BrandingPage() {
 
         {/* Preview en vivo: las variables CSS sólo aplican dentro de este bloque. */}
         <div>
-          <p className="mb-2 text-sm font-medium text-slate-500">Vista previa</p>
+          <p className="mb-2 text-sm font-medium text-zinc-500">Vista previa</p>
           <div
             style={previewStyle}
-            className="space-y-4 rounded-[var(--radius-card)] border border-slate-200 bg-surface-muted p-5"
+            className="space-y-4 rounded-[var(--radius-card)] border border-zinc-200 bg-surface-muted p-5"
           >
             <div className="flex items-center gap-2">
               {currentLogo ? (
@@ -121,12 +129,12 @@ export function BrandingPage() {
                   <Dumbbell className="size-5" />
                 </div>
               )}
-              <span className="text-lg font-bold text-slate-900">{gym.name}</span>
+              <span className="text-lg font-bold text-zinc-900">{gym.name}</span>
             </div>
 
             <Card className="p-4">
-              <p className="text-sm font-semibold text-slate-900">Tarjeta de ejemplo</p>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="text-sm font-semibold text-zinc-900">Tarjeta de ejemplo</p>
+              <p className="mt-1 text-sm text-zinc-500">
                 Así se ven los contenedores con tus colores.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -164,7 +172,7 @@ function ColorField({
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="size-10 cursor-pointer rounded-lg border border-slate-200 bg-surface p-0.5"
+          className="size-10 cursor-pointer rounded-lg border border-zinc-200 bg-surface p-0.5"
           aria-label={label}
         />
         <Input

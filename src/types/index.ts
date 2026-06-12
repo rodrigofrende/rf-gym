@@ -25,9 +25,28 @@ export interface GymTheme {
   text: string // color de texto principal (foreground fuerte)
 }
 
+/** Nivel de white-label de un plan de suscripción. */
+export type WhiteLabelLevel = 'none' | 'basic' | 'full'
+
+/** Plan de suscripción de la plataforma (colección top-level `plans`). */
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  price: number
+  maxAdmins: number // 0 = ilimitado
+  maxMembers: number // 0 = ilimitado
+  maxRoutines: number // 0 = ilimitado
+  logsEnabled: boolean // si los alumnos pueden registrar cargas
+  maxLogsPerMember: number // 0 = ilimitado (solo si logsEnabled)
+  whiteLabel: WhiteLabelLevel
+  features?: string[]
+  active: boolean
+}
+
 /** Suscripción del gym a la plataforma RF Gym (lo gestiona el super-admin). */
 export interface GymSubscription {
   monthlyCost: number
+  planId?: string // plan de suscripción asignado
   lastPaymentDate?: DateValue
   dueDate?: DateValue // próximo vencimiento estipulado
   status: 'active' | 'suspended'
@@ -61,12 +80,24 @@ export interface Member {
   birthDate?: DateValue
   photoURL?: string
   // datos de negocio (solo admin escribe)
-  service?: string
+  service?: string // nombre del plan/tarifa (snapshot)
+  tariffId?: string // tarifa elegida (referencia)
+  weeklyFrequency?: number // veces por semana (snapshot; 0 = libre)
   startDate?: DateValue
   paymentDate?: DateValue // próximo vencimiento estipulado
   lastPaymentDate?: DateValue // último pago registrado
   monthlyCost?: number // cuota
   status: MemberStatus
+}
+
+/** Tarifa / plan que ofrece el gym (`gyms/{gymId}/tariffs`). */
+export interface Tariff {
+  id: string
+  name: string
+  weeklyFrequency: number // veces por semana (0 = libre)
+  price: number
+  description?: string
+  active: boolean
 }
 
 /** Pago registrado de un socio o de la suscripción de un gym. */
@@ -158,4 +189,24 @@ export interface AdminStats {
   routinesSent: number
   overdueCount: number
   updatedAt?: DateValue
+}
+
+export interface SeriesPoint {
+  label: string
+  value: number
+}
+
+/** Datos derivados para el panel del admin (KPIs + series para gráficos). */
+export interface GymDashboard {
+  sociosActivos: number
+  sociosTotal: number
+  cobradoEsteMes: number
+  deudaTotal: number
+  vencidosCount: number
+  rutinasActivas: number
+  logsTotal: number // registros de carga del gym
+  revenueByMonth: SeriesPoint[] // últimos 6 meses ($ cobrado)
+  altasByMonth: SeriesPoint[] // últimos 6 meses (altas)
+  activityByWeek: SeriesPoint[] // últimas ~8 semanas (registros)
+  statusBreakdown: { key: string; label: string; value: number }[]
 }

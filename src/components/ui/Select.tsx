@@ -17,11 +17,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
     <select
       ref={ref}
       className={cn(
-        'h-10 w-full rounded-lg border bg-white px-3 text-sm text-slate-900 transition-colors',
+        'h-10 w-full rounded-lg border bg-white px-3 text-sm text-zinc-900 transition-colors',
         'focus:outline-none focus:ring-2',
         invalid
           ? 'border-red-400 focus:ring-red-300'
-          : 'border-slate-200 focus:border-brand-400 focus:ring-brand-200',
+          : 'border-zinc-200 focus:border-brand-400 focus:ring-brand-200',
         className,
       )}
       {...props}

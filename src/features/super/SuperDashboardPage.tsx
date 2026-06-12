@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import { Building2, LogIn, Plus, ShieldCheck, Wallet } from 'lucide-react'
+import { Activity, Building2, Dumbbell, LogIn, Plus, ShieldCheck, Users, Wallet } from 'lucide-react'
 import { useTenant } from '@/providers/TenantProvider'
 import { useGyms } from '@/hooks/useGyms'
+import { usePlatformStats } from '@/hooks/useDashboard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ROUTES } from '@/routes/routePaths'
 import { getPaymentStatus } from '@/utils/payments'
@@ -11,6 +12,7 @@ export function SuperDashboardPage() {
   const navigate = useNavigate()
   const { selectGym } = useTenant()
   const { data: gyms = [], isLoading } = useGyms()
+  const { data: platform } = usePlatformStats()
 
   const totalAdmins = gyms.reduce((sum, g) => sum + (g.adminUids?.length ?? 0), 0)
   const withDebt = gyms.filter(
@@ -23,15 +25,11 @@ export function SuperDashboardPage() {
   }
 
   return (
-    <AppLayout title="Panel">
+    <AppLayout
+      title="Panel"
+      subtitle="Gestioná los gimnasios y sus administradores desde un solo lugar."
+    >
       <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Plataforma RF Gym</h2>
-          <p className="text-sm text-slate-500">
-            Gestioná los gimnasios y sus administradores desde un solo lugar.
-          </p>
-        </div>
-
         {isLoading ? (
           <FullPageSpinner />
         ) : (
@@ -40,6 +38,17 @@ export function SuperDashboardPage() {
               <StatCard icon={Building2} label="Gimnasios" value={gyms.length} tone="brand" />
               <StatCard icon={ShieldCheck} label="Administradores" value={totalAdmins} tone="green" />
               <StatCard icon={Wallet} label="Gimnasios con deuda" value={withDebt} tone="amber" />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <StatCard icon={Users} label="Socios (total)" value={platform?.socios ?? 0} />
+              <StatCard icon={Dumbbell} label="Rutinas (total)" value={platform?.routines ?? 0} />
+              <StatCard
+                icon={Activity}
+                label="Registros (total)"
+                value={platform?.logs ?? 0}
+                tone="green"
+              />
             </div>
 
             <Card>
@@ -63,7 +72,7 @@ export function SuperDashboardPage() {
                   description="Creá el primer gimnasio desde Gimnasios."
                 />
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-zinc-100">
                   {gyms.map((g) => (
                     <div key={g.id} className="flex items-center gap-3 px-5 py-3">
                       {g.logoURL ? (
@@ -74,7 +83,7 @@ export function SuperDashboardPage() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-slate-900">{g.name}</p>
+                        <p className="truncate font-medium text-zinc-900">{g.name}</p>
                         <Badge tone={g.adminUids?.length ? 'neutral' : 'amber'}>
                           {g.adminUids?.length ?? 0} admin{(g.adminUids?.length ?? 0) === 1 ? '' : 's'}
                         </Badge>

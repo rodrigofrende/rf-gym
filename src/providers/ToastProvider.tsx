@@ -19,7 +19,7 @@ const ICONS = { success: CheckCircle2, error: AlertCircle, info: Info }
 const TONES = {
   success: 'border-emerald-200 text-emerald-700',
   error: 'border-red-200 text-red-700',
-  info: 'border-slate-200 text-slate-700',
+  info: 'border-zinc-200 text-zinc-700',
 }
 
 let counter = 0
@@ -55,8 +55,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               )}
             >
               <Icon className="size-5 shrink-0" />
-              <span className="flex-1 text-sm text-slate-700">{t.message}</span>
-              <button onClick={() => remove(t.id)} className="text-slate-400 hover:text-slate-600">
+              <span className="flex-1 text-sm text-zinc-700">{t.message}</span>
+              <button onClick={() => remove(t.id)} className="text-zinc-400 hover:text-zinc-600">
                 <X className="size-4" />
               </button>
             </div>

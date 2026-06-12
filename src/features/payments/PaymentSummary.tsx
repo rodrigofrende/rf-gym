@@ -1,7 +1,7 @@
 import type { DateValue } from '@/types'
-import { Badge } from '@/components/ui'
+import { Badge, Money } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
-import { formatCurrency, formatDate } from '@/utils/format'
+import { formatDate } from '@/utils/format'
 import { amountOwed, getPaymentStatus } from '@/utils/payments'
 
 /**
@@ -27,7 +27,7 @@ export function PaymentSummary({
     <div className="space-y-3">
       <InfoGrid
         items={[
-          { label: 'Cuota', value: formatCurrency(monthlyCost) },
+          { label: 'Cuota', value: <Money value={monthlyCost} /> },
           { label: 'Último pago', value: formatDate(lastPaymentDate) },
           { label: 'Próximo vencimiento', value: formatDate(dueDate) },
         ]}
@@ -42,9 +42,12 @@ export function PaymentSummary({
           <Badge tone={status.state === 'blocked' ? 'red' : 'amber'}>
             {status.state === 'blocked' ? blockedLabel : 'Vencido'}
           </Badge>
-          <p className="mt-1.5 text-sm text-slate-700">
-            Debe <strong>{formatCurrency(owed)}</strong> desde el {formatDate(status.owesSince)}{' '}
-            ({status.daysOverdue} días de atraso).
+          <p className="mt-1.5 text-sm text-zinc-700">
+            Debe{' '}
+            <strong>
+              <Money value={owed} />
+            </strong>{' '}
+            desde el {formatDate(status.owesSince)} ({status.daysOverdue} días de atraso).
           </p>
         </div>
       )}

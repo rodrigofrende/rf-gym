@@ -1,15 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, LogIn, Plus, ShieldCheck, Trash2, UserPlus, Wallet } from 'lucide-react'
-import type { Gym, GymSubscription, Member } from '@/types'
+import { AlertTriangle, Building2, LogIn, Plus, ShieldCheck, Trash2, UserPlus, Wallet } from 'lucide-react'
+import type { Gym, GymSubscription, Member, SubscriptionPlan } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useGymAdminActions, useGyms } from '@/hooks/useGyms'
 import { useCreateMember, useMembers, useRemoveMember } from '@/hooks/useMembers'
+import { usePlans } from '@/hooks/usePlans'
+import { useRoutines } from '@/hooks/useRoutines'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ROUTES } from '@/routes/routePaths'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
+import { formatCurrency } from '@/utils/format'
+import { exceedsLimit, usageLabel } from '@/utils/plans'
 import {
   Badge,
   Button,
@@ -19,7 +23,7 @@ import {
   FullPageSpinner,
   Input,
   Modal,
-  MoneyInput,
+  Select,
 } from '@/components/ui'
 import { GymPaymentsModal } from './GymPaymentsModal'
 
@@ -27,17 +31,25 @@ export function SuperGymsPage() {
   const { user } = useAuth()
   const { notify } = useToast()
   const { data: gyms = [], isLoading } = useGyms()
+  const { data: plans = [] } = usePlans()
   const { create, remove } = useGymAdminActions()
   const [newOpen, setNewOpen] = useState(false)
   const [name, setName] = useState('')
-  const [cuota, setCuota] = useState(0)
+  const [planId, setPlanId] = useState('')
+
+  const activePlans = plans.filter((p) => p.active)
 
   const handleCreate = async () => {
     if (name.trim().length < 2) return
-    const subscription: GymSubscription | undefined =
-      cuota > 0
-        ? { monthlyCost: cuota, status: 'active', dueDate: addMonths(new Date(), 1) }
-        : undefined
+    const plan = plans.find((p) => p.id === planId)
+    const subscription: GymSubscription | undefined = plan
+      ? {
+          planId: plan.id,
+          monthlyCost: plan.price,
+          status: 'active',
+          dueDate: addMonths(new Date(), 1),
+        }
+      : undefined
     try {
       await create.mutateAsync({
         name: name.trim(),
@@ -47,7 +59,7 @@ export function SuperGymsPage() {
       })
       notify('Gimnasio creado', 'success')
       setName('')
-      setCuota(0)
+      setPlanId('')
       setNewOpen(false)
     } catch {
       notify('No se pudo crear el gimnasio', 'error')
@@ -65,16 +77,15 @@ export function SuperGymsPage() {
   }
 
   return (
-    <AppLayout title="Gimnasios">
-      <div className="mb-5 flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          Administrá todos los gimnasios y sus administradores.
-        </p>
+    <AppLayout
+      title="Gimnasios"
+      subtitle="Administrá todos los gimnasios y sus administradores."
+      actions={
         <Button leftIcon={<Plus className="size-4" />} onClick={() => setNewOpen(true)}>
           Nuevo gimnasio
         </Button>
-      </div>
-
+      }
+    >
       {isLoading ? (
         <FullPageSpinner />
       ) : gyms.length === 0 ? (
@@ -86,7 +97,12 @@ export function SuperGymsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {gyms.map((gym) => (
-            <GymCard key={gym.id} gym={gym} onRemoveGym={() => handleRemoveGym(gym)} />
+            <GymCard
+              key={gym.id}
+              gym={gym}
+              plan={plans.find((p) => p.id === gym.subscription?.planId)}
+              onRemoveGym={() => handleRemoveGym(gym)}
+            />
           ))}
         </div>
       )}
@@ -101,10 +117,18 @@ export function SuperGymsPage() {
               autoFocus
             />
           </FormField>
-          <FormField label="Cuota de suscripción" hint="Opcional · mensual, lo paga el gym a la plataforma">
-            <MoneyInput value={cuota} onChange={setCuota} />
+          <FormField label="Plan de suscripción" hint="Opcional · define el precio y los límites">
+            <Select
+              value={planId}
+              onChange={(e) => setPlanId(e.target.value)}
+              placeholder={activePlans.length ? 'Elegí un plan' : 'No hay planes'}
+              options={activePlans.map((p) => ({
+                value: p.id,
+                label: `${p.name} · ${formatCurrency(p.price)}`,
+              }))}
+            />
           </FormField>
-          <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+          <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
             <Button variant="secondary" onClick={() => setNewOpen(false)}>
               Cancelar
             </Button>
@@ -118,11 +142,20 @@ export function SuperGymsPage() {
   )
 }
 
-function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
+function GymCard({
+  gym,
+  plan,
+  onRemoveGym,
+}: {
+  gym: Gym
+  plan?: SubscriptionPlan
+  onRemoveGym: () => void
+}) {
   const navigate = useNavigate()
   const { selectGym } = useTenant()
   const { notify } = useToast()
   const { data: members = [] } = useMembers(gym.id)
+  const { data: routines = [] } = useRoutines(gym.id)
   const createMember = useCreateMember(gym.id)
   const removeMember = useRemoveMember(gym.id)
   const { removeAdmin } = useGymAdminActions()
@@ -130,6 +163,13 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
   const admins = members.filter((m) => m.role === 'admin')
   const subStatus = getPaymentStatus(gym.subscription?.dueDate)
   const suspended = subStatus.state === 'blocked'
+
+  const usage = {
+    members: members.filter((m) => m.role === 'user').length,
+    admins: admins.length,
+    routines: routines.length,
+  }
+  const overLimit = exceedsLimit(usage, plan)
 
   const [addOpen, setAddOpen] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
@@ -182,7 +222,7 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
             </div>
           )}
           <div className="min-w-0">
-            <h3 className="truncate font-semibold text-slate-900">{gym.name}</h3>
+            <h3 className="truncate font-semibold text-zinc-900">{gym.name}</h3>
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge tone="neutral">{admins.length} admin{admins.length === 1 ? '' : 's'}</Badge>
               {suspended && <Badge tone="red">Suspendido</Badge>}
@@ -199,16 +239,37 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
           <button
             onClick={onRemoveGym}
             aria-label="Eliminar gimnasio"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-500"
+            className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500"
           >
             <Trash2 className="size-4" />
           </button>
         </div>
       </div>
 
-      <div className="mt-4 border-t border-slate-100 pt-3">
+      {plan ? (
+        <div className="mt-3 rounded-lg bg-surface-muted p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium text-zinc-700">Plan {plan.name}</p>
+            {overLimit && (
+              <Badge tone="amber">
+                <AlertTriangle className="mr-1 inline size-3" />
+                Límite superado
+              </Badge>
+            )}
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <Badge tone="neutral">{usageLabel(usage.members, plan.maxMembers)} socios</Badge>
+            <Badge tone="neutral">{usageLabel(usage.routines, plan.maxRoutines)} rutinas</Badge>
+            <Badge tone="neutral">{usageLabel(usage.admins, plan.maxAdmins)} admins</Badge>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-zinc-400">Sin plan asignado.</p>
+      )}
+
+      <div className="mt-4 border-t border-zinc-100 pt-3">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Administradores</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Administradores</p>
           <Button
             size="sm"
             variant="ghost"
@@ -219,7 +280,7 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
           </Button>
         </div>
         {admins.length === 0 ? (
-          <p className="text-sm text-slate-400">Sin administradores.</p>
+          <p className="text-sm text-zinc-400">Sin administradores.</p>
         ) : (
           <ul className="space-y-1">
             {admins.map((a) => (
@@ -230,14 +291,14 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
                 <div className="flex min-w-0 items-center gap-2">
                   <ShieldCheck className="size-4 shrink-0 text-brand-600" />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-800">{a.fullName}</p>
-                    <p className="truncate text-xs text-slate-500">{a.email}</p>
+                    <p className="truncate text-sm font-medium text-zinc-800">{a.fullName}</p>
+                    <p className="truncate text-xs text-zinc-500">{a.email}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleRemoveAdmin(a)}
                   aria-label={`Quitar a ${a.fullName}`}
-                  className="shrink-0 text-slate-400 hover:text-red-500"
+                  className="shrink-0 text-zinc-400 hover:text-red-500"
                 >
                   <Trash2 className="size-4" />
                 </button>
@@ -255,7 +316,7 @@ function GymCard({ gym, onRemoveGym }: { gym: Gym; onRemoveGym: () => void }) {
           <FormField label="Email" hint="Con este email el admin reclama su acceso al ingresar.">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </FormField>
-          <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+          <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
             <Button variant="secondary" onClick={() => setAddOpen(false)}>
               Cancelar
             </Button>

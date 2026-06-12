@@ -56,18 +56,18 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100 p-4">
+    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-zinc-100 p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center">
           <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
             <Dumbbell className="size-7" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-slate-900">{APP_NAME}</h1>
-          <p className="text-sm text-slate-500">Gestión de gimnasios y entrenamiento</p>
+          <h1 className="mt-4 text-2xl font-bold text-zinc-900">{APP_NAME}</h1>
+          <p className="text-sm text-zinc-500">Gestión de gimnasios y entrenamiento</p>
         </div>
 
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-zinc-900">
             {mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
           </h2>
 
@@ -122,15 +122,15 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-slate-400">
-            <span className="h-px flex-1 bg-slate-200" />o<span className="h-px flex-1 bg-slate-200" />
+          <div className="my-4 flex items-center gap-3 text-xs text-zinc-400">
+            <span className="h-px flex-1 bg-zinc-200" />o<span className="h-px flex-1 bg-zinc-200" />
           </div>
 
           <Button variant="secondary" fullWidth loading={googleLoading} onClick={onGoogle}>
             <GoogleIcon /> Continuar con Google
           </Button>
 
-          <p className="mt-4 text-center text-sm text-slate-500">
+          <p className="mt-4 text-center text-sm text-zinc-500">
             {mode === 'login' ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}
             <button
               type="button"

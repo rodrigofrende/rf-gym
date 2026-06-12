@@ -6,6 +6,8 @@ import type {
   Note,
   Payment,
   Routine,
+  SubscriptionPlan,
+  Tariff,
   WorkoutLog,
 } from '@/types'
 
@@ -42,6 +44,8 @@ export interface DemoData {
   notes: Record<string, Note[]> // memberId -> notas
   logs: Record<string, WorkoutLog[]> // memberId -> logs
   payments: Record<string, Payment[]> // memberId -> pagos
+  tariffs: Tariff[]
+  plans: SubscriptionPlan[] // planes de suscripción (plataforma)
   stats: AdminStats
 }
 
@@ -66,6 +70,17 @@ function progressionLogs(
   }))
 }
 
+/** Pagos mensuales (uno por mes), para alimentar el gráfico de ingresos. */
+function monthlyPayments(idBase: string, amount: number, monthsYYYYMM: string[]): Payment[] {
+  return monthsYYYYMM.map((ym, i) => ({
+    id: `${idBase}-${i + 1}`,
+    amount,
+    date: new Date(`${ym}-05T12:00:00`),
+    comment: 'Cuota mensual',
+    createdBy: 'demo-admin',
+  }))
+}
+
 /** Genera una copia fresca de la data inicial de TigerFit (todo en memoria). */
 export function buildSeed(): DemoData {
   const gym = {
@@ -80,9 +95,10 @@ export function buildSeed(): DemoData {
       container: '#ffffff',
       text: '#0f172a',
     },
-    // Suscripción del gym a la plataforma RF Gym (al día).
+    // Suscripción del gym a la plataforma RF Gym (plan Profesional, al día).
     subscription: {
-      monthlyCost: 50000,
+      monthlyCost: 25000,
+      planId: 'tier-pro',
       lastPaymentDate: new Date('2026-05-28'),
       dueDate: new Date('2026-06-28'),
       status: 'active' as const,
@@ -109,9 +125,11 @@ export function buildSeed(): DemoData {
       phone: '+54 11 5555-2010',
       birthDate: new Date('1994-03-15'),
       service: 'Musculación',
+      tariffId: 'tf-musc-3',
+      weeklyFrequency: 3,
       startDate: new Date('2024-09-01'),
-      paymentDate: new Date('2026-06-25'), // al día
-      lastPaymentDate: new Date('2026-05-25'),
+      paymentDate: new Date('2026-07-05'), // al día
+      lastPaymentDate: new Date('2026-06-05'),
       monthlyCost: 30000,
       status: 'active',
     },
@@ -124,6 +142,8 @@ export function buildSeed(): DemoData {
       phone: '+54 11 5555-2001',
       birthDate: new Date('1995-08-23'),
       service: 'Musculación + clases',
+      tariffId: 'tf-full-4',
+      weeklyFrequency: 4,
       startDate: new Date('2025-02-01'),
       paymentDate: new Date('2026-06-03'), // vencido ~8 días → aviso
       lastPaymentDate: new Date('2026-05-03'),
@@ -139,6 +159,8 @@ export function buildSeed(): DemoData {
       phone: '+54 11 5555-2002',
       birthDate: new Date('1988-12-03'),
       service: 'Funcional',
+      tariffId: 'tf-func-2',
+      weeklyFrequency: 2,
       startDate: new Date('2024-11-10'),
       paymentDate: new Date('2026-05-10'), // vencido >14 días → bloqueado
       lastPaymentDate: new Date('2026-04-10'),
@@ -154,9 +176,11 @@ export function buildSeed(): DemoData {
       phone: '+54 11 5555-2003',
       birthDate: new Date('2000-01-30'),
       service: 'Musculación',
+      tariffId: 'tf-musc-2',
+      weeklyFrequency: 2,
       startDate: new Date('2025-05-20'),
-      paymentDate: new Date('2026-06-20'),
-      lastPaymentDate: new Date('2026-05-20'),
+      paymentDate: new Date('2026-04-05'),
+      lastPaymentDate: new Date('2026-03-05'),
       monthlyCost: 25000,
       status: 'paused',
     },
@@ -409,6 +433,20 @@ export function buildSeed(): DemoData {
       ),
     ],
     'demo-socio-1': [
+      // Actividad reciente de Juan (para el gráfico de entrenamientos por semana).
+      ...progressionLogs(
+        'log-j-banca',
+        'routine-1',
+        'Press banca',
+        [
+          { date: '2026-05-19', weight: 60 },
+          { date: '2026-05-26', weight: 62.5 },
+          { date: '2026-06-02', weight: 65 },
+          { date: '2026-06-09', weight: 65 },
+        ],
+        8,
+        3,
+      ),
       {
         id: 'log-1',
         routineId: 'routine-1',
@@ -444,13 +482,82 @@ export function buildSeed(): DemoData {
     ],
   }
 
+  // Historial de pagos por socio sobre 6 meses (alimenta el gráfico de ingresos):
+  // Rodrigo paga siempre; Juan corta en junio; Mariana en mayo; Carlos en abril.
+  const allMonths = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06']
   const payments: Record<string, Payment[]> = {
-    'demo-socio-rodrigo': [
-      { id: 'pay-r1', amount: 30000, date: new Date('2026-03-25'), comment: 'Marzo · efectivo', createdBy: 'demo-admin' },
-      { id: 'pay-r2', amount: 30000, date: new Date('2026-04-25'), comment: 'Abril · transferencia', createdBy: 'demo-admin' },
-      { id: 'pay-r3', amount: 30000, date: new Date('2026-05-25'), comment: 'Mayo · transferencia', createdBy: 'demo-admin' },
-    ],
+    'demo-socio-rodrigo': monthlyPayments('pay-r', 30000, allMonths),
+    'demo-socio-1': monthlyPayments('pay-j', 28000, allMonths.slice(0, 5)), // ene–may
+    'demo-socio-2': monthlyPayments('pay-m', 22000, allMonths.slice(0, 4)), // ene–abr
+    'demo-socio-3': monthlyPayments('pay-c', 25000, allMonths.slice(0, 3)), // ene–mar
   }
+
+  // Tarifas que ofrece TigerFit (precios alineados con la cuota de cada socio).
+  const tariffs: Tariff[] = [
+    { id: 'tf-musc-2', name: 'Musculación', weeklyFrequency: 2, price: 25000, description: '2 días por semana.', active: true },
+    { id: 'tf-musc-3', name: 'Musculación', weeklyFrequency: 3, price: 30000, description: '3 días por semana.', active: true },
+    { id: 'tf-musc-libre', name: 'Musculación', weeklyFrequency: 0, price: 40000, description: 'Acceso libre.', active: true },
+    { id: 'tf-full-4', name: 'Musculación + clases', weeklyFrequency: 4, price: 28000, description: 'Musculación y clases grupales.', active: true },
+    { id: 'tf-func-2', name: 'Funcional', weeklyFrequency: 2, price: 22000, description: 'Entrenamiento funcional.', active: true },
+    { id: 'tf-func-3', name: 'Funcional', weeklyFrequency: 3, price: 30000, description: 'Funcional, 3 días.', active: true },
+  ]
+
+  // Planes de suscripción de la plataforma (lo que paga cada gym a RF Gym).
+  const plans: SubscriptionPlan[] = [
+    {
+      id: 'tier-inicial',
+      name: 'Inicial',
+      price: 9999,
+      maxAdmins: 1,
+      maxMembers: 30,
+      maxRoutines: 10,
+      logsEnabled: false,
+      maxLogsPerMember: 0,
+      whiteLabel: 'none',
+      features: ['1 administrador', 'Hasta 30 socios', '10 rutinas', 'Sin registro de cargas'],
+      active: true,
+    },
+    {
+      id: 'tier-pro',
+      name: 'Profesional',
+      price: 25000,
+      maxAdmins: 3,
+      maxMembers: 150,
+      maxRoutines: 50,
+      logsEnabled: true,
+      maxLogsPerMember: 100,
+      whiteLabel: 'basic',
+      features: [
+        'Hasta 3 admins',
+        '150 socios',
+        '50 rutinas',
+        '100 registros por alumno',
+        'White-label (logo + colores)',
+        'Panel de analíticas',
+      ],
+      active: true,
+    },
+    {
+      id: 'tier-premium',
+      name: 'Premium',
+      price: 50000,
+      maxAdmins: 0,
+      maxMembers: 0,
+      maxRoutines: 0,
+      logsEnabled: true,
+      maxLogsPerMember: 0,
+      whiteLabel: 'full',
+      features: [
+        'Admins ilimitados',
+        'Socios ilimitados',
+        'Rutinas ilimitadas',
+        'Registros ilimitados',
+        'White-label completo',
+        'Soporte prioritario + export',
+      ],
+      active: true,
+    },
+  ]
 
   const socios = members.filter((m) => m.role === 'user')
   const stats: AdminStats = {
@@ -463,5 +570,5 @@ export function buildSeed(): DemoData {
     updatedAt: new Date('2026-06-08'),
   }
 
-  return { gym, members, routines, assignments, notes, logs, payments, stats }
+  return { gym, members, routines, assignments, notes, logs, payments, tariffs, plans, stats }
 }

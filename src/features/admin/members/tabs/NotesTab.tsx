@@ -52,7 +52,7 @@ export function NotesTab({
   return (
     <div className="space-y-4">
       <Card className="p-4">
-        <p className="mb-3 text-sm font-medium text-slate-700">Agregar anotación privada</p>
+        <p className="mb-3 text-sm font-medium text-zinc-700">Agregar anotación privada</p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="sm:w-44">
             <Select
@@ -93,19 +93,19 @@ export function NotesTab({
             const Icon = meta.icon
             return (
               <Card key={note.id} className="flex items-start gap-3 p-4">
-                <div className="mt-0.5 text-slate-400">
+                <div className="mt-0.5 text-zinc-400">
                   <Icon className="size-5" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <Badge tone={meta.tone}>{meta.label}</Badge>
-                    <span className="text-xs text-slate-400">{formatDate(note.date)}</span>
+                    <span className="text-xs text-zinc-400">{formatDate(note.date)}</span>
                   </div>
-                  <p className="mt-1 text-sm text-slate-700">{note.value}</p>
+                  <p className="mt-1 text-sm text-zinc-700">{note.value}</p>
                 </div>
                 <button
                   onClick={() => removeNote.mutate(note.id)}
-                  className="text-slate-400 hover:text-red-500"
+                  className="text-zinc-400 hover:text-red-500"
                   aria-label="Eliminar"
                 >
                   <Trash2 className="size-4" />

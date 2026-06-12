@@ -1,19 +1,28 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { FullPageSpinner } from '@/components/ui'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { TenantSelectPage } from '@/features/tenant-select/TenantSelectPage'
-import { AdminDashboardPage } from '@/features/admin/dashboard/AdminDashboardPage'
+// Lazy: el panel admin trae recharts; lo separamos para no pesar el bundle inicial
+// (login y vista de socio mobile no lo descargan).
+const AdminDashboardPage = lazy(() =>
+  import('@/features/admin/dashboard/AdminDashboardPage').then((m) => ({
+    default: m.AdminDashboardPage,
+  })),
+)
 import { MembersListPage } from '@/features/admin/members/MembersListPage'
 import { MemberDetailPage } from '@/features/admin/members/MemberDetailPage'
 import { RoutinesListPage } from '@/features/admin/routines/RoutinesListPage'
+import { TariffsListPage } from '@/features/admin/tariffs/TariffsListPage'
 import { BrandingPage } from '@/features/admin/branding/BrandingPage'
 import { ProfilePage } from '@/features/member/profile/ProfilePage'
 import { MyRoutinesPage } from '@/features/member/routines/MyRoutinesPage'
 import { SocioPaymentGate } from '@/features/payments/SocioPaymentGate'
 import { SuperGymsPage } from '@/features/super/SuperGymsPage'
 import { SuperDashboardPage } from '@/features/super/SuperDashboardPage'
+import { PlansListPage } from '@/features/super/PlansListPage'
 import { PrivateRoute, SuperAdminRoute } from './PrivateRoute'
 import { ROUTES } from './routePaths'
 
@@ -30,8 +39,9 @@ function HomeRedirect() {
 
 export function AppRoutes() {
   return (
-    <Routes>
-      <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+    <Suspense fallback={<FullPageSpinner />}>
+      <Routes>
+        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.SELECT_GYM} element={<TenantSelectPage />} />
 
       {/* Super-admin (plataforma RF Gym) */}
@@ -48,6 +58,14 @@ export function AppRoutes() {
         element={
           <SuperAdminRoute>
             <SuperGymsPage />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path={ROUTES.SUPER_PLANS}
+        element={
+          <SuperAdminRoute>
+            <PlansListPage />
           </SuperAdminRoute>
         }
       />
@@ -86,6 +104,14 @@ export function AppRoutes() {
         }
       />
       <Route
+        path={ROUTES.ADMIN_TARIFFS}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <TariffsListPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path={ROUTES.ADMIN_BRANDING}
         element={
           <PrivateRoute allowedRoles={['admin']}>
@@ -118,6 +144,7 @@ export function AppRoutes() {
 
       <Route path="/" element={<HomeRedirect />} />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }

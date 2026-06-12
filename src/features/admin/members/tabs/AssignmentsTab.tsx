@@ -44,7 +44,7 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
   return (
     <div className="space-y-4">
       <Card className="p-4">
-        <p className="mb-3 text-sm font-medium text-slate-700">Asignar rutina</p>
+        <p className="mb-3 text-sm font-medium text-zinc-700">Asignar rutina</p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Select
             className="flex-1"
@@ -71,12 +71,12 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
               <Card key={a.id} className="flex items-center gap-3 p-4">
                 <Dumbbell className="size-5 text-brand-500" />
                 <div className="flex-1">
-                  <p className="font-medium text-slate-900">{r?.name ?? 'Rutina'}</p>
-                  <p className="text-xs text-slate-500">{r?.exercises.length ?? 0} ejercicios</p>
+                  <p className="font-medium text-zinc-900">{r?.name ?? 'Rutina'}</p>
+                  <p className="text-xs text-zinc-500">{r?.exercises.length ?? 0} ejercicios</p>
                 </div>
                 <button
                   onClick={() => removeAssignment.mutate(a.id)}
-                  className="text-slate-400 hover:text-red-500"
+                  className="text-zinc-400 hover:text-red-500"
                   aria-label="Quitar"
                 >
                   <Trash2 className="size-4" />
@@ -91,22 +91,22 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
         <CardHeader title="Cargas registradas" subtitle="Últimos registros del socio" />
         <CardBody>
           {logs.length === 0 ? (
-            <p className="text-sm text-slate-500">El socio todavía no registró cargas.</p>
+            <p className="text-sm text-zinc-500">El socio todavía no registró cargas.</p>
           ) : (
             <ul className="space-y-2">
               {logs.slice(0, 12).map((log) => (
                 <li
                   key={log.id}
-                  className="flex items-center justify-between border-b border-slate-50 pb-2 text-sm last:border-0"
+                  className="flex items-center justify-between border-b border-zinc-50 pb-2 text-sm last:border-0"
                 >
-                  <span className="font-medium text-slate-700">{log.exerciseName}</span>
-                  <span className="flex items-center gap-2 text-slate-500">
+                  <span className="font-medium text-zinc-700">{log.exerciseName}</span>
+                  <span className="flex items-center gap-2 text-zinc-500">
                     {log.sets.map((s, i) => (
                       <Badge key={i} tone="neutral">
                         {formatLogSet(s, loadTypeByExercise.get(log.exerciseName))}
                       </Badge>
                     ))}
-                    <span className="text-xs text-slate-400">{formatDate(log.date)}</span>
+                    <span className="text-xs text-zinc-400">{formatDate(log.date)}</span>
                   </span>
                 </li>
               ))}

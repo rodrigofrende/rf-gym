@@ -62,8 +62,8 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
           dueDate={sub?.dueDate}
         />
 
-        <div className="space-y-3 rounded-lg border border-slate-200 p-3">
-          <p className="text-sm font-medium text-slate-700">Registrar pago</p>
+        <div className="space-y-3 rounded-lg border border-zinc-200 p-3">
+          <p className="text-sm font-medium text-zinc-700">Registrar pago</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Monto">
               <MoneyInput value={amount} onChange={setAmount} />
@@ -92,7 +92,7 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-slate-700">Historial</p>
+          <p className="mb-2 text-sm font-medium text-zinc-700">Historial</p>
           {isLoading ? <Spinner /> : <PaymentHistoryList payments={payments} onDelete={handleDelete} />}
         </div>
       </div>

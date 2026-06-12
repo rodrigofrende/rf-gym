@@ -4,8 +4,8 @@ import { AuthProvider } from '@/providers/AuthProvider'
 import { TenantProvider } from '@/providers/TenantProvider'
 import { TenantThemeEffect } from '@/providers/TenantThemeEffect'
 import { ToastProvider } from '@/providers/ToastProvider'
+import { PrivacyProvider } from '@/providers/PrivacyProvider'
 import { AppRoutes } from '@/routes/AppRoutes'
-import { DemoSwitcher } from '@/components/layout/DemoSwitcher'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,15 +17,16 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <PrivacyProvider>
         <ToastProvider>
           <AuthProvider>
             <TenantProvider>
               <TenantThemeEffect />
               <AppRoutes />
-              <DemoSwitcher />
             </TenantProvider>
           </AuthProvider>
         </ToastProvider>
+        </PrivacyProvider>
       </BrowserRouter>
     </QueryClientProvider>
   )
