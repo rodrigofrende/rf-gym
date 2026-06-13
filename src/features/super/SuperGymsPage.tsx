@@ -18,6 +18,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   FormField,
   FullPageSpinner,
@@ -36,6 +37,7 @@ export function SuperGymsPage() {
   const [newOpen, setNewOpen] = useState(false)
   const [name, setName] = useState('')
   const [planId, setPlanId] = useState('')
+  const [toDeleteGym, setToDeleteGym] = useState<Gym | null>(null)
 
   const activePlans = plans.filter((p) => p.active)
 
@@ -66,11 +68,12 @@ export function SuperGymsPage() {
     }
   }
 
-  const handleRemoveGym = async (gym: Gym) => {
-    if (!confirm(`¿Eliminar el gimnasio "${gym.name}"? Esta acción no se puede deshacer.`)) return
+  const confirmRemoveGym = async () => {
+    if (!toDeleteGym) return
     try {
-      await remove.mutateAsync(gym.id)
+      await remove.mutateAsync(toDeleteGym.id)
       notify('Gimnasio eliminado', 'success')
+      setToDeleteGym(null)
     } catch {
       notify('No se pudo eliminar', 'error')
     }
@@ -101,7 +104,7 @@ export function SuperGymsPage() {
               key={gym.id}
               gym={gym}
               plan={plans.find((p) => p.id === gym.subscription?.planId)}
-              onRemoveGym={() => handleRemoveGym(gym)}
+              onRemoveGym={() => setToDeleteGym(gym)}
             />
           ))}
         </div>
@@ -138,6 +141,15 @@ export function SuperGymsPage() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={!!toDeleteGym}
+        onClose={() => setToDeleteGym(null)}
+        onConfirm={confirmRemoveGym}
+        title="Eliminar gimnasio"
+        description={`¿Querés eliminar el gimnasio "${toDeleteGym?.name}"? Esta acción no se puede deshacer.`}
+        loading={remove.isPending}
+      />
     </AppLayout>
   )
 }
@@ -175,6 +187,7 @@ function GymCard({
   const [payOpen, setPayOpen] = useState(false)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [adminToRemove, setAdminToRemove] = useState<Member | null>(null)
 
   const enterGym = () => {
     selectGym(gym.id)
@@ -199,12 +212,14 @@ function GymCard({
     }
   }
 
-  const handleRemoveAdmin = async (admin: Member) => {
-    if (!confirm(`¿Quitar a ${admin.fullName} como administrador?`)) return
+  const confirmRemoveAdmin = async () => {
+    if (!adminToRemove) return
     try {
-      await removeMember.mutateAsync(admin.id)
-      if (admin.uid) await removeAdmin.mutateAsync({ gymId: gym.id, uid: admin.uid })
+      await removeMember.mutateAsync(adminToRemove.id)
+      if (adminToRemove.uid)
+        await removeAdmin.mutateAsync({ gymId: gym.id, uid: adminToRemove.uid })
       notify('Administrador eliminado', 'success')
+      setAdminToRemove(null)
     } catch {
       notify('No se pudo eliminar', 'error')
     }
@@ -296,9 +311,9 @@ function GymCard({
                   </div>
                 </div>
                 <button
-                  onClick={() => handleRemoveAdmin(a)}
+                  onClick={() => setAdminToRemove(a)}
                   aria-label={`Quitar a ${a.fullName}`}
-                  className="shrink-0 text-zinc-400 hover:text-red-500"
+                  className="shrink-0 rounded text-zinc-400 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                 >
                   <Trash2 className="size-4" />
                 </button>
@@ -328,6 +343,16 @@ function GymCard({
       </Modal>
 
       {payOpen && <GymPaymentsModal gym={gym} onClose={() => setPayOpen(false)} />}
+
+      <ConfirmDialog
+        open={!!adminToRemove}
+        onClose={() => setAdminToRemove(null)}
+        onConfirm={confirmRemoveAdmin}
+        title="Quitar administrador"
+        description={`¿Querés quitar a ${adminToRemove?.fullName} como administrador de ${gym.name}?`}
+        confirmLabel="Quitar"
+        loading={removeMember.isPending || removeAdmin.isPending}
+      />
     </Card>
   )
 }

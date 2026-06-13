@@ -4,6 +4,7 @@ import {
   Dumbbell,
   User,
   ClipboardList,
+  History,
   Palette,
   Building2,
   Tags,
@@ -30,6 +31,7 @@ const ADMIN_NAV: NavItem[] = [
 
 const USER_NAV: NavItem[] = [
   { to: ROUTES.APP_ROUTINES, label: 'Mis rutinas', icon: ClipboardList },
+  { to: ROUTES.APP_LOGS, label: 'Mis registros', icon: History },
   { to: ROUTES.APP_PROFILE, label: 'Mi perfil', icon: User },
 ]
 

@@ -9,6 +9,7 @@ export function LogExerciseModal({
   onClose,
   exercise,
   defaultSets,
+  initialSets,
   onSave,
   saving,
 }: {
@@ -16,16 +17,22 @@ export function LogExerciseModal({
   onClose: () => void
   exercise: Exercise | null
   defaultSets: number
+  /** Si se pasan, el modal arranca en modo edición con estas series. */
+  initialSets?: LogSet[]
   onSave: (sets: LogSet[]) => void
   saving?: boolean
 }) {
   const meta = loadTypeMeta(exercise?.loadType)
   const fields = SHAPE_FIELDS[meta.shape]
   const Icon = meta.icon
+  const editing = !!initialSets
 
-  // Filas vacías según las series planificadas. El padre remonta por ejercicio (key).
+  // En edición arranca con las series guardadas; si no, filas vacías según lo
+  // planificado. El padre remonta por ejercicio/registro (key).
   const [sets, setSets] = useState<LogSet[]>(() =>
-    Array.from({ length: Math.max(defaultSets, 1) }, () => ({}) as LogSet),
+    initialSets?.length
+      ? initialSets.map((s) => ({ ...s }))
+      : Array.from({ length: Math.max(defaultSets, 1) }, () => ({}) as LogSet),
   )
 
   const update = (i: number, key: keyof LogSet, value: number) =>
@@ -37,7 +44,11 @@ export function LogExerciseModal({
   const gridCols = { gridTemplateColumns: `2.5rem repeat(${fields.length}, 1fr) 2rem` }
 
   return (
-    <Modal open={open} onClose={onClose} title={exercise ? `Registrar — ${exercise.name}` : 'Registrar'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={exercise ? `${editing ? 'Editar' : 'Registrar'} — ${exercise.name}` : 'Registrar'}
+    >
       <div className="space-y-2">
         {/* Tipo de carga + explicación */}
         <div className="flex items-center gap-1.5 pb-1 text-sm">

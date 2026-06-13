@@ -7,7 +7,7 @@ import {
   useRegisterMemberPayment,
   useRemoveMemberPayment,
 } from '@/hooks/usePayments'
-import { Badge, Button, Card, CardBody, CardHeader, Spinner } from '@/components/ui'
+import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, Spinner } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
 import { toDate } from '@/utils/format'
 import { STATUS_LABEL } from '@/utils/roles'
@@ -29,6 +29,7 @@ export function PaymentsTab({
   const register = useRegisterMemberPayment(gymId, member.id)
   const removePayment = useRemoveMemberPayment(gymId, member.id)
   const [open, setOpen] = useState(false)
+  const [toDelete, setToDelete] = useState<string | null>(null)
 
   const handleSubmit = async (v: PaymentFormValue) => {
     try {
@@ -43,11 +44,12 @@ export function PaymentsTab({
     }
   }
 
-  const handleDelete = async (paymentId: string) => {
-    if (!confirm('¿Eliminar este pago del historial?')) return
+  const confirmDelete = async () => {
+    if (!toDelete) return
     try {
-      await removePayment.mutateAsync(paymentId)
+      await removePayment.mutateAsync(toDelete)
       notify('Pago eliminado', 'success')
+      setToDelete(null)
     } catch {
       notify('No se pudo eliminar el pago', 'error')
     }
@@ -86,10 +88,19 @@ export function PaymentsTab({
           {isLoading ? (
             <Spinner />
           ) : (
-            <PaymentHistoryList payments={payments} onDelete={handleDelete} />
+            <PaymentHistoryList payments={payments} onDelete={(id) => setToDelete(id)} />
           )}
         </CardBody>
       </Card>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar pago"
+        description="¿Querés eliminar este pago del historial? Esta acción no se puede deshacer."
+        loading={removePayment.isPending}
+      />
 
       {open && (
         <RegisterPaymentModal

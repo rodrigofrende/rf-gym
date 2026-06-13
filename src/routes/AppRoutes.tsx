@@ -19,6 +19,7 @@ import { TariffsListPage } from '@/features/admin/tariffs/TariffsListPage'
 import { BrandingPage } from '@/features/admin/branding/BrandingPage'
 import { ProfilePage } from '@/features/member/profile/ProfilePage'
 import { MyRoutinesPage } from '@/features/member/routines/MyRoutinesPage'
+import { MyLogsPage } from '@/features/member/logs/MyLogsPage'
 import { SocioPaymentGate } from '@/features/payments/SocioPaymentGate'
 import { SuperGymsPage } from '@/features/super/SuperGymsPage'
 import { SuperDashboardPage } from '@/features/super/SuperDashboardPage'
@@ -127,6 +128,16 @@ export function AppRoutes() {
           <PrivateRoute allowedRoles={['user']}>
             <SocioPaymentGate>
               <MyRoutinesPage />
+            </SocioPaymentGate>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path={ROUTES.APP_LOGS}
+        element={
+          <PrivateRoute allowedRoles={['user']}>
+            <SocioPaymentGate>
+              <MyLogsPage />
             </SocioPaymentGate>
           </PrivateRoute>
         }

@@ -215,6 +215,21 @@ export function createLog(_gymId: string, memberId: string, payload: Omit<Workou
   data.logs[memberId] = [...(data.logs[memberId] ?? []), { ...payload, id }]
   return ok(id)
 }
+export function updateLog(
+  _gymId: string,
+  memberId: string,
+  logId: string,
+  payload: Partial<Omit<WorkoutLog, 'id'>>,
+) {
+  data.logs[memberId] = (data.logs[memberId] ?? []).map((l) =>
+    l.id === logId ? { ...l, ...payload } : l,
+  )
+  return ok(undefined)
+}
+export function deleteLog(_gymId: string, memberId: string, logId: string) {
+  data.logs[memberId] = (data.logs[memberId] ?? []).filter((l) => l.id !== logId)
+  return ok(undefined)
+}
 
 // ---- Pagos ----
 const byDateDesc = <T extends { date: unknown }>(list: T[]) =>

@@ -18,6 +18,7 @@ export const ROUTES = {
   // Socio
   APP_PROFILE: '/app/profile',
   APP_ROUTINES: '/app/routines',
+  APP_LOGS: '/app/logs',
 } as const
 
 export const adminMemberDetail = (uid: string) => `/admin/members/${uid}`

@@ -4,7 +4,7 @@ import type { Gym, GymSubscription } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useGymPayments, useRegisterGymPayment, useRemoveGymPayment } from '@/hooks/usePayments'
-import { Button, FormField, Input, Modal, MoneyInput, Spinner } from '@/components/ui'
+import { Button, ConfirmDialog, FormField, Input, Modal, MoneyInput, Spinner } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
 import { PaymentSummary } from '@/features/payments/PaymentSummary'
 import { PaymentHistoryList } from '@/features/payments/PaymentHistoryList'
@@ -21,6 +21,7 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
   const [amount, setAmount] = useState(sub?.monthlyCost ?? 0)
   const [date, setDate] = useState(() => toDateInput(new Date()))
   const [comment, setComment] = useState('')
+  const [toDelete, setToDelete] = useState<string | null>(null)
 
   const handleRegister = async () => {
     if (amount <= 0) return
@@ -42,11 +43,12 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
     }
   }
 
-  const handleDelete = async (paymentId: string) => {
-    if (!confirm('¿Eliminar este pago del historial?')) return
+  const confirmDelete = async () => {
+    if (!toDelete) return
     try {
-      await removePayment.mutateAsync(paymentId)
+      await removePayment.mutateAsync(toDelete)
       notify('Pago eliminado', 'success')
+      setToDelete(null)
     } catch {
       notify('No se pudo eliminar el pago', 'error')
     }
@@ -93,9 +95,22 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
 
         <div>
           <p className="mb-2 text-sm font-medium text-zinc-700">Historial</p>
-          {isLoading ? <Spinner /> : <PaymentHistoryList payments={payments} onDelete={handleDelete} />}
+          {isLoading ? (
+            <Spinner />
+          ) : (
+            <PaymentHistoryList payments={payments} onDelete={(id) => setToDelete(id)} />
+          )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar pago"
+        description="¿Querés eliminar este pago del historial? Esta acción no se puede deshacer."
+        loading={removePayment.isPending}
+      />
     </Modal>
   )
 }

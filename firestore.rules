@@ -67,11 +67,11 @@ service cloud.firestore {
           allow read, write: if isGymAdmin(gymId);
         }
 
-        // ---- Logs de carga: el socio (dueño) y el admin. ----
+        // ---- Logs de carga: el socio (dueño) gestiona los suyos; el admin solo lee. ----
         match /logs/{logId} {
           allow read: if isGymAdmin(gymId)
             || get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data.uid == request.auth.uid;
-          allow create: if get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data.uid == request.auth.uid;
+          allow create, update, delete: if get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data.uid == request.auth.uid;
         }
       }
 

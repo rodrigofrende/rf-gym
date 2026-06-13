@@ -4,7 +4,7 @@ import type { SubscriptionPlan } from '@/types'
 import { useToast } from '@/providers/ToastProvider'
 import { useCreatePlan, usePlans, useRemovePlan, useUpdatePlan } from '@/hooks/usePlans'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, EmptyState, FullPageSpinner } from '@/components/ui'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatCurrency } from '@/utils/format'
 import { limitLabel, logsCapabilityLabel, whiteLabelLabel } from '@/utils/plans'
@@ -19,6 +19,7 @@ export function PlansListPage() {
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<SubscriptionPlan | null>(null)
+  const [toDelete, setToDelete] = useState<SubscriptionPlan | null>(null)
 
   const openNew = () => {
     setEditing(null)
@@ -40,11 +41,12 @@ export function PlansListPage() {
     }
   }
 
-  const handleDelete = async (p: SubscriptionPlan) => {
-    if (!confirm(`¿Eliminar el plan "${p.name}"?`)) return
+  const confirmDelete = async () => {
+    if (!toDelete) return
     try {
-      await remove.mutateAsync(p.id)
+      await remove.mutateAsync(toDelete.id)
       notify('Plan eliminado', 'success')
+      setToDelete(null)
     } catch {
       notify('No se pudo eliminar', 'error')
     }
@@ -86,15 +88,15 @@ export function PlansListPage() {
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEdit(p)}
-                    aria-label="Editar"
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+                    aria-label={`Editar ${p.name}`}
+                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     <Pencil className="size-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(p)}
-                    aria-label="Eliminar"
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500"
+                    onClick={() => setToDelete(p)}
+                    aria-label={`Eliminar ${p.name}`}
+                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
                     <Trash2 className="size-4" />
                   </button>
@@ -132,6 +134,15 @@ export function PlansListPage() {
         onSubmit={handleSubmit}
         initial={editing}
         saving={create.isPending || update.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar plan"
+        description={`¿Querés eliminar el plan "${toDelete?.name}"? Esta acción no se puede deshacer.`}
+        loading={remove.isPending}
       />
     </AppLayout>
   )

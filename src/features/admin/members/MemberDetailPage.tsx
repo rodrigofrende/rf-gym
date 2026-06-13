@@ -7,7 +7,7 @@ import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useMember, useRemoveMember, useUpdateMember } from '@/hooks/useMembers'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Avatar, Badge, Button, Card, CardBody, CardHeader, FullPageSpinner, Sensitive } from '@/components/ui'
+import { Avatar, Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, FullPageSpinner, Sensitive } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
 import { formatDate } from '@/utils/format'
 import { ROLE_LABEL } from '@/utils/roles'
@@ -17,13 +17,15 @@ import { MemberFormModal } from './MemberFormModal'
 import { NotesTab } from './tabs/NotesTab'
 import { AssignmentsTab } from './tabs/AssignmentsTab'
 import { PaymentsTab } from './tabs/PaymentsTab'
+import { ProgressTab } from './tabs/ProgressTab'
 
-type Tab = 'data' | 'notes' | 'payments' | 'routines'
+type Tab = 'data' | 'notes' | 'payments' | 'routines' | 'progress'
 const TABS: { key: Tab; label: string; locked?: boolean }[] = [
   { key: 'data', label: 'Datos' },
   { key: 'notes', label: 'Notas privadas', locked: true },
   { key: 'payments', label: 'Pagos' },
   { key: 'routines', label: 'Rutinas y cargas' },
+  { key: 'progress', label: 'Progreso' },
 ]
 
 export function MemberDetailPage() {
@@ -39,6 +41,7 @@ export function MemberDetailPage() {
   const removeMember = useRemoveMember(gymId)
   const [tab, setTab] = useState<Tab>('data')
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   if (isLoading) {
     return (
@@ -66,8 +69,7 @@ export function MemberDetailPage() {
     }
   }
 
-  const handleDelete = async () => {
-    if (!confirm(`¿Eliminar a ${member.fullName}?`)) return
+  const confirmDelete = async () => {
     try {
       await removeMember.mutateAsync(memberId)
       notify('Socio eliminado', 'success')
@@ -103,7 +105,7 @@ export function MemberDetailPage() {
             <Button variant="secondary" leftIcon={<Pencil className="size-4" />} onClick={() => setEditOpen(true)}>
               Editar
             </Button>
-            <Button variant="danger" leftIcon={<Trash2 className="size-4" />} onClick={handleDelete}>
+            <Button variant="danger" leftIcon={<Trash2 className="size-4" />} onClick={() => setDeleteOpen(true)}>
               Eliminar
             </Button>
           </div>
@@ -152,12 +154,23 @@ export function MemberDetailPage() {
 
       {tab === 'routines' && <AssignmentsTab gymId={gymId} memberId={memberId} />}
 
+      {tab === 'progress' && <ProgressTab gymId={gymId} memberId={memberId} />}
+
       <MemberFormModal
         open={editOpen}
         onClose={() => setEditOpen(false)}
         onSubmit={handleEdit}
         initial={member}
         saving={updateMember.isPending}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={confirmDelete}
+        title="Eliminar socio"
+        description={`¿Querés eliminar a ${member.fullName}? Se borrarán sus datos, pagos y registros. Esta acción no se puede deshacer.`}
+        loading={removeMember.isPending}
       />
     </AppLayout>
   )
