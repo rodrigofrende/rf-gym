@@ -587,12 +587,12 @@ export function buildSeed(): DemoData {
 
   // Tarifas que ofrece TigerFit (precios alineados con la cuota de cada socio).
   const tariffs: Tariff[] = [
-    { id: 'tf-musc-2', name: 'Musculación', weeklyFrequency: 2, price: 25000, description: '2 días por semana.', active: true },
-    { id: 'tf-musc-3', name: 'Musculación', weeklyFrequency: 3, price: 30000, description: '3 días por semana.', active: true },
-    { id: 'tf-musc-libre', name: 'Musculación', weeklyFrequency: 0, price: 40000, description: 'Acceso libre.', active: true },
-    { id: 'tf-full-4', name: 'Musculación + clases', weeklyFrequency: 4, price: 28000, description: 'Musculación y clases grupales.', active: true },
-    { id: 'tf-func-2', name: 'Funcional', weeklyFrequency: 2, price: 22000, description: 'Entrenamiento funcional.', active: true },
-    { id: 'tf-func-3', name: 'Funcional', weeklyFrequency: 3, price: 30000, description: 'Funcional, 3 días.', active: true },
+    { id: 'tf-musc-2', name: 'Musculación', icon: 'dumbbell', weeklyFrequency: 2, price: 25000, description: '2 días por semana.', active: true },
+    { id: 'tf-musc-3', name: 'Musculación', icon: 'dumbbell', weeklyFrequency: 3, price: 30000, description: '3 días por semana.', active: true },
+    { id: 'tf-musc-libre', name: 'Musculación', icon: 'crown', weeklyFrequency: 0, price: 40000, description: 'Acceso libre.', active: true },
+    { id: 'tf-full-4', name: 'Musculación + clases', icon: 'users', weeklyFrequency: 4, price: 28000, description: 'Musculación y clases grupales.', active: true },
+    { id: 'tf-func-2', name: 'Funcional', icon: 'zap', weeklyFrequency: 2, price: 22000, description: 'Entrenamiento funcional.', active: true },
+    { id: 'tf-func-3', name: 'Funcional', icon: 'activity', weeklyFrequency: 3, price: 30000, description: 'Funcional, 3 días.', active: true },
   ]
 
   // Planes de suscripción de la plataforma (lo que paga cada gym a RF Gym).

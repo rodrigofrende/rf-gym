@@ -97,6 +97,7 @@ export interface Tariff {
   weeklyFrequency: number // veces por semana (0 = libre)
   price: number
   description?: string
+  icon?: TariffIconKey
   active: boolean
 }
 
@@ -142,7 +143,31 @@ export type LegacyLoadType = 'cable' | 'barbell' | 'unilateral' | 'isometric'
 export type StoredLoadType = LoadType | LegacyLoadType
 
 /** Icono visual de la rutina (cards y vista). */
-export type RoutineIconKey = 'strength' | 'lower' | 'upper' | 'cardio' | 'mobility' | 'core'
+export type RoutineIconKey =
+  | 'strength'
+  | 'lower'
+  | 'upper'
+  | 'cardio'
+  | 'mobility'
+  | 'core'
+  | 'functional'
+  | 'boxing'
+  | 'yoga'
+  | 'running'
+  | 'recovery'
+
+/** Icono visual de la tarifa (cards y formulario). */
+export type TariffIconKey =
+  | 'membership'
+  | 'dumbbell'
+  | 'activity'
+  | 'heart'
+  | 'users'
+  | 'calendar'
+  | 'star'
+  | 'crown'
+  | 'zap'
+  | 'sparkles'
 
 export interface Exercise {
   name: string

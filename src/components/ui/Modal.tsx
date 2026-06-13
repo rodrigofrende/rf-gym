@@ -13,7 +13,7 @@ export function Modal({
   onClose: () => void
   title: ReactNode
   children: ReactNode
-  size?: 'md' | 'lg'
+  size?: 'md' | 'lg' | 'xl'
 }) {
   useEffect(() => {
     if (!open) return
@@ -32,7 +32,9 @@ export function Modal({
         aria-modal="true"
         className={cn(
           'relative z-10 flex max-h-[90vh] w-full flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl',
-          size === 'md' ? 'sm:max-w-lg' : 'sm:max-w-2xl',
+          size === 'md' && 'sm:max-w-xl',
+          size === 'lg' && 'sm:max-w-3xl',
+          size === 'xl' && 'sm:max-w-4xl',
         )}
       >
         <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">

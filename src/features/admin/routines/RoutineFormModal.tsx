@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  Controller,
   useForm,
   useFieldArray,
   useWatch,
@@ -12,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import type { Exercise, LoadType, Routine, RoutineIconKey } from '@/types'
-import { Badge, Button, FormField, Input, Modal } from '@/components/ui'
+import { Badge, Button, FormField, IconSelect, Input, Modal } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import {
   formatExerciseVolume,
@@ -31,6 +32,11 @@ const ROUTINE_ICON_VALUES = [
   'cardio',
   'mobility',
   'core',
+  'functional',
+  'boxing',
+  'yoga',
+  'running',
+  'recovery',
 ] as const satisfies readonly RoutineIconKey[]
 
 const exerciseSchema = z.object({
@@ -99,7 +105,7 @@ export function RoutineFormModal({
       open={open}
       onClose={onClose}
       title={initial ? 'Editar rutina' : 'Nueva rutina'}
-      size="lg"
+      size="xl"
     >
       <RoutineForm
         onClose={onClose}
@@ -130,7 +136,6 @@ function RoutineForm({
     control,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -146,7 +151,6 @@ function RoutineForm({
     name: 'exercises',
   })
 
-  const selectedIcon = watch('icon') ?? 'strength'
   const [openIndex, setOpenIndex] = useState(initial ? -1 : 0)
 
   const toggle = (i: number) => setOpenIndex((cur) => (cur === i ? -1 : i))
@@ -186,33 +190,20 @@ function RoutineForm({
         <Input {...register('description')} placeholder="Notas generales" />
       </FormField>
 
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium text-zinc-700">Icono de la rutina</legend>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-          {ROUTINE_ICON_OPTIONS.map(({ value, label, icon: Icon }) => {
-            const selected = selectedIcon === value
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={selected}
-                aria-label={label}
-                onClick={() => setValue('icon', value)}
-                className={cn(
-                  'flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-medium transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
-                  selected
-                    ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
-                    : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50',
-                )}
-              >
-                <Icon className="size-5" aria-hidden />
-                <span className="truncate">{label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </fieldset>
+      <FormField label="Icono de la rutina">
+        <Controller
+          control={control}
+          name="icon"
+          render={({ field }) => (
+            <IconSelect
+              value={field.value ?? 'strength'}
+              onChange={field.onChange}
+              options={ROUTINE_ICON_OPTIONS}
+              placeholder="Elegir icono"
+            />
+          )}
+        />
+      </FormField>
 
       <div>
         <div className="mb-2 flex items-center justify-between">

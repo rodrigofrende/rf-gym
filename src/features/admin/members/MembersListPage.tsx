@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Users } from 'lucide-react'
+import { ChevronRight, Plus, Search, Users, Wallet } from 'lucide-react'
 import type { Member, MemberStatus } from '@/types'
+import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useCreateMember, useMembers } from '@/hooks/useMembers'
@@ -10,6 +11,7 @@ import {
   Avatar,
   Badge,
   Button,
+  Card,
   EmptyState,
   FullPageSpinner,
   Input,
@@ -21,6 +23,7 @@ import {
 import { STATUS_LABEL } from '@/utils/roles'
 import { adminMemberDetail } from '@/routes/routePaths'
 import { MemberFormModal } from './MemberFormModal'
+import { MemberRegisterPaymentModal } from './MemberRegisterPaymentModal'
 
 const STATUS_TONE: Record<MemberStatus, 'green' | 'amber' | 'red'> = {
   active: 'green',
@@ -29,6 +32,7 @@ const STATUS_TONE: Record<MemberStatus, 'green' | 'amber' | 'red'> = {
 }
 
 export function MembersListPage() {
+  const { user } = useAuth()
   const { activeGymId } = useTenant()
   const gymId = activeGymId as string
   const navigate = useNavigate()
@@ -37,6 +41,7 @@ export function MembersListPage() {
   const createMember = useCreateMember(gymId)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [payMember, setPayMember] = useState<Member | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -45,6 +50,11 @@ export function MembersListPage() {
       (m) => m.fullName.toLowerCase().includes(q) || m.email.toLowerCase().includes(q),
     )
   }, [members, search])
+
+  const openPay = (member: Member, e?: { stopPropagation: () => void }) => {
+    e?.stopPropagation()
+    setPayMember(member)
+  }
 
   const columns: Column<Member>[] = [
     {
@@ -77,6 +87,21 @@ export function MembersListPage() {
       render: (m) =>
         m.uid ? null : <Badge tone="amber">Invitación pendiente</Badge>,
     },
+    {
+      key: 'actions',
+      header: '',
+      className: 'w-px whitespace-nowrap',
+      render: (m) => (
+        <Button
+          size="sm"
+          leftIcon={<Wallet className="size-4" />}
+          onClick={(e) => openPay(m, e)}
+          aria-label={`Registrar pago de ${m.fullName}`}
+        >
+          Registrar pago
+        </Button>
+      ),
+    },
   ]
 
   const handleCreate = async (data: Omit<Member, 'id' | 'uid'>) => {
@@ -99,8 +124,8 @@ export function MembersListPage() {
         </Button>
       }
     >
-      <div className="mb-5 relative max-w-xs">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+      <div className="relative mb-5 max-w-xs">
+        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
         <Input
           className="pl-9"
           placeholder="Buscar por nombre o email"
@@ -126,12 +151,53 @@ export function MembersListPage() {
           />
         )
       ) : (
-        <Table
-          columns={columns}
-          rows={filtered}
-          keyOf={(m) => m.id}
-          onRowClick={(m) => navigate(adminMemberDetail(m.id))}
-        />
+        <>
+          <div className="space-y-3 md:hidden">
+            {filtered.map((m) => (
+              <Card key={m.id} className="overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => navigate(adminMemberDetail(m.id))}
+                  className="flex w-full items-center gap-3 p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
+                >
+                  <Avatar name={m.fullName} src={m.photoURL} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-zinc-900">{m.fullName}</p>
+                    <Sensitive className="block truncate text-xs text-zinc-500">{m.email}</Sensitive>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Badge>
+                      {m.monthlyCost != null ? (
+                        <span className="text-xs text-zinc-500">
+                          <Money value={m.monthlyCost} /> /mes
+                        </span>
+                      ) : null}
+                      {!m.uid ? <Badge tone="amber">Pendiente</Badge> : null}
+                    </div>
+                  </div>
+                  <ChevronRight className="size-5 shrink-0 text-zinc-300" aria-hidden />
+                </button>
+                <div className="border-t border-zinc-100 p-3">
+                  <Button
+                    fullWidth
+                    leftIcon={<Wallet className="size-4" />}
+                    onClick={() => openPay(m)}
+                  >
+                    Registrar pago
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <div className="hidden md:block">
+            <Table
+              columns={columns}
+              rows={filtered}
+              keyOf={(m) => m.id}
+              onRowClick={(m) => navigate(adminMemberDetail(m.id))}
+            />
+          </div>
+        </>
       )}
 
       <MemberFormModal
@@ -140,6 +206,16 @@ export function MembersListPage() {
         onSubmit={handleCreate}
         saving={createMember.isPending}
       />
+
+      {payMember && (
+        <MemberRegisterPaymentModal
+          open
+          onClose={() => setPayMember(null)}
+          gymId={gymId}
+          member={payMember}
+          adminUid={user?.uid ?? ''}
+        />
+      )}
     </AppLayout>
   )
 }

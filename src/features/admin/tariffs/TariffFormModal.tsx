@@ -1,11 +1,26 @@
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import type { Tariff } from '@/types'
-import { Button, FormField, Input, Modal, MoneyInput } from '@/components/ui'
+import type { Tariff, TariffIconKey } from '@/types'
+import { Button, FormField, IconSelect, Input, Modal, MoneyInput, Toggle } from '@/components/ui'
+import { TARIFF_ICON_OPTIONS } from '@/utils/tariffIcons'
+
+const TARIFF_ICON_VALUES = [
+  'membership',
+  'dumbbell',
+  'activity',
+  'heart',
+  'users',
+  'calendar',
+  'star',
+  'crown',
+  'zap',
+  'sparkles',
+] as const satisfies readonly TariffIconKey[]
 
 const schema = z.object({
   name: z.string().min(2, 'Ingresá un nombre'),
+  icon: z.enum(TARIFF_ICON_VALUES).optional(),
   weeklyFrequency: z.number().min(0),
   price: z.number().min(0),
   description: z.string().optional(),
@@ -35,6 +50,7 @@ export function TariffFormModal({
     resolver: zodResolver(schema),
     values: {
       name: initial?.name ?? '',
+      icon: initial?.icon ?? 'membership',
       weeklyFrequency: initial?.weeklyFrequency ?? 3,
       price: initial?.price ?? 0,
       description: initial?.description ?? '',
@@ -43,8 +59,23 @@ export function TariffFormModal({
   })
 
   return (
-    <Modal open={open} onClose={onClose} title={initial ? 'Editar tarifa' : 'Nueva tarifa'}>
+    <Modal open={open} onClose={onClose} title={initial ? 'Editar tarifa' : 'Nueva tarifa'} size="lg">
       <form onSubmit={handleSubmit((v) => onSubmit(v))} className="space-y-4">
+        <FormField label="Icono de la tarifa">
+          <Controller
+            control={control}
+            name="icon"
+            render={({ field }) => (
+              <IconSelect
+                value={field.value ?? 'membership'}
+                onChange={field.onChange}
+                options={TARIFF_ICON_OPTIONS}
+                placeholder="Elegir icono"
+              />
+            )}
+          />
+        </FormField>
+
         <FormField label="Nombre del plan / servicio" error={errors.name?.message} required>
           <Input placeholder="Ej. Musculación" {...register('name')} invalid={!!errors.name} />
         </FormField>
@@ -67,12 +98,20 @@ export function TariffFormModal({
         <FormField label="Descripción (opcional)">
           <Input placeholder="Ej. Acceso a sala de musculación" {...register('description')} />
         </FormField>
-        <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-          <input type="checkbox" {...register('active')} className="size-4 rounded border-zinc-300" />
-          Activa (visible para los socios)
-        </label>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <Controller
+          control={control}
+          name="active"
+          render={({ field }) => (
+            <Toggle
+              checked={field.value}
+              onChange={field.onChange}
+              label="Activa (visible para los socios)"
+            />
+          )}
+        />
+
+        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>

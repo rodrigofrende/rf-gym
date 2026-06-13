@@ -2,18 +2,13 @@ import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { Member } from '@/types'
 import { useToast } from '@/providers/ToastProvider'
-import {
-  useMemberPayments,
-  useRegisterMemberPayment,
-  useRemoveMemberPayment,
-} from '@/hooks/usePayments'
+import { useMemberPayments, useRemoveMemberPayment } from '@/hooks/usePayments'
 import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, Spinner } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
-import { toDate } from '@/utils/format'
 import { STATUS_LABEL } from '@/utils/roles'
 import { PaymentSummary } from '@/features/payments/PaymentSummary'
 import { PaymentHistoryList } from '@/features/payments/PaymentHistoryList'
-import { RegisterPaymentModal, type PaymentFormValue } from '@/features/payments/RegisterPaymentModal'
+import { MemberRegisterPaymentModal } from '../MemberRegisterPaymentModal'
 
 export function PaymentsTab({
   gymId,
@@ -26,23 +21,9 @@ export function PaymentsTab({
 }) {
   const { notify } = useToast()
   const { data: payments = [], isLoading } = useMemberPayments(gymId, member.id)
-  const register = useRegisterMemberPayment(gymId, member.id)
   const removePayment = useRemoveMemberPayment(gymId, member.id)
   const [open, setOpen] = useState(false)
   const [toDelete, setToDelete] = useState<string | null>(null)
-
-  const handleSubmit = async (v: PaymentFormValue) => {
-    try {
-      await register.mutateAsync({
-        payment: { amount: v.amount, date: v.date, comment: v.comment, createdBy: adminUid },
-        currentDueDate: toDate(member.paymentDate) ?? undefined,
-      })
-      notify('Pago registrado', 'success')
-      setOpen(false)
-    } catch {
-      notify('No se pudo registrar el pago', 'error')
-    }
-  }
 
   const confirmDelete = async () => {
     if (!toDelete) return
@@ -103,12 +84,12 @@ export function PaymentsTab({
       />
 
       {open && (
-        <RegisterPaymentModal
+        <MemberRegisterPaymentModal
           open
           onClose={() => setOpen(false)}
-          defaultAmount={member.monthlyCost ?? 0}
-          onSubmit={handleSubmit}
-          saving={register.isPending}
+          gymId={gymId}
+          member={member}
+          adminUid={adminUid}
         />
       )}
     </div>

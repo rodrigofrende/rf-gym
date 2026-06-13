@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Plus, Tags, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Tariff } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -14,6 +14,7 @@ import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from 
 import { cn } from '@/utils/cn'
 import { formatCurrency } from '@/utils/format'
 import { frequencyLabel } from '@/utils/tariffs'
+import { tariffIconMeta } from '@/utils/tariffIcons'
 import { TariffFormModal } from './TariffFormModal'
 
 export function TariffsListPage() {
@@ -74,17 +75,19 @@ export function TariffsListPage() {
         <FullPageSpinner />
       ) : tariffs.length === 0 ? (
         <EmptyState
-          icon={Tags}
+          icon={tariffIconMeta().icon}
           title="Sin tarifas"
           description="Creá los planes que ofrecés (servicio, frecuencia y precio) para asignarlos a tus socios."
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {tariffs.map((t) => (
+          {tariffs.map((t) => {
+            const { icon: TariffIcon } = tariffIconMeta(t.icon)
+            return (
             <Card key={t.id} className={cn('flex flex-col p-5', !t.active && 'opacity-60')}>
               <div className="flex items-start justify-between">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                  <Tags className="size-5" />
+                  <TariffIcon className="size-5" />
                 </div>
                 <div className="flex gap-1">
                   <button
@@ -114,7 +117,8 @@ export function TariffsListPage() {
                 <span className="text-sm font-normal text-zinc-400"> /mes</span>
               </p>
             </Card>
-          ))}
+            )
+          })}
         </div>
       )}
 

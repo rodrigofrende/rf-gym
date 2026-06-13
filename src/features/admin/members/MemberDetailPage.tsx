@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Lock, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Lock, Pencil, Trash2, Wallet } from 'lucide-react'
 import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
@@ -14,6 +14,7 @@ import { ROLE_LABEL } from '@/utils/roles'
 import { ROUTES } from '@/routes/routePaths'
 import { cn } from '@/utils/cn'
 import { MemberFormModal } from './MemberFormModal'
+import { MemberRegisterPaymentModal } from './MemberRegisterPaymentModal'
 import { NotesTab } from './tabs/NotesTab'
 import { AssignmentsTab } from './tabs/AssignmentsTab'
 import { PaymentsTab } from './tabs/PaymentsTab'
@@ -42,6 +43,7 @@ export function MemberDetailPage() {
   const [tab, setTab] = useState<Tab>('data')
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
 
   if (isLoading) {
     return (
@@ -101,7 +103,10 @@ export function MemberDetailPage() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button leftIcon={<Wallet className="size-4" />} onClick={() => setPayOpen(true)}>
+              Registrar pago
+            </Button>
             <Button variant="secondary" leftIcon={<Pencil className="size-4" />} onClick={() => setEditOpen(true)}>
               Editar
             </Button>
@@ -163,6 +168,16 @@ export function MemberDetailPage() {
         initial={member}
         saving={updateMember.isPending}
       />
+
+      {payOpen && (
+        <MemberRegisterPaymentModal
+          open
+          onClose={() => setPayOpen(false)}
+          gymId={gymId}
+          member={member}
+          adminUid={user?.uid ?? ''}
+        />
+      )}
 
       <ConfirmDialog
         open={deleteOpen}

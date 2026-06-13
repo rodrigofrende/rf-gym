@@ -2,7 +2,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { SubscriptionPlan } from '@/types'
-import { Button, FormField, Input, Modal, MoneyInput, Select } from '@/components/ui'
+import { Button, FormField, Input, Modal, MoneyInput, Select, Toggle } from '@/components/ui'
 
 const schema = z.object({
   name: z.string().min(2, 'Ingresá un nombre'),
@@ -13,7 +13,7 @@ const schema = z.object({
   logsEnabled: z.boolean(),
   maxLogsPerMember: z.number().min(0),
   whiteLabel: z.enum(['none', 'basic', 'full']),
-  features: z.string().optional(), // una por línea
+  features: z.string().optional(),
   active: z.boolean(),
 })
 type FormValues = z.infer<typeof schema>
@@ -71,7 +71,7 @@ export function PlanFormModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={initial ? 'Editar plan' : 'Nuevo plan'} size="lg">
+    <Modal open={open} onClose={onClose} title={initial ? 'Editar plan' : 'Nuevo plan'} size="xl">
       <form onSubmit={handleSubmit(submit)} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Nombre del plan" error={errors.name?.message} required>
@@ -98,16 +98,21 @@ export function PlanFormModal({
           </FormField>
         </div>
 
-        <div className="rounded-lg border border-zinc-200 p-3">
-          <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-            <input type="checkbox" {...register('logsEnabled')} className="size-4 rounded border-zinc-300" />
-            Registro de cargas para alumnos
-          </label>
-          <div className="mt-3">
-            <FormField label="Máx. registros por alumno" hint="0 = ilimitado (solo si está habilitado)">
-              <Input type="number" min={0} {...register('maxLogsPerMember', { valueAsNumber: true })} />
-            </FormField>
-          </div>
+        <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
+          <Controller
+            control={control}
+            name="logsEnabled"
+            render={({ field }) => (
+              <Toggle
+                checked={field.value}
+                onChange={field.onChange}
+                label="Registro de cargas para alumnos"
+              />
+            )}
+          />
+          <FormField label="Máx. registros por alumno" hint="0 = ilimitado (solo si está habilitado)">
+            <Input type="number" min={0} {...register('maxLogsPerMember', { valueAsNumber: true })} />
+          </FormField>
         </div>
 
         <FormField label="White-label">
@@ -130,12 +135,19 @@ export function PlanFormModal({
           />
         </FormField>
 
-        <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-          <input type="checkbox" {...register('active')} className="size-4 rounded border-zinc-300" />
-          Activo (disponible para asignar)
-        </label>
+        <Controller
+          control={control}
+          name="active"
+          render={({ field }) => (
+            <Toggle
+              checked={field.value}
+              onChange={field.onChange}
+              label="Activo (disponible para asignar)"
+            />
+          )}
+        />
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
