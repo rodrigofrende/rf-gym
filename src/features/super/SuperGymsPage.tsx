@@ -22,9 +22,12 @@ import {
   EmptyState,
   FormField,
   FullPageSpinner,
+  Heading,
+  IconButton,
   Input,
   Modal,
   Select,
+  Text,
 } from '@/components/ui'
 import { GymPaymentsModal } from './GymPaymentsModal'
 
@@ -237,7 +240,9 @@ function GymCard({
             </div>
           )}
           <div className="min-w-0">
-            <h3 className="truncate font-semibold text-zinc-900">{gym.name}</h3>
+            <Heading variant="card" className="truncate">
+              {gym.name}
+            </Heading>
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge tone="neutral">{admins.length} admin{admins.length === 1 ? '' : 's'}</Badge>
               {suspended && <Badge tone="red">Suspendido</Badge>}
@@ -251,20 +256,19 @@ function GymCard({
           <Button size="sm" variant="secondary" leftIcon={<LogIn className="size-4" />} onClick={enterGym}>
             Entrar
           </Button>
-          <button
+          <IconButton
+            icon={<Trash2 className="size-4" />}
+            label="Eliminar gimnasio"
+            tone="danger"
             onClick={onRemoveGym}
-            aria-label="Eliminar gimnasio"
-            className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          />
         </div>
       </div>
 
       {plan ? (
         <div className="mt-3 rounded-lg bg-surface-muted p-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-zinc-700">Plan {plan.name}</p>
+            <Text variant="label">Plan {plan.name}</Text>
             {overLimit && (
               <Badge tone="amber">
                 <AlertTriangle className="mr-1 inline size-3" />
@@ -306,17 +310,20 @@ function GymCard({
                 <div className="flex min-w-0 items-center gap-2">
                   <ShieldCheck className="size-4 shrink-0 text-brand-600" />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-zinc-800">{a.fullName}</p>
-                    <p className="truncate text-xs text-zinc-500">{a.email}</p>
+                    <Text variant="listItem" className="truncate">
+                      {a.fullName}
+                    </Text>
+                    <Text variant="caption" className="truncate">
+                      {a.email}
+                    </Text>
                   </div>
                 </div>
-                <button
+                <IconButton
+                  icon={<Trash2 className="size-4" />}
+                  label={`Quitar a ${a.fullName}`}
+                  tone="danger"
                   onClick={() => setAdminToRemove(a)}
-                  aria-label={`Quitar a ${a.fullName}`}
-                  className="shrink-0 rounded text-zinc-400 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                />
               </li>
             ))}
           </ul>

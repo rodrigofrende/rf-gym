@@ -12,7 +12,7 @@ import {
   PLATFORM_DEFAULT_THEME,
 } from '@/utils/theme'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Input } from '@/components/ui'
+import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Heading, Input, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 
 const FIELD_DEFAULTS: Record<keyof GymTheme, string> = { ...PLATFORM_DEFAULT_THEME }
@@ -85,7 +85,9 @@ export function BrandingPage() {
             </FormField>
 
             <fieldset>
-              <legend className="mb-2 text-sm font-medium text-zinc-700">Paletas sugeridas</legend>
+              <Text variant="label" as="legend" className="mb-2">
+                Paletas sugeridas
+              </Text>
               <p className="mb-3 text-xs text-zinc-500">
                 Aplicá un conjunto de colores y ajustá los detalles después.
               </p>
@@ -110,7 +112,7 @@ export function BrandingPage() {
 
             <div className="space-y-4 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-medium text-zinc-700">Colores</p>
+                <Text variant="label">Colores</Text>
                 <Button
                   type="button"
                   size="sm"
@@ -164,7 +166,9 @@ export function BrandingPage() {
         </Card>
 
         <div>
-          <p className="mb-2 text-sm font-semibold text-zinc-700">Vista previa</p>
+          <Text variant="label" className="mb-2">
+            Vista previa
+          </Text>
           <p className="mb-3 text-xs text-zinc-500">
             Los cambios se aplican en vivo mientras editás. Al salir sin guardar, vuelve el tema
             guardado.
@@ -181,14 +185,14 @@ export function BrandingPage() {
                   <Dumbbell className="size-5" />
                 </div>
               )}
-              <span className="text-lg font-bold text-zinc-900">{gym.name}</span>
+              <Heading variant="page">{gym.name}</Heading>
             </div>
 
-            <Card className="p-4">
-              <p className="text-sm font-semibold text-zinc-900">Tarjeta de ejemplo</p>
-              <p className="mt-1 text-sm text-zinc-500">
+            <Card className="p-5">
+              <Heading variant="card">Tarjeta de ejemplo</Heading>
+              <Text variant="caption" className="mt-1">
                 Así se ven los contenedores con tus colores.
-              </p>
+              </Text>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button size="sm">Acción</Button>
                 <Button size="sm" variant="secondary">

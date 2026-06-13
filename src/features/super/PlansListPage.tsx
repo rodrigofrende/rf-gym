@@ -4,7 +4,7 @@ import type { SubscriptionPlan } from '@/types'
 import { useCreatePlan, usePlans, useRemovePlan, useUpdatePlan } from '@/hooks/usePlans'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner, Heading, IconButton, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatCurrency } from '@/utils/format'
 import { limitLabel, logsCapabilityLabel, whiteLabelLabel } from '@/utils/plans'
@@ -76,29 +76,26 @@ export function PlansListPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-zinc-900">{p.name}</h3>
+                    <Heading variant="card">{p.name}</Heading>
                     {!p.active && <Badge tone="amber">Inactivo</Badge>}
                   </div>
-                  <p className="mt-1 text-2xl font-bold text-zinc-900">
+                  <Text variant="metric" className="mt-1">
                     {formatCurrency(p.price)}
                     <span className="text-sm font-normal text-zinc-400"> /mes</span>
-                  </p>
+                  </Text>
                 </div>
                 <div className="flex gap-1">
-                  <button
+                  <IconButton
+                    icon={<Pencil className="size-4" />}
+                    label={`Editar ${p.name}`}
                     onClick={() => openEdit(p)}
-                    aria-label={`Editar ${p.name}`}
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                  >
-                    <Pencil className="size-4" />
-                  </button>
-                  <button
+                  />
+                  <IconButton
+                    icon={<Trash2 className="size-4" />}
+                    label={`Eliminar ${p.name}`}
+                    tone="danger"
                     onClick={() => setToDelete(p)}
-                    aria-label={`Eliminar ${p.name}`}
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                  />
                 </div>
               </div>
 

@@ -60,7 +60,7 @@ export function AdminDashboardPage() {
       {isLoading || !data ? (
         <FullPageSpinner />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* KPIs */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <StatCard

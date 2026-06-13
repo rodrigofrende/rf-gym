@@ -4,7 +4,7 @@ import type { Gym, GymSubscription } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useGymPayments, useRegisterGymPayment, useRemoveGymPayment } from '@/hooks/usePayments'
 import { useToastAction } from '@/hooks/useToastAction'
-import { Button, ConfirmDialog, DateInput, FormField, Input, Modal, MoneyInput, Spinner } from '@/components/ui'
+import { Button, ConfirmDialog, DateInput, FormField, Input, Modal, MoneyInput, Spinner, Text } from '@/components/ui'
 import { parseDateInput, todayDateInput } from '@/utils/dates'
 import { PaymentSummary } from '@/features/payments/PaymentSummary'
 import { PaymentHistoryList } from '@/features/payments/PaymentHistoryList'
@@ -53,7 +53,7 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
 
   return (
     <Modal open onClose={onClose} title={`Suscripción — ${gym.name}`} size="lg">
-      <div className="space-y-4">
+      <div className="space-y-6">
         <PaymentSummary
           subject="gym"
           monthlyCost={sub?.monthlyCost}
@@ -61,8 +61,8 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
           dueDate={sub?.dueDate}
         />
 
-        <div className="space-y-3 rounded-lg border border-zinc-200 p-3">
-          <p className="text-sm font-medium text-zinc-700">Registrar pago</p>
+        <div className="space-y-3 rounded-[var(--radius-control)] border border-zinc-200 p-4">
+          <Text variant="label">Registrar pago</Text>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Monto">
               <MoneyInput value={amount} onChange={setAmount} />
@@ -91,7 +91,9 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-zinc-700">Historial</p>
+          <Text variant="label" className="mb-2">
+            Historial
+          </Text>
           {isLoading ? (
             <Spinner />
           ) : (

@@ -4,7 +4,7 @@ import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { useMember } from '@/hooks/useMembers'
-import { Button } from '@/components/ui'
+import { Button, Heading, Text } from '@/components/ui'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { amountOwed, getPaymentStatus, GRACE_DAYS, type PaymentStatus } from '@/utils/payments'
 
@@ -62,8 +62,10 @@ function PaymentBlockedScreen({ member, status }: { member: Member; status: Paym
         <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
           <Lock className="size-7" />
         </div>
-        <h1 className="mt-4 text-xl font-bold text-zinc-900">Acceso suspendido</h1>
-        <p className="mt-2 text-sm text-zinc-600">{MESSAGE}</p>
+        <Heading variant="display" className="mt-4">
+          Acceso suspendido
+        </Heading>
+        <Text className="mt-2">{MESSAGE}</Text>
         <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-zinc-700">{owedText(member, status)}</div>
         <Button
           variant="secondary"

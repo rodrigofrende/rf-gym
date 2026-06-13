@@ -1,6 +1,6 @@
 import { Trash2 } from 'lucide-react'
 import type { Payment } from '@/types'
-import { Money } from '@/components/ui'
+import { Money, IconButton } from '@/components/ui'
 import { formatDate } from '@/utils/format'
 
 export function PaymentHistoryList({
@@ -29,14 +29,12 @@ export function PaymentHistoryList({
           <div className="flex shrink-0 items-center gap-3">
             <span className="text-xs text-zinc-400">{formatDate(p.date)}</span>
             {onDelete && (
-              <button
-                type="button"
+              <IconButton
+                icon={<Trash2 className="size-4" />}
+                label="Eliminar pago"
+                tone="danger"
                 onClick={() => onDelete(p.id)}
-                aria-label="Eliminar pago"
-                className="text-zinc-400 hover:text-red-500"
-              >
-                <Trash2 className="size-4" />
-              </button>
+              />
             )}
           </div>
         </li>

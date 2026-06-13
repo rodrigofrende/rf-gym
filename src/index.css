@@ -17,10 +17,20 @@
   --color-surface-muted: #fafafa;
   --color-border: #e4e4e7;
 
+  --radius-control: 0.5rem;
   --radius-card: 0.875rem;
-  /* Montserrat es la tipografía de toda la app (cargada en index.html). Al
-     definirla como --font-sans, la usan tanto el body como las utilidades
-     `font-sans` de Tailwind. */
+  --radius-pill: 9999px;
+
+  /*
+   * Tipografía canónica (encapsulada en Heading / Text):
+   * display   → text-2xl font-bold   (full-page / brand)
+   * page      → text-xl font-bold     (AppLayout, entidad)
+   * card      → text-base font-semibold (título de card)
+   * metric    → text-2xl font-bold   (precios, KPIs)
+   * label     → text-sm font-semibold (labels de sección)
+   * body      → text-sm               (texto general)
+   * caption   → text-xs               (hints, metadata)
+   */
   --font-sans: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -34,7 +44,7 @@ body,
 body {
   margin: 0;
   background-color: var(--color-surface-muted);
-  color: #18181b;
+  color: var(--color-zinc-900);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }

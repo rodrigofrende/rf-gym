@@ -9,7 +9,7 @@ import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
 import { APP_NAME } from '@/config/app'
 import { mapAuthError } from '@/utils/authErrors'
-import { Button, Card, FormField, Input } from '@/components/ui'
+import { Button, Card, FormField, Heading, Input, Text } from '@/components/ui'
 
 const schema = z.object({
   name: z.string().optional(),
@@ -63,14 +63,16 @@ export function LoginPage() {
           <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
             <Dumbbell className="size-7" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-zinc-900">{APP_NAME}</h1>
-          <p className="text-sm text-zinc-500">Gestión de gimnasios y entrenamiento</p>
+          <Heading variant="display" className="mt-4">
+            {APP_NAME}
+          </Heading>
+          <Text variant="caption">Gestión de gimnasios y entrenamiento</Text>
         </div>
 
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold text-zinc-900">
+        <Card className="p-5">
+          <Text variant="label" as="h2">
             {mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
-          </h2>
+          </Text>
 
           {env.demoMode && setDemoIdentity && (
             <div className="mt-4 rounded-xl border border-brand-100 bg-brand-50/60 p-3">

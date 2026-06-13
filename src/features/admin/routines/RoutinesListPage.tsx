@@ -11,13 +11,10 @@ import {
 } from '@/hooks/useRoutines'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner, Heading, IconButton, Text } from '@/components/ui'
 import { routineIconMeta } from '@/utils/routineIcons'
 import { RoutineFormModal } from './RoutineFormModal'
 import { RoutineViewModal } from './RoutineViewModal'
-
-const iconActionClass =
-  'rounded-lg p-1.5 text-zinc-400 transition-colors focus-visible:outline-none focus-visible:ring-2'
 
 export function RoutinesListPage() {
   const { user } = useAuth()
@@ -103,31 +100,33 @@ export function RoutinesListPage() {
                     <RoutineIcon className="size-5" />
                   </div>
                   <div className="flex gap-0.5">
-                    <button
+                    <IconButton
+                      icon={<Eye className="size-4" />}
+                      label={`Ver ${r.name}`}
+                      tone="brand"
                       onClick={() => openView(r)}
-                      aria-label={`Ver ${r.name}`}
-                      className={`${iconActionClass} hover:bg-brand-50 hover:text-brand-600 focus-visible:ring-brand-500`}
-                    >
-                      <Eye className="size-4" />
-                    </button>
-                    <button
+                    />
+                    <IconButton
+                      icon={<Pencil className="size-4" />}
+                      label={`Editar ${r.name}`}
                       onClick={() => openEdit(r)}
-                      aria-label={`Editar ${r.name}`}
-                      className={`${iconActionClass} hover:bg-zinc-100 hover:text-zinc-600 focus-visible:ring-brand-500`}
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                    <button
+                    />
+                    <IconButton
+                      icon={<Trash2 className="size-4" />}
+                      label={`Eliminar ${r.name}`}
+                      tone="danger"
                       onClick={() => setToDelete(r)}
-                      aria-label={`Eliminar ${r.name}`}
-                      className={`${iconActionClass} hover:bg-red-50 hover:text-red-500 focus-visible:ring-red-500`}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    />
                   </div>
                 </div>
-                <h3 className="mt-3 font-semibold text-zinc-900">{r.name}</h3>
-                {r.description && <p className="mt-1 text-sm text-zinc-500">{r.description}</p>}
+                <Heading variant="card" className="mt-3">
+                  {r.name}
+                </Heading>
+                {r.description && (
+                  <Text variant="caption" className="mt-1">
+                    {r.description}
+                  </Text>
+                )}
                 <div className="mt-3">
                   <Badge tone="neutral">{r.exercises.length} ejercicios</Badge>
                 </div>

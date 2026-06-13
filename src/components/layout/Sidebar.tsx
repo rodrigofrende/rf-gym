@@ -1,11 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Dumbbell, Eye, EyeOff, LogOut, X } from 'lucide-react'
+import { Dumbbell, LogOut, X } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { usePrivacy } from '@/providers/PrivacyProvider'
 import { ROLE_LABEL } from '@/utils/roles'
 import { cn } from '@/utils/cn'
-import { Avatar } from '@/components/ui'
+import { Avatar, Text, Toggle } from '@/components/ui'
 import { APP_NAME, APP_VERSION } from '@/config/app'
 import { TenantSwitcher } from './TenantSwitcher'
 import { navForRole, PLATFORM_NAV, SUPER_NAV_ITEM } from './navItems'
@@ -73,7 +73,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               onClick={onClose}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
                     ? 'bg-brand-50 text-brand-700'
                     : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
@@ -87,42 +87,53 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </nav>
 
         {/* Usuario + acciones */}
-        <div className="border-t border-zinc-100 p-3">
-          <div className="flex items-center gap-3 rounded-xl bg-surface-muted px-3 py-2.5">
-            <Avatar name={user?.displayName || user?.email || '?'} src={user?.photoURL ?? undefined} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-zinc-800">
-                {user?.displayName || user?.email}
-              </p>
-              <p className="truncate text-xs text-zinc-500">
-                {isSuperAdmin ? 'Super administrador' : role ? ROLE_LABEL[role] : ''}
-              </p>
+        <div className="border-t border-zinc-100">
+          <div className="space-y-3 p-3">
+            <div className="flex items-center gap-3 px-1">
+              <Avatar
+                name={user?.displayName || user?.email || '?'}
+                src={user?.photoURL ?? undefined}
+                size="sm"
+              />
+              <div className="min-w-0 flex-1">
+                <Text variant="listItem" className="truncate">
+                  {user?.displayName || user?.email}
+                </Text>
+                <Text variant="caption" className="truncate">
+                  {isSuperAdmin ? 'Super administrador' : role ? ROLE_LABEL[role] : ''}
+                </Text>
+              </div>
+            </div>
+
+            <div className="space-y-0.5">
+              {showDiscreto && (
+                <div
+                  className="rounded-[var(--radius-control)] px-3 py-2.5"
+                  title="Blurea montos y datos sensibles (para compartir pantalla)"
+                >
+                  <Toggle
+                    checked={blurred}
+                    onChange={() => toggle()}
+                    label="Modo discreto"
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+              >
+                <LogOut className="size-5 shrink-0" aria-hidden />
+                Cerrar sesión
+              </button>
             </div>
           </div>
 
-          <div className="mt-1 space-y-0.5">
-            {showDiscreto && (
-              <button
-                onClick={toggle}
-                aria-pressed={blurred}
-                title="Blurea montos y datos sensibles (para compartir pantalla)"
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
-              >
-                {blurred ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                <span className="flex-1 text-left">Modo discreto</span>
-                <span className={cn('size-2 rounded-full', blurred ? 'bg-brand-500' : 'bg-zinc-300')} />
-              </button>
-            )}
-            <button
-              onClick={() => logout()}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
-            >
-              <LogOut className="size-5" />
-              Cerrar sesión
-            </button>
+          <div className="border-t border-zinc-100 px-4 py-2">
+            <Text variant="caption" className="text-zinc-400">
+              v{APP_VERSION}
+            </Text>
           </div>
-
-          <p className="mt-2 px-3 text-[11px] text-zinc-400">v{APP_VERSION}</p>
         </div>
       </aside>
     </>

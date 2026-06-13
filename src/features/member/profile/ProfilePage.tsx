@@ -7,7 +7,7 @@ import { useToastAction } from '@/hooks/useToastAction'
 import { useMember, useUpdateMemberProfile } from '@/hooks/useMembers'
 import { useTariffs } from '@/hooks/useTariffs'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Avatar, Badge, Button, Card, CardBody, CardHeader, DateInput, FormField, FullPageSpinner, Input } from '@/components/ui'
+import { Avatar, Badge, Button, Card, CardBody, CardHeader, DateInput, FormField, FullPageSpinner, Heading, Input, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatCurrency, toDateInput } from '@/utils/format'
 import { frequencyLabel } from '@/utils/tariffs'
@@ -68,12 +68,14 @@ export function ProfilePage() {
 
   return (
     <AppLayout title="Mi perfil">
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Card className="p-6 lg:col-span-1">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="p-5 lg:col-span-1">
           <div className="flex flex-col items-center text-center">
             <Avatar name={member?.fullName ?? '?'} src={member?.photoURL} size="lg" />
-            <h2 className="mt-3 font-semibold text-zinc-900">{member?.fullName}</h2>
-            <p className="text-sm text-zinc-500">{member?.email}</p>
+            <Heading variant="page" className="mt-3">
+              {member?.fullName}
+            </Heading>
+            <Text variant="caption">{member?.email}</Text>
             {member && (
               <div className="mt-4 w-full space-y-2 border-t border-zinc-100 pt-4 text-left text-sm">
                 <Row label="Servicio" value={member.service || '—'} />
@@ -115,30 +117,31 @@ export function ProfilePage() {
         <Card className="mt-5">
           <CardHeader title="Planes del gimnasio" subtitle="Tarifas disponibles" />
           <CardBody>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {tariffs
                 .filter((t) => t.active || t.id === member?.tariffId)
                 .map((t) => {
                   const current = t.id === member?.tariffId
                   return (
-                    <div
+                    <Card
                       key={t.id}
-                      className={cn(
-                        'rounded-lg border p-4',
-                        current ? 'border-brand-300 bg-brand-50' : 'border-zinc-200',
-                      )}
+                      className={cn('p-5', current ? 'border-brand-300 bg-brand-50' : '')}
                     >
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-zinc-900">{t.name}</p>
+                        <Heading variant="card">{t.name}</Heading>
                         <Badge tone="neutral">{frequencyLabel(t.weeklyFrequency)}</Badge>
                         {current && <Badge tone="brand">Tu plan</Badge>}
                       </div>
-                      {t.description && <p className="mt-1 text-sm text-zinc-500">{t.description}</p>}
-                      <p className="mt-2 font-semibold text-zinc-900">
+                      {t.description && (
+                        <Text variant="caption" className="mt-1">
+                          {t.description}
+                        </Text>
+                      )}
+                      <Text variant="metric" className="mt-2">
                         {formatCurrency(t.price)}
                         <span className="text-sm font-normal text-zinc-400"> /mes</span>
-                      </p>
-                    </div>
+                      </Text>
+                    </Card>
                   )
                 })}
             </div>

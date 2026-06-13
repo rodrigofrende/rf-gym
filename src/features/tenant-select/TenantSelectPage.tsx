@@ -4,7 +4,7 @@ import { Building2, ChevronRight, Dumbbell, LogOut } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { ROLE_LABEL } from '@/utils/roles'
-import { Button, Card, EmptyState, FullPageSpinner } from '@/components/ui'
+import { Button, Card, EmptyState, FullPageSpinner, Heading } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
 
 export function TenantSelectPage() {
@@ -28,7 +28,9 @@ export function TenantSelectPage() {
           <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg">
             <Dumbbell className="size-7" />
           </div>
-          <h1 className="mt-4 text-xl font-bold text-zinc-900">Elegí un gimnasio</h1>
+          <Heading variant="display" className="mt-4">
+            Elegí un gimnasio
+          </Heading>
           <p className="text-sm text-zinc-500">Tenés acceso a estos espacios</p>
         </div>
 

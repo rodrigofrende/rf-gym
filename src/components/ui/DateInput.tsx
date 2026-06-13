@@ -15,7 +15,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
       type="date"
       inputMode="none"
       className={cn(
-        'h-11 w-full min-w-0 rounded-lg border bg-surface px-3 text-base text-zinc-900 transition-colors sm:h-10 sm:text-sm',
+        'h-11 w-full min-w-0 rounded-[var(--radius-control)] border bg-surface px-3 text-base text-zinc-900 transition-colors sm:h-10 sm:text-sm',
         'focus-visible:outline-none focus-visible:ring-2',
         '[color-scheme:light]',
         invalid

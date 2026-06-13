@@ -17,6 +17,7 @@ import {
   Input,
   Money,
   Sensitive,
+  Text,
   Table,
   type Column,
 } from '@/components/ui'
@@ -64,7 +65,7 @@ export function MembersListPage() {
         <div className="flex items-center gap-3">
           <Avatar name={m.fullName} src={m.photoURL} size="sm" />
           <div>
-            <p className="font-medium text-zinc-900">{m.fullName}</p>
+            <Text variant="listItem">{m.fullName}</Text>
             <Sensitive className="block text-xs text-zinc-500">{m.email}</Sensitive>
           </div>
         </div>
@@ -160,7 +161,9 @@ export function MembersListPage() {
                 >
                   <Avatar name={m.fullName} src={m.photoURL} size="md" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-zinc-900">{m.fullName}</p>
+                    <Text variant="listItem" className="truncate">
+                      {m.fullName}
+                    </Text>
                     <Sensitive className="block truncate text-xs text-zinc-500">{m.email}</Sensitive>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Badge>

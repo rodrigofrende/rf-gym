@@ -41,7 +41,7 @@ export function Toggle({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors',
+          'relative inline-flex h-6 w-11 shrink-0 rounded-[var(--radius-pill)] transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
           'disabled:cursor-not-allowed disabled:opacity-60',
           checked ? 'bg-brand-600' : 'bg-zinc-200',
@@ -50,7 +50,7 @@ export function Toggle({
         <span
           aria-hidden
           className={cn(
-            'pointer-events-none absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow-sm transition-transform',
+            'pointer-events-none absolute top-0.5 left-0.5 size-5 rounded-[var(--radius-pill)] bg-white shadow-sm transition-transform',
             checked && 'translate-x-5',
           )}
         />

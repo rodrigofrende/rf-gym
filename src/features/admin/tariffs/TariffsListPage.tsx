@@ -10,7 +10,7 @@ import {
 } from '@/hooks/useTariffs'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner, Heading, IconButton, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatCurrency } from '@/utils/format'
 import { frequencyLabel } from '@/utils/tariffs'
@@ -89,32 +89,33 @@ export function TariffsListPage() {
                   <TariffIcon className="size-5" />
                 </div>
                 <div className="flex gap-1">
-                  <button
+                  <IconButton
+                    icon={<Pencil className="size-4" />}
+                    label={`Editar ${t.name}`}
                     onClick={() => openEdit(t)}
-                    aria-label={`Editar ${t.name}`}
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                  >
-                    <Pencil className="size-4" />
-                  </button>
-                  <button
+                  />
+                  <IconButton
+                    icon={<Trash2 className="size-4" />}
+                    label={`Eliminar ${t.name}`}
+                    tone="danger"
                     onClick={() => setToDelete(t)}
-                    aria-label={`Eliminar ${t.name}`}
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                  />
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <h3 className="font-semibold text-zinc-900">{t.name}</h3>
+                <Heading variant="card">{t.name}</Heading>
                 <Badge tone="neutral">{frequencyLabel(t.weeklyFrequency)}</Badge>
                 {!t.active && <Badge tone="amber">Inactiva</Badge>}
               </div>
-              {t.description && <p className="mt-1 text-sm text-zinc-500">{t.description}</p>}
-              <p className="mt-3 text-xl font-bold text-zinc-900">
+              {t.description && (
+                <Text variant="caption" className="mt-1">
+                  {t.description}
+                </Text>
+              )}
+              <Text variant="metric" className="mt-3">
                 {formatCurrency(t.price)}
                 <span className="text-sm font-normal text-zinc-400"> /mes</span>
-              </p>
+              </Text>
             </Card>
             )
           })}

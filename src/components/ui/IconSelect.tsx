@@ -75,13 +75,13 @@ export function IconSelect<T extends string>({
         aria-controls={listId}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'flex h-10 w-full items-center gap-2 rounded-lg border border-zinc-200 bg-surface px-3 text-left text-sm transition-colors',
+          'flex h-10 w-full items-center gap-2 rounded-[var(--radius-control)] border border-zinc-200 bg-surface px-3 text-left text-sm transition-colors',
           'hover:border-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
           open && 'border-brand-400 ring-2 ring-brand-200',
         )}
       >
         {SelectedIcon ? (
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-brand-50 text-brand-600">
             <SelectedIcon className="size-4" aria-hidden />
           </span>
         ) : null}
@@ -128,7 +128,7 @@ export function IconSelect<T extends string>({
                       aria-selected={isSelected}
                       onClick={() => pick(option.value)}
                       className={cn(
-                        'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
+                        'flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2 text-left text-sm transition-colors',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500',
                         isSelected
                           ? 'bg-brand-50 text-brand-800'
@@ -137,7 +137,7 @@ export function IconSelect<T extends string>({
                     >
                       <span
                         className={cn(
-                          'flex size-8 shrink-0 items-center justify-center rounded-lg',
+                          'flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-control)]',
                           isSelected ? 'bg-brand-100 text-brand-700' : 'bg-zinc-100 text-zinc-500',
                         )}
                       >

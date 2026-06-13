@@ -8,7 +8,7 @@ import {
   useRemoveAssignment,
   useRoutines,
 } from '@/hooks/useRoutines'
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Select, Spinner } from '@/components/ui'
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, IconButton, Select, Spinner, Text } from '@/components/ui'
 import { formatDate } from '@/utils/format'
 import { formatLogSet } from '@/utils/loadTypes'
 import { routineIconMeta } from '@/utils/routineIcons'
@@ -41,9 +41,11 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <p className="mb-3 text-sm font-medium text-zinc-700">Asignar rutina</p>
+    <div className="space-y-6">
+      <Card className="p-5">
+        <Text variant="label" className="mb-3">
+          Asignar rutina
+        </Text>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Select
             className="flex-1"
@@ -68,19 +70,18 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
             const r = byId(a.routineId)
             const { icon: RoutineIcon } = routineIconMeta(r?.icon)
             return (
-              <Card key={a.id} className="flex items-center gap-3 p-4">
+              <Card key={a.id} className="flex items-center gap-3 p-5">
                 <RoutineIcon className="size-5 text-brand-500" />
                 <div className="flex-1">
-                  <p className="font-medium text-zinc-900">{r?.name ?? 'Rutina'}</p>
-                  <p className="text-xs text-zinc-500">{r?.exercises.length ?? 0} ejercicios</p>
+                  <Text variant="listItem">{r?.name ?? 'Rutina'}</Text>
+                  <Text variant="caption">{r?.exercises.length ?? 0} ejercicios</Text>
                 </div>
-                <button
+                <IconButton
+                  icon={<Trash2 className="size-4" />}
+                  label="Quitar rutina"
+                  tone="danger"
                   onClick={() => removeAssignment.mutate(a.id)}
-                  className="text-zinc-400 hover:text-red-500"
-                  aria-label="Quitar"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                />
               </Card>
             )
           })}

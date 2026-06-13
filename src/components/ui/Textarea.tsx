@@ -1,17 +1,17 @@
-import { forwardRef, type InputHTMLAttributes } from 'react'
+import { forwardRef, type TextareaHTMLAttributes } from 'react'
 import { cn } from '@/utils/cn'
 
-type InputProps = InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }
+type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
   { className, invalid, ...props },
   ref,
 ) {
   return (
-    <input
+    <textarea
       ref={ref}
       className={cn(
-        'h-10 w-full rounded-[var(--radius-control)] border bg-surface px-3 text-sm text-zinc-900 transition-colors',
+        'w-full rounded-[var(--radius-control)] border bg-surface px-3 py-2 text-sm text-zinc-900 transition-colors',
         'placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2',
         invalid
           ? 'border-red-400 focus-visible:ring-red-300'

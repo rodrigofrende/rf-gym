@@ -2,7 +2,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { SubscriptionPlan } from '@/types'
-import { Button, FormField, Input, Modal, MoneyInput, Select, Toggle } from '@/components/ui'
+import { Button, FormField, Input, Modal, MoneyInput, Select, Textarea, Toggle } from '@/components/ui'
 
 const schema = z.object({
   name: z.string().min(2, 'Ingresá un nombre'),
@@ -127,11 +127,10 @@ export function PlanFormModal({
         </FormField>
 
         <FormField label="Características (una por línea)">
-          <textarea
+          <Textarea
             {...register('features')}
             rows={4}
             placeholder={'Hasta 3 admins\n150 socios\nPanel de analíticas'}
-            className="w-full rounded-lg border border-zinc-200 bg-surface px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
         </FormField>
 

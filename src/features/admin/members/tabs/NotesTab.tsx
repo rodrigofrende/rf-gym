@@ -4,7 +4,7 @@ import { NotebookPen, Plus, Target, Trash2, Weight } from 'lucide-react'
 import type { NoteType } from '@/types'
 import { useCreateNote, useNotes, useRemoveNote } from '@/hooks/useMemberNotes'
 import { useToastAction } from '@/hooks/useToastAction'
-import { Badge, Button, Card, EmptyState, Input, Select, Spinner } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, IconButton, Input, Select, Spinner, Text } from '@/components/ui'
 import { formatDate } from '@/utils/format'
 
 const TYPE_META: Record<NoteType, { label: string; tone: 'brand' | 'green' | 'neutral'; icon: typeof Target }> = {
@@ -49,9 +49,11 @@ export function NotesTab({
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <p className="mb-3 text-sm font-medium text-zinc-700">Agregar anotación privada</p>
+    <div className="space-y-6">
+      <Card className="p-5">
+        <Text variant="label" className="mb-3">
+          Agregar anotación privada
+        </Text>
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="sm:w-44">
             <Select
@@ -91,7 +93,7 @@ export function NotesTab({
             const meta = TYPE_META[note.type]
             const Icon = meta.icon
             return (
-              <Card key={note.id} className="flex items-start gap-3 p-4">
+              <Card key={note.id} className="flex items-start gap-3 p-5">
                 <div className="mt-0.5 text-zinc-400">
                   <Icon className="size-5" />
                 </div>
@@ -100,15 +102,14 @@ export function NotesTab({
                     <Badge tone={meta.tone}>{meta.label}</Badge>
                     <span className="text-xs text-zinc-400">{formatDate(note.date)}</span>
                   </div>
-                  <p className="mt-1 text-sm text-zinc-700">{note.value}</p>
+                  <Text className="mt-1">{note.value}</Text>
                 </div>
-                <button
+                <IconButton
+                  icon={<Trash2 className="size-4" />}
+                  label="Eliminar nota"
+                  tone="danger"
                   onClick={() => removeNote.mutate(note.id)}
-                  className="text-zinc-400 hover:text-red-500"
-                  aria-label="Eliminar"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                />
               </Card>
             )
           })}

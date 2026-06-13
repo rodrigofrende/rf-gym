@@ -188,10 +188,14 @@ const VARS_TO_CLEAR = [
   ...SHADES.map((s) => `--color-brand-${s}`),
   '--color-surface',
   '--color-surface-muted',
-  // Foreground fuerte (color de texto del tenant). Las demás zinc quedan fijas.
   '--color-zinc-900',
   '--color-zinc-800',
   '--color-zinc-700',
+  // Futuro white-label (tipografía / radios): descomentar al agregar campos a GymTheme.
+  // '--font-sans',
+  // '--radius-control',
+  // '--radius-card',
+  // '--radius-pill',
 ]
 
 /** Mapa de variables CSS para un theme. Útil para aplicar a `:root` o a un preview. */
@@ -209,6 +213,10 @@ export function buildThemeVars(theme: GymTheme): Record<string, string> {
   vars['--color-zinc-900'] = text
   vars['--color-zinc-800'] = lerpHex(text, theme.container, 0.12)
   vars['--color-zinc-700'] = lerpHex(text, theme.container, 0.24)
+
+  // Futuro white-label: mapear theme.fontFamily → '--font-sans',
+  // theme.radiusControl → '--radius-control', etc.
+
   return vars
 }
 

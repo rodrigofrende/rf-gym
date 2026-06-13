@@ -78,7 +78,7 @@ export function MemberDetailPage() {
   }
 
   return (
-    <AppLayout title="Detalle de socio">
+    <AppLayout title={member.fullName}>
       <button
         onClick={() => navigate(ROUTES.ADMIN_MEMBERS)}
         className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700"
@@ -91,7 +91,6 @@ export function MemberDetailPage() {
           <div className="flex items-center gap-4">
             <Avatar name={member.fullName} src={member.photoURL} size="lg" />
             <div>
-              <h2 className="text-xl font-bold text-zinc-900">{member.fullName}</h2>
               <Sensitive className="block text-sm text-zinc-500">{member.email}</Sensitive>
               <div className="mt-2 flex items-center gap-2">
                 <Badge tone="brand">{ROLE_LABEL[member.role]}</Badge>

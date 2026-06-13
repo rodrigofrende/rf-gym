@@ -10,7 +10,7 @@ import { useMemberAssignments, useRoutines } from '@/hooks/useRoutines'
 import { useGym } from '@/hooks/useGym'
 import { usePlans } from '@/hooks/usePlans'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, EmptyState, FullPageSpinner } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, FullPageSpinner, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatDate } from '@/utils/format'
 import { formatLogSet, formatExerciseVolume, loadTypeMeta } from '@/utils/loadTypes'
@@ -121,7 +121,9 @@ export function MyRoutinesPage() {
                     <RoutineIcon className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-zinc-900">{routine.name}</p>
+                    <Text variant="listItem" className="truncate">
+                      {routine.name}
+                    </Text>
                     {routine.description && (
                       <p className="truncate text-xs text-zinc-500">{routine.description}</p>
                     )}

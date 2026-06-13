@@ -4,7 +4,7 @@ import { z } from 'zod'
 import type { Member } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useTariffs } from '@/hooks/useTariffs'
-import { Button, DateInput, FormField, Input, Modal, MoneyInput, Select } from '@/components/ui'
+import { Button, DateInput, FormField, Input, Modal, MoneyInput, Select, Text } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
 import { dateInputToTimestamp, parseDateInput, todayDateInput } from '@/utils/dates'
 import { frequencyLabel, tariffLabel } from '@/utils/tariffs'
@@ -127,7 +127,7 @@ export function MemberFormModal({
       <form id="member-form" onSubmit={handleSubmit(submit)} className="space-y-5">
         {/* Datos personales */}
         <section className="space-y-3">
-          <p className="text-sm font-semibold text-zinc-700">Datos personales</p>
+          <Text variant="label">Datos personales</Text>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Nombre completo" error={errors.fullName?.message} required>
               <Input {...register('fullName')} invalid={!!errors.fullName} />
@@ -146,7 +146,7 @@ export function MemberFormModal({
 
         {/* Membresía y pago */}
         <section className="space-y-3 border-t border-zinc-100 pt-4">
-          <p className="text-sm font-semibold text-zinc-700">Membresía y pago</p>
+          <Text variant="label">Membresía y pago</Text>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Tipo de usuario">
               <Select
