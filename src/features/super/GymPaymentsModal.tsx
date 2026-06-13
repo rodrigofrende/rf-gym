@@ -4,7 +4,7 @@ import type { Gym, GymSubscription } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useGymPayments, useRegisterGymPayment, useRemoveGymPayment } from '@/hooks/usePayments'
-import { Button, ConfirmDialog, FormField, Input, Modal, MoneyInput, Spinner } from '@/components/ui'
+import { Button, ConfirmDialog, DateInput, FormField, Input, Modal, MoneyInput, Spinner } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
 import { PaymentSummary } from '@/features/payments/PaymentSummary'
 import { PaymentHistoryList } from '@/features/payments/PaymentHistoryList'
@@ -71,7 +71,7 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
               <MoneyInput value={amount} onChange={setAmount} />
             </FormField>
             <FormField label="Fecha">
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
             </FormField>
             <FormField label="Comentario (opcional)">
               <Input

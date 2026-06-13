@@ -5,7 +5,7 @@ import { Timestamp } from 'firebase/firestore'
 import type { Member } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useTariffs } from '@/hooks/useTariffs'
-import { Button, FormField, Input, Modal, MoneyInput, Select } from '@/components/ui'
+import { Button, DateInput, FormField, Input, Modal, MoneyInput, Select } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
 import { addMonths } from '@/utils/payments'
 import { frequencyLabel, tariffLabel } from '@/utils/tariffs'
@@ -122,7 +122,7 @@ export function MemberFormModal({
               <Input {...register('phone')} />
             </FormField>
             <FormField label="Fecha de nacimiento">
-              <Input type="date" {...register('birthDate')} />
+              <DateInput {...register('birthDate')} />
             </FormField>
           </div>
         </section>
@@ -172,8 +172,7 @@ export function MemberFormModal({
               />
             </FormField>
             <FormField label="Fecha de inicio" hint="Autocompleta el próximo pago a 1 mes">
-              <Input
-                type="date"
+              <DateInput
                 {...startReg}
                 onChange={(e) => {
                   startReg.onChange(e)
@@ -182,7 +181,7 @@ export function MemberFormModal({
               />
             </FormField>
             <FormField label="Próximo pago">
-              <Input type="date" {...register('paymentDate')} />
+              <DateInput {...register('paymentDate')} />
             </FormField>
           </div>
         </section>

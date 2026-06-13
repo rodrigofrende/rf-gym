@@ -1,5 +1,6 @@
 export { Button } from './Button'
 export { Input } from './Input'
+export { DateInput } from './DateInput'
 export { MoneyInput } from './MoneyInput'
 export { Money } from './Money'
 export { Sensitive } from './Sensitive'

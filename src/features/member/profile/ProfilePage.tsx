@@ -7,7 +7,7 @@ import { useToast } from '@/providers/ToastProvider'
 import { useMember, useUpdateMemberProfile } from '@/hooks/useMembers'
 import { useTariffs } from '@/hooks/useTariffs'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Avatar, Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Input } from '@/components/ui'
+import { Avatar, Badge, Button, Card, CardBody, CardHeader, DateInput, FormField, FullPageSpinner, Input } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatCurrency, toDateInput } from '@/utils/format'
 import { frequencyLabel } from '@/utils/tariffs'
@@ -100,7 +100,7 @@ export function ProfilePage() {
                   <Input {...register('phone')} />
                 </FormField>
                 <FormField label="Fecha de nacimiento">
-                  <Input type="date" {...register('birthDate')} />
+                  <DateInput {...register('birthDate')} />
                 </FormField>
               </div>
               <div className="flex justify-end">

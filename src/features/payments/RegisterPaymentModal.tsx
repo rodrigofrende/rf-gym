@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Button, FormField, Input, Modal, MoneyInput } from '@/components/ui'
-import { toDateInput } from '@/utils/format'
+import { Button, DateInput, FormField, Input, Modal, MoneyInput } from '@/components/ui'
 
 export interface PaymentFormValue {
   amount: number
@@ -8,10 +7,6 @@ export interface PaymentFormValue {
   comment?: string
 }
 
-/**
- * Modal para registrar un pago. El padre debe montarlo recién al abrir
- * (`open && <RegisterPaymentModal .../>`) para resetear el estado por apertura.
- */
 export function RegisterPaymentModal({
   open,
   onClose,
@@ -28,41 +23,54 @@ export function RegisterPaymentModal({
   title?: string
 }) {
   const [amount, setAmount] = useState(defaultAmount)
-  const [date, setDate] = useState(() => toDateInput(new Date()))
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [comment, setComment] = useState('')
 
+  const canSubmit = amount > 0 && !!date
+
+  const submit = () => {
+    if (!canSubmit) return
+    onSubmit({ amount, date: new Date(`${date}T12:00:00`), comment: comment.trim() || undefined })
+  }
+
   return (
-    <Modal open={open} onClose={onClose} title={title}>
-      <div className="space-y-4">
-        <FormField label="Monto">
-          <MoneyInput value={amount} onChange={setAmount} autoFocus />
-        </FormField>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="Fecha del pago">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </FormField>
-          <FormField label="Comentario (opcional)">
-            <Input
-              placeholder="Ej. Pago en efectivo"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-          </FormField>
-        </div>
-        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
-          <Button variant="secondary" onClick={onClose}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      footer={
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={onClose}>
             Cancelar
           </Button>
           <Button
+            type="button"
+            fullWidth
+            className="sm:w-auto"
             loading={saving}
-            disabled={amount <= 0 || !date}
-            onClick={() =>
-              onSubmit({ amount, date: new Date(date), comment: comment.trim() || undefined })
-            }
+            disabled={!canSubmit}
+            onClick={submit}
           >
             Registrar pago
           </Button>
         </div>
+      }
+    >
+      <div className="space-y-4">
+        <FormField label="Monto">
+          <MoneyInput value={amount} onChange={setAmount} autoFocus className="h-11 text-base sm:h-10 sm:text-sm" />
+        </FormField>
+        <FormField label="Fecha del pago">
+          <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
+        </FormField>
+        <FormField label="Comentario (opcional)">
+          <Input
+            placeholder="Ej. Pago en efectivo"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="h-11 text-base sm:h-10 sm:text-sm"
+          />
+        </FormField>
       </div>
     </Modal>
   )
