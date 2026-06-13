@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
-import { ChevronDown, ClipboardList, History, Dumbbell, Lock } from 'lucide-react'
+import { ChevronDown, ClipboardList, History, Lock } from 'lucide-react'
 import type { Exercise, LogSet, Routine, WorkoutLog } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -12,7 +12,8 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, EmptyState, FullPageSpinner } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatDate } from '@/utils/format'
-import { formatLogSet, loadTypeMeta } from '@/utils/loadTypes'
+import { formatLogSet, formatExerciseVolume, loadTypeMeta } from '@/utils/loadTypes'
+import { routineIconMeta } from '@/utils/routineIcons'
 import { canMemberLog } from '@/utils/plans'
 import { LogExerciseModal } from './LogExerciseModal'
 
@@ -106,6 +107,7 @@ export function MyRoutinesPage() {
           )}
           {myRoutines.map((routine) => {
             const isOpen = openIds.has(routine.id)
+            const { icon: RoutineIcon } = routineIconMeta(routine.icon)
             return (
               <Card key={routine.id} className="overflow-hidden">
                 <button
@@ -115,7 +117,7 @@ export function MyRoutinesPage() {
                   className="flex w-full items-center gap-3 px-4 py-3.5 text-left sm:px-5"
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                    <Dumbbell className="size-5" />
+                    <RoutineIcon className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-zinc-900">{routine.name}</p>
@@ -136,20 +138,22 @@ export function MyRoutinesPage() {
                   <div className="space-y-2 border-t border-zinc-100 px-4 pb-4 pt-3 sm:px-5">
                     {routine.exercises.map((ex, i) => {
                       const last = lastByExercise.get(ex.name)
+                      const meta = loadTypeMeta(ex.loadType)
+                      const LoadIcon = meta.icon
                       return (
                         <div
                           key={`${ex.name}-${i}`}
                           className="flex flex-col gap-2 rounded-lg border border-zinc-100 p-3 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="flex items-start gap-3">
-                            <Dumbbell className="mt-0.5 size-5 shrink-0 text-brand-500" />
+                            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                              <LoadIcon className="size-4" aria-hidden />
+                            </div>
                             <div className="min-w-0">
                               <p className="font-medium text-zinc-900">{ex.name}</p>
                               <p className="text-sm text-zinc-500">
-                                {ex.sets} series × {ex.reps} reps
-                                {ex.loadType && ex.loadType !== 'weight'
-                                  ? ` · ${loadTypeMeta(ex.loadType).label}`
-                                  : ''}
+                                {formatExerciseVolume(ex)}
+                                {` · ${meta.label}`}
                                 {ex.intensity ? ` · ${ex.intensity}` : ''}
                                 {ex.weight ? ` · ${ex.weight}` : ''}
                                 {ex.restSec ? ` · ${ex.restSec}s descanso` : ''}

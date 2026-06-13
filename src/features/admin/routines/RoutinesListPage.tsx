@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Routine } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
@@ -12,7 +12,12 @@ import {
 } from '@/hooks/useRoutines'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
+import { routineIconMeta } from '@/utils/routineIcons'
 import { RoutineFormModal } from './RoutineFormModal'
+import { RoutineViewModal } from './RoutineViewModal'
+
+const iconActionClass =
+  'rounded-lg p-1.5 text-zinc-400 transition-colors focus-visible:outline-none focus-visible:ring-2'
 
 export function RoutinesListPage() {
   const { user } = useAuth()
@@ -25,16 +30,25 @@ export function RoutinesListPage() {
   const removeRoutine = useRemoveRoutine(gymId)
 
   const [modalOpen, setModalOpen] = useState(false)
+  const [viewOpen, setViewOpen] = useState(false)
   const [editing, setEditing] = useState<Routine | null>(null)
+  const [viewing, setViewing] = useState<Routine | null>(null)
   const [toDelete, setToDelete] = useState<Routine | null>(null)
 
   const openNew = () => {
     setEditing(null)
     setModalOpen(true)
   }
+
   const openEdit = (r: Routine) => {
     setEditing(r)
+    setViewOpen(false)
     setModalOpen(true)
+  }
+
+  const openView = (r: Routine) => {
+    setViewing(r)
+    setViewOpen(true)
   }
 
   const handleSubmit = async (data: Omit<Routine, 'id'>) => {
@@ -77,44 +91,61 @@ export function RoutinesListPage() {
         <FullPageSpinner />
       ) : routines.length === 0 ? (
         <EmptyState
-          icon={Dumbbell}
+          icon={routineIconMeta().icon}
           title="Sin rutinas"
           description="Creá rutinas con sus ejercicios y luego asignalas a tus socios."
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {routines.map((r) => (
-            <Card key={r.id} className="flex flex-col p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                  <Dumbbell className="size-5" />
+          {routines.map((r) => {
+            const { icon: RoutineIcon } = routineIconMeta(r.icon)
+            return (
+              <Card key={r.id} className="flex flex-col p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                    <RoutineIcon className="size-5" />
+                  </div>
+                  <div className="flex gap-0.5">
+                    <button
+                      onClick={() => openView(r)}
+                      aria-label={`Ver ${r.name}`}
+                      className={`${iconActionClass} hover:bg-brand-50 hover:text-brand-600 focus-visible:ring-brand-500`}
+                    >
+                      <Eye className="size-4" />
+                    </button>
+                    <button
+                      onClick={() => openEdit(r)}
+                      aria-label={`Editar ${r.name}`}
+                      className={`${iconActionClass} hover:bg-zinc-100 hover:text-zinc-600 focus-visible:ring-brand-500`}
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button
+                      onClick={() => setToDelete(r)}
+                      aria-label={`Eliminar ${r.name}`}
+                      className={`${iconActionClass} hover:bg-red-50 hover:text-red-500 focus-visible:ring-red-500`}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => openEdit(r)}
-                    aria-label={`Editar ${r.name}`}
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                  >
-                    <Pencil className="size-4" />
-                  </button>
-                  <button
-                    onClick={() => setToDelete(r)}
-                    aria-label={`Eliminar ${r.name}`}
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                <h3 className="mt-3 font-semibold text-zinc-900">{r.name}</h3>
+                {r.description && <p className="mt-1 text-sm text-zinc-500">{r.description}</p>}
+                <div className="mt-3">
+                  <Badge tone="neutral">{r.exercises.length} ejercicios</Badge>
                 </div>
-              </div>
-              <h3 className="mt-3 font-semibold text-zinc-900">{r.name}</h3>
-              {r.description && <p className="mt-1 text-sm text-zinc-500">{r.description}</p>}
-              <div className="mt-3">
-                <Badge tone="neutral">{r.exercises.length} ejercicios</Badge>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            )
+          })}
         </div>
       )}
+
+      <RoutineViewModal
+        open={viewOpen}
+        onClose={() => setViewOpen(false)}
+        routine={viewing}
+        onEdit={openEdit}
+      />
 
       <RoutineFormModal
         open={modalOpen}

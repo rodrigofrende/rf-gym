@@ -132,12 +132,17 @@ export interface Note {
 
 /** Tipo de carga del ejercicio → define qué inputs ve el socio al registrar. */
 export type LoadType =
-  | 'weight' // peso total + reps (barra/mancuerna/máquina)
-  | 'cable' // polea: peso + reps
-  | 'barbell' // barra: peso por lado + reps
-  | 'unilateral' // por lado/mano + reps
-  | 'bodyweight' // peso corporal: reps (+ lastre opc.)
-  | 'isometric' // tensión: tiempo (+ peso opc.)
+  | 'weight' // kg + reps (peso total, incluye barra si aplica)
+  | 'time' // tiempo / tensión (planchas, isométricos)
+  | 'bodyweight' // peso corporal: solo reps
+
+/** Valores legacy persistidos antes de la simplificación de tipos. */
+export type LegacyLoadType = 'cable' | 'barbell' | 'unilateral' | 'isometric'
+
+export type StoredLoadType = LoadType | LegacyLoadType
+
+/** Icono visual de la rutina (cards y vista). */
+export type RoutineIconKey = 'strength' | 'lower' | 'upper' | 'cardio' | 'mobility' | 'core'
 
 export interface Exercise {
   name: string
@@ -145,7 +150,7 @@ export interface Exercise {
   reps: number
   intensity?: string // RPE / esfuerzo percibido (opcional)
   weight?: string // carga, ej. "80 kg" / "corporal" (opcional)
-  loadType?: LoadType // tipo de carga (default 'weight')
+  loadType?: StoredLoadType // tipo de carga (default 'weight')
   restSec?: number
   notes?: string
 }
@@ -155,6 +160,7 @@ export interface Routine {
   id: string
   name: string
   description?: string
+  icon?: RoutineIconKey
   createdBy: string
   exercises: Exercise[]
 }

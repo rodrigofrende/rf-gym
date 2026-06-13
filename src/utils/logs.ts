@@ -1,4 +1,4 @@
-import type { LoadType, LogSet, Routine, WorkoutLog } from '@/types'
+import type { LogSet, Routine, StoredLoadType, WorkoutLog } from '@/types'
 import { loadTypeMeta, type SetShape } from './loadTypes'
 import { toDate } from './format'
 
@@ -14,7 +14,7 @@ export interface SessionSummary {
 /** Progresión de un ejercicio a lo largo del tiempo. */
 export interface ExerciseProgress {
   exerciseName: string
-  loadType?: LoadType
+  loadType?: StoredLoadType
   unit: string // 'kg' | 'reps' | 's'
   sessions: SessionSummary[] // ordenadas de la más vieja a la más nueva
   best: number // mejor metric histórico
@@ -31,7 +31,7 @@ export interface ExerciseProgress {
 function sessionMetric(sets: LogSet[], shape: SetShape) {
   const vals = (key: keyof LogSet) => sets.map((s) => s[key] ?? 0)
   switch (shape) {
-    case 'reps_load': {
+    case 'reps_only': {
       const value = Math.max(0, ...vals('reps'))
       return {
         value,
@@ -49,7 +49,6 @@ function sessionMetric(sets: LogSet[], shape: SetShape) {
         volume: vals('seconds').reduce((a, b) => a + b, 0),
       }
     }
-    case 'perside_reps':
     case 'weight_reps':
     default: {
       const value = Math.max(0, ...vals('weight'))
@@ -60,14 +59,14 @@ function sessionMetric(sets: LogSet[], shape: SetShape) {
 }
 
 /** Mapa nombre de ejercicio → tipo de carga, a partir de las rutinas del gym. */
-export function loadTypesByExercise(routines: Routine[]): Map<string, LoadType | undefined> {
+export function loadTypesByExercise(routines: Routine[]): Map<string, StoredLoadType | undefined> {
   return new Map(routines.flatMap((r) => r.exercises.map((e) => [e.name, e.loadType] as const)))
 }
 
 /** Agrupa los logs por ejercicio y calcula la progresión de cada uno. */
 export function exerciseProgressList(
   logs: WorkoutLog[],
-  loadTypeByExercise: Map<string, LoadType | undefined>,
+  loadTypeByExercise: Map<string, StoredLoadType | undefined>,
 ): ExerciseProgress[] {
   const groups = new Map<string, WorkoutLog[]>()
   for (const log of logs) {

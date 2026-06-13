@@ -11,6 +11,7 @@ import {
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Select, Spinner } from '@/components/ui'
 import { formatDate } from '@/utils/format'
 import { formatLogSet } from '@/utils/loadTypes'
+import { routineIconMeta } from '@/utils/routineIcons'
 import { useState } from 'react'
 
 export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: string }) {
@@ -67,9 +68,10 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
         <div className="space-y-2">
           {assignments.map((a) => {
             const r = byId(a.routineId)
+            const { icon: RoutineIcon } = routineIconMeta(r?.icon)
             return (
               <Card key={a.id} className="flex items-center gap-3 p-4">
-                <Dumbbell className="size-5 text-brand-500" />
+                <RoutineIcon className="size-5 text-brand-500" />
                 <div className="flex-1">
                   <p className="font-medium text-zinc-900">{r?.name ?? 'Rutina'}</p>
                   <p className="text-xs text-zinc-500">{r?.exercises.length ?? 0} ejercicios</p>

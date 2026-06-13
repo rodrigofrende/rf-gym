@@ -1,7 +1,7 @@
-import { Cable, Dumbbell, PersonStanding, Timer, type LucideIcon } from 'lucide-react'
-import type { LoadType, LogSet } from '@/types'
+import { Dumbbell, PersonStanding, Timer, type LucideIcon } from 'lucide-react'
+import type { Exercise, LoadType, LogSet, StoredLoadType } from '@/types'
 
-export type SetShape = 'weight_reps' | 'perside_reps' | 'reps_load' | 'time_load'
+export type SetShape = 'weight_reps' | 'time_load' | 'reps_only'
 
 export interface SetField {
   key: 'weight' | 'reps' | 'seconds'
@@ -10,28 +10,18 @@ export interface SetField {
   optional?: boolean
 }
 
-/** Campos (inputs) que muestra cada forma de carga, en orden. */
 export const SHAPE_FIELDS: Record<SetShape, SetField[]> = {
   weight_reps: [
     { key: 'weight', label: 'Peso', unit: 'kg' },
     { key: 'reps', label: 'Reps' },
   ],
-  perside_reps: [
-    { key: 'weight', label: 'Peso x lado', unit: 'kg' },
-    { key: 'reps', label: 'Reps' },
-  ],
-  reps_load: [
-    { key: 'reps', label: 'Reps' },
-    { key: 'weight', label: 'Lastre', unit: 'kg', optional: true },
-  ],
-  time_load: [
-    { key: 'seconds', label: 'Tiempo', unit: 'seg' },
-    { key: 'weight', label: 'Peso', unit: 'kg', optional: true },
-  ],
+  time_load: [{ key: 'seconds', label: 'Tiempo', unit: 'seg' }],
+  reps_only: [{ key: 'reps', label: 'Reps' }],
 }
 
 export interface LoadTypeMeta {
   label: string
+  shortLabel: string
   icon: LucideIcon
   tooltip: string
   shape: SetShape
@@ -39,66 +29,75 @@ export interface LoadTypeMeta {
 
 export const LOAD_TYPES: Record<LoadType, LoadTypeMeta> = {
   weight: {
-    label: 'Peso + reps',
+    label: 'Kg + reps',
+    shortLabel: 'Kg',
     icon: Dumbbell,
-    tooltip: 'Carga total (barra, mancuerna o máquina) más repeticiones.',
+    tooltip: 'Usá el peso total. Si hay barra, incluí el peso de la barra.',
     shape: 'weight_reps',
   },
-  cable: {
-    label: 'Polea',
-    icon: Cable,
-    tooltip: 'Carga de la placa/polea más repeticiones.',
-    shape: 'weight_reps',
-  },
-  barbell: {
-    label: 'Barra (peso por lado)',
-    icon: Dumbbell,
-    tooltip: 'Indicá el peso por lado del disco (sin contar la barra).',
-    shape: 'perside_reps',
-  },
-  unilateral: {
-    label: 'Unilateral (por lado)',
-    icon: Dumbbell,
-    tooltip: 'Carga por lado/mano; las repeticiones son por lado.',
-    shape: 'perside_reps',
+  time: {
+    label: 'Tiempo / tensión',
+    shortLabel: 'Tiempo',
+    icon: Timer,
+    tooltip: 'Planchas, isométricos y ejercicios medidos en segundos.',
+    shape: 'time_load',
   },
   bodyweight: {
     label: 'Peso corporal',
+    shortLabel: 'Corporal',
     icon: PersonStanding,
-    tooltip: 'Solo repeticiones. Si usás lastre, sumalo en kg.',
-    shape: 'reps_load',
-  },
-  isometric: {
-    label: 'Isométrico / tensión',
-    icon: Timer,
-    tooltip: 'Tiempo de tensión en segundos; el peso es opcional.',
-    shape: 'time_load',
+    tooltip: 'Solo repeticiones, sin carga adicional.',
+    shape: 'reps_only',
   },
 }
 
-/** Lista para selects (admin elige el tipo de carga). */
 export const LOAD_TYPE_OPTIONS = (Object.keys(LOAD_TYPES) as LoadType[]).map((value) => ({
   value,
   label: LOAD_TYPES[value].label,
 }))
 
-export function loadTypeMeta(loadType?: LoadType): LoadTypeMeta {
-  return LOAD_TYPES[loadType ?? 'weight']
+export function normalizeLoadType(loadType?: StoredLoadType): LoadType {
+  switch (loadType) {
+    case 'time':
+    case 'isometric':
+      return 'time'
+    case 'bodyweight':
+      return 'bodyweight'
+    case 'cable':
+    case 'barbell':
+    case 'unilateral':
+    case 'weight':
+      return 'weight'
+    default:
+      return 'weight'
+  }
 }
 
-/** Texto compacto de una serie registrada, según el tipo de carga. */
-export function formatLogSet(set: LogSet, loadType?: LoadType): string {
+export function loadTypeMeta(loadType?: StoredLoadType): LoadTypeMeta {
+  return LOAD_TYPES[normalizeLoadType(loadType)]
+}
+
+export function formatExerciseVolume(exercise: Exercise): string {
+  const meta = loadTypeMeta(exercise.loadType)
+  if (meta.shape === 'time_load') {
+    return `${exercise.sets} series`
+  }
+  return `${exercise.sets}×${exercise.reps}`
+}
+
+export function formatLogSet(set: LogSet, loadType?: StoredLoadType): string {
   const shape = loadTypeMeta(loadType).shape
   const { weight, reps, seconds } = set
   switch (shape) {
-    case 'perside_reps':
-      return `${weight ?? 0}kg/lado×${reps ?? 0}`
-    case 'reps_load':
-      return weight ? `${reps ?? 0} reps +${weight}kg` : `${reps ?? 0} reps`
+    case 'reps_only':
+      return `${reps ?? 0} reps`
     case 'time_load':
-      return weight ? `${seconds ?? 0}s · ${weight}kg` : `${seconds ?? 0}s`
+      return `${seconds ?? 0}s`
     case 'weight_reps':
-    default:
+    default: {
+      const _exhaustive: never | 'weight_reps' = shape
+      void _exhaustive
       return `${weight ?? 0}kg×${reps ?? 0}`
+    }
   }
 }
