@@ -1,5 +1,84 @@
 import type { GymTheme } from '@/types'
 
+/** Theme base de la plataforma cuando el gym no personalizó colores. */
+export const PLATFORM_DEFAULT_THEME: GymTheme = {
+  accent: '#4f46e5',
+  background: '#fafafa',
+  container: '#ffffff',
+  text: '#18181b',
+}
+
+export interface BrandingPreset {
+  id: string
+  label: string
+  theme: GymTheme
+}
+
+/** Paletas sugeridas para aplicar de un clic en la pantalla Marca. */
+export const BRANDING_PRESETS: BrandingPreset[] = [
+  {
+    id: 'tiger',
+    label: 'Naranja',
+    theme: {
+      accent: '#ea580c',
+      background: '#fafaf9',
+      container: '#ffffff',
+      text: '#0f172a',
+    },
+  },
+  {
+    id: 'indigo',
+    label: 'Índigo',
+    theme: PLATFORM_DEFAULT_THEME,
+  },
+  {
+    id: 'emerald',
+    label: 'Verde',
+    theme: {
+      accent: '#059669',
+      background: '#f0fdf4',
+      container: '#ffffff',
+      text: '#14532d',
+    },
+  },
+  {
+    id: 'rose',
+    label: 'Rosa',
+    theme: {
+      accent: '#e11d48',
+      background: '#fff1f2',
+      container: '#ffffff',
+      text: '#881337',
+    },
+  },
+  {
+    id: 'slate',
+    label: 'Gris',
+    theme: {
+      accent: '#475569',
+      background: '#f8fafc',
+      container: '#ffffff',
+      text: '#0f172a',
+    },
+  },
+]
+
+const HEX6 = /^#?[0-9a-f]{6}$/i
+
+/** Normaliza un hex a `#RRGGBB` válido para inputs type=color. */
+export function normalizeHex(value: string, fallback = '#000000'): string {
+  const trimmed = value.trim()
+  const withHash = trimmed.startsWith('#') ? trimmed : `#${trimmed}`
+  if (HEX6.test(withHash)) return withHash.toLowerCase()
+  if (withHash.length === 4) {
+    const r = withHash[1]
+    const g = withHash[2]
+    const b = withHash[3]
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase()
+  }
+  return fallback
+}
+
 /**
  * Theming white-label por tenant. Tailwind v4 expone los colores del bloque
  * `@theme` como variables CSS en `:root` (ej. `--color-brand-600`), y las
