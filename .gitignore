@@ -1,5 +1,5 @@
-# Logs
-logs
+# Logs (solo carpeta de logs en la raíz del repo, no features/member/logs ni features/logs)
+/logs
 *.log
 npm-debug.log*
 yarn-debug.log*
