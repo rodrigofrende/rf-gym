@@ -10,7 +10,7 @@ import { useToastAction } from '@/hooks/useToastAction'
 import { usePlans } from '@/hooks/usePlans'
 import { useRoutines } from '@/hooks/useRoutines'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { ROUTES } from '@/routes/routePaths'
+import { defaultHomeForRole } from '@/routes/routePaths'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
 import { formatCurrency } from '@/utils/format'
 import { exceedsLimit, usageLabel } from '@/utils/plans'
@@ -193,7 +193,7 @@ function GymCard({
 
   const enterGym = () => {
     selectGym(gym.id)
-    navigate(ROUTES.ADMIN_DASHBOARD)
+    navigate(defaultHomeForRole('admin'))
   }
 
   const handleAddAdmin = async () => {

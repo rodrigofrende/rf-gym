@@ -4,6 +4,7 @@ import type { Role } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { FullPageSpinner } from '@/components/ui'
+import { UnauthorizedPage } from '@/features/auth/UnauthorizedPage'
 import { ROUTES } from './routePaths'
 
 /**
@@ -23,10 +24,7 @@ export function PrivateRoute({
   if (!isInitialized || isLoading) return <FullPageSpinner />
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />
   if (!activeGymId || !role) return <Navigate to={ROUTES.SELECT_GYM} replace />
-  if (!allowedRoles.includes(role)) {
-    // Redirige a la home propia del rol en vez de mostrar la vista ajena.
-    return <Navigate to={role === 'admin' ? ROUTES.ADMIN_DASHBOARD : ROUTES.APP_ROUTINES} replace />
-  }
+  if (!allowedRoles.includes(role)) return <UnauthorizedPage />
   return <>{children}</>
 }
 
@@ -40,6 +38,6 @@ export function SuperAdminRoute({ children }: { children: ReactNode }) {
 
   if (!isInitialized || isLoading) return <FullPageSpinner />
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />
-  if (!isSuperAdmin) return <Navigate to="/" replace />
+  if (!isSuperAdmin) return <UnauthorizedPage />
   return <>{children}</>
 }

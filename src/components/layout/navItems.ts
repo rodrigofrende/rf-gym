@@ -22,11 +22,11 @@ export interface NavItem {
 }
 
 const ADMIN_NAV: NavItem[] = [
-  { to: ROUTES.ADMIN_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
   { to: ROUTES.ADMIN_MEMBERS, label: 'Socios', icon: Users },
   { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
   { to: ROUTES.ADMIN_TARIFFS, label: 'Tarifas', icon: Tags },
   { to: ROUTES.ADMIN_BRANDING, label: 'Marca', icon: Palette },
+  { to: ROUTES.ADMIN_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
 ]
 
 const USER_NAV: NavItem[] = [
@@ -42,11 +42,11 @@ export const SUPER_NAV_ITEM: NavItem = {
   icon: Building2,
 }
 
-/** Nav de la plataforma RF Gym (vistas del super-admin, look general). */
+/** Nav de la plataforma RF FIT (vistas del super-admin, look general). */
 export const PLATFORM_NAV: NavItem[] = [
-  { to: ROUTES.SUPER_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
   { to: ROUTES.SUPER_GYMS, label: 'Gimnasios', icon: Building2 },
   { to: ROUTES.SUPER_PLANS, label: 'Planes', icon: Layers },
+  { to: ROUTES.SUPER_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
 ]
 
 export function navForRole(role: Role): NavItem[] {

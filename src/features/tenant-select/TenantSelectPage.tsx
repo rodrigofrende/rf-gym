@@ -5,7 +5,7 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { ROLE_LABEL } from '@/utils/roles'
 import { Button, Card, EmptyState, FullPageSpinner, Heading } from '@/components/ui'
-import { ROUTES } from '@/routes/routePaths'
+import { defaultHomeForRole } from '@/routes/routePaths'
 
 export function TenantSelectPage() {
   const navigate = useNavigate()
@@ -15,7 +15,7 @@ export function TenantSelectPage() {
   // Si ya hay gym activo (auto-seleccionado o elegido), saltar a la home del rol.
   useEffect(() => {
     if (activeGymId && role) {
-      navigate(role === 'admin' ? ROUTES.ADMIN_DASHBOARD : ROUTES.APP_ROUTINES, { replace: true })
+      navigate(defaultHomeForRole(role), { replace: true })
     }
   }, [activeGymId, role, navigate])
 

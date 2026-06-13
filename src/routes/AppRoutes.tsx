@@ -25,7 +25,7 @@ import { SuperGymsPage } from '@/features/super/SuperGymsPage'
 import { SuperDashboardPage } from '@/features/super/SuperDashboardPage'
 import { PlansListPage } from '@/features/super/PlansListPage'
 import { PrivateRoute, SuperAdminRoute } from './PrivateRoute'
-import { ROUTES } from './routePaths'
+import { defaultHomeForRole, ROUTES } from './routePaths'
 
 /** Decide la home según el estado de auth/rol para la ruta raíz. */
 function HomeRedirect() {
@@ -33,9 +33,9 @@ function HomeRedirect() {
   const { isLoading, role, isSuperAdmin } = useTenant()
   if (!isInitialized || isLoading) return <FullPageSpinner />
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />
-  if (isSuperAdmin) return <Navigate to={ROUTES.SUPER_DASHBOARD} replace />
+  if (isSuperAdmin) return <Navigate to={defaultHomeForRole(null, { isSuperAdmin: true })} replace />
   if (!role) return <Navigate to={ROUTES.SELECT_GYM} replace />
-  return <Navigate to={role === 'admin' ? ROUTES.ADMIN_DASHBOARD : ROUTES.APP_ROUTINES} replace />
+  return <Navigate to={defaultHomeForRole(role)} replace />
 }
 
 export function AppRoutes() {
@@ -45,7 +45,7 @@ export function AppRoutes() {
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.SELECT_GYM} element={<TenantSelectPage />} />
 
-      {/* Super-admin (plataforma RF Gym) */}
+      {/* Super-admin (plataforma RF FIT) */}
       <Route
         path={ROUTES.SUPER_DASHBOARD}
         element={

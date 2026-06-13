@@ -4,7 +4,7 @@ import { useTenant } from '@/providers/TenantProvider'
 import { useGyms } from '@/hooks/useGyms'
 import { usePlatformStats } from '@/hooks/useDashboard'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { ROUTES } from '@/routes/routePaths'
+import { ROUTES, defaultHomeForRole } from '@/routes/routePaths'
 import { getPaymentStatus } from '@/utils/payments'
 import { Badge, Button, Card, CardHeader, EmptyState, FullPageSpinner, StatCard } from '@/components/ui'
 
@@ -21,7 +21,7 @@ export function SuperDashboardPage() {
 
   const enterGym = (gymId: string) => {
     selectGym(gymId)
-    navigate(ROUTES.ADMIN_DASHBOARD)
+    navigate(defaultHomeForRole('admin'))
   }
 
   return (

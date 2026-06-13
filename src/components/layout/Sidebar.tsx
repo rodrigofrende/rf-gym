@@ -15,7 +15,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const { role, activeMembership, memberships, isSuperAdmin } = useTenant()
   const { blurred, toggle } = usePrivacy()
   const { pathname } = useLocation()
-  // Plataforma RF Gym (vistas del super-admin): marca general, sin logo de gym.
+  // Plataforma RF FIT (vistas del super-admin): marca general, sin logo de gym.
   const isPlatform = pathname.startsWith('/super')
 
   const items = isPlatform
@@ -87,8 +87,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </nav>
 
         {/* Usuario + acciones */}
-        <div className="border-t border-zinc-100">
-          <div className="space-y-3 p-3">
+        <div className="border-t border-zinc-100 p-3">
+          <div className="space-y-3">
             <div className="flex items-center gap-3 px-1">
               <Avatar
                 name={user?.displayName || user?.email || '?'}
@@ -127,12 +127,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 Cerrar sesión
               </button>
             </div>
-          </div>
 
-          <div className="border-t border-zinc-100 px-4 py-2">
-            <Text variant="caption" className="text-zinc-400">
-              v{APP_VERSION}
-            </Text>
+            <p className="px-1 pt-1 text-center text-[11px] tracking-wide text-zinc-400">
+              {APP_NAME} · v{APP_VERSION}
+            </p>
           </div>
         </div>
       </aside>
