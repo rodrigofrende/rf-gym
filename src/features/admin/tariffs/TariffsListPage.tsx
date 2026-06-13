@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Tariff } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
-import { useToast } from '@/providers/ToastProvider'
 import {
   useCreateTariff,
   useRemoveTariff,
   useTariffs,
   useUpdateTariff,
 } from '@/hooks/useTariffs'
+import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
 import { cn } from '@/utils/cn'
@@ -20,7 +20,7 @@ import { TariffFormModal } from './TariffFormModal'
 export function TariffsListPage() {
   const { activeGymId } = useTenant()
   const gymId = activeGymId as string
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: tariffs = [], isLoading } = useTariffs(gymId)
   const create = useCreateTariff(gymId)
   const update = useUpdateTariff(gymId)
@@ -40,25 +40,24 @@ export function TariffsListPage() {
   }
 
   const handleSubmit = async (data: Omit<Tariff, 'id'>) => {
-    try {
-      if (editing) await update.mutateAsync({ tariffId: editing.id, data })
-      else await create.mutateAsync(data)
-      notify(editing ? 'Tarifa actualizada' : 'Tarifa creada', 'success')
-      setModalOpen(false)
-    } catch {
-      notify('No se pudo guardar la tarifa', 'error')
-    }
+    const ok = await run(
+      () =>
+        editing ? update.mutateAsync({ tariffId: editing.id, data }) : create.mutateAsync(data),
+      {
+        success: editing ? 'Tarifa actualizada' : 'Tarifa creada',
+        error: 'No se pudo guardar la tarifa',
+      },
+    )
+    if (ok) setModalOpen(false)
   }
 
   const confirmDelete = async () => {
     if (!toDelete) return
-    try {
-      await remove.mutateAsync(toDelete.id)
-      notify('Tarifa eliminada', 'success')
-      setToDelete(null)
-    } catch {
-      notify('No se pudo eliminar', 'error')
-    }
+    const ok = await run(() => remove.mutateAsync(toDelete.id), {
+      success: 'Tarifa eliminada',
+      error: 'No se pudo eliminar',
+    })
+    if (ok) setToDelete(null)
   }
 
   return (

@@ -3,13 +3,13 @@ import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Routine } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
-import { useToast } from '@/providers/ToastProvider'
 import {
   useCreateRoutine,
   useRemoveRoutine,
   useRoutines,
   useUpdateRoutine,
 } from '@/hooks/useRoutines'
+import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
 import { routineIconMeta } from '@/utils/routineIcons'
@@ -23,7 +23,7 @@ export function RoutinesListPage() {
   const { user } = useAuth()
   const { activeGymId } = useTenant()
   const gymId = activeGymId as string
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: routines = [], isLoading } = useRoutines(gymId)
   const createRoutine = useCreateRoutine(gymId)
   const updateRoutine = useUpdateRoutine(gymId)
@@ -52,29 +52,26 @@ export function RoutinesListPage() {
   }
 
   const handleSubmit = async (data: Omit<Routine, 'id'>) => {
-    try {
-      if (editing) {
-        await updateRoutine.mutateAsync({ routineId: editing.id, data })
-        notify('Rutina actualizada', 'success')
-      } else {
-        await createRoutine.mutateAsync(data)
-        notify('Rutina creada', 'success')
-      }
-      setModalOpen(false)
-    } catch {
-      notify('No se pudo guardar la rutina', 'error')
-    }
+    const ok = await run(
+      () =>
+        editing
+          ? updateRoutine.mutateAsync({ routineId: editing.id, data })
+          : createRoutine.mutateAsync(data),
+      {
+        success: editing ? 'Rutina actualizada' : 'Rutina creada',
+        error: 'No se pudo guardar la rutina',
+      },
+    )
+    if (ok) setModalOpen(false)
   }
 
   const confirmDelete = async () => {
     if (!toDelete) return
-    try {
-      await removeRoutine.mutateAsync(toDelete.id)
-      notify('Rutina eliminada', 'success')
-      setToDelete(null)
-    } catch {
-      notify('No se pudo eliminar', 'error')
-    }
+    const ok = await run(() => removeRoutine.mutateAsync(toDelete.id), {
+      success: 'Rutina eliminada',
+      error: 'No se pudo eliminar',
+    })
+    if (ok) setToDelete(null)
   }
 
   return (

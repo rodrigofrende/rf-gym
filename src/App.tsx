@@ -6,10 +6,20 @@ import { TenantThemeEffect } from '@/providers/TenantThemeEffect'
 import { ToastProvider } from '@/providers/ToastProvider'
 import { PrivacyProvider } from '@/providers/PrivacyProvider'
 import { AppRoutes } from '@/routes/AppRoutes'
+import { isNonRetryableError } from '@/utils/firestoreErrors'
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, refetchOnWindowFocus: false },
+    queries: {
+      // No reintentar errores de permisos/sesión: el retry no los va a arreglar
+      // y suma lecturas de Firestore al pedo.
+      retry: (failureCount, error) => !isNonRetryableError(error) && failureCount < 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+    },
+    mutations: {
+      retry: false,
+    },
   },
 })
 

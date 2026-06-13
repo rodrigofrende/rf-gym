@@ -4,8 +4,8 @@ import { ArrowLeft, Lock, Pencil, Trash2, Wallet } from 'lucide-react'
 import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
-import { useToast } from '@/providers/ToastProvider'
 import { useMember, useRemoveMember, useUpdateMember } from '@/hooks/useMembers'
+import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, FullPageSpinner, Sensitive } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
@@ -35,7 +35,7 @@ export function MemberDetailPage() {
   const { activeGymId } = useTenant()
   const gymId = activeGymId as string
   const navigate = useNavigate()
-  const { notify } = useToast()
+  const run = useToastAction()
 
   const { data: member, isLoading } = useMember(gymId, memberId)
   const updateMember = useUpdateMember(gymId)
@@ -62,23 +62,19 @@ export function MemberDetailPage() {
   }
 
   const handleEdit = async (data: Omit<Member, 'id' | 'uid'>) => {
-    try {
-      await updateMember.mutateAsync({ memberId, data })
-      notify('Socio actualizado', 'success')
-      setEditOpen(false)
-    } catch {
-      notify('No se pudo actualizar', 'error')
-    }
+    const ok = await run(() => updateMember.mutateAsync({ memberId, data }), {
+      success: 'Socio actualizado',
+      error: 'No se pudo actualizar',
+    })
+    if (ok) setEditOpen(false)
   }
 
   const confirmDelete = async () => {
-    try {
-      await removeMember.mutateAsync(memberId)
-      notify('Socio eliminado', 'success')
-      navigate(ROUTES.ADMIN_MEMBERS)
-    } catch {
-      notify('No se pudo eliminar', 'error')
-    }
+    const ok = await run(() => removeMember.mutateAsync(memberId), {
+      success: 'Socio eliminado',
+      error: 'No se pudo eliminar',
+    })
+    if (ok) navigate(ROUTES.ADMIN_MEMBERS)
   }
 
   return (

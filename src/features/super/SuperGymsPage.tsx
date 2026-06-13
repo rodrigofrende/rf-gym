@@ -4,9 +4,9 @@ import { AlertTriangle, Building2, LogIn, Plus, ShieldCheck, Trash2, UserPlus, W
 import type { Gym, GymSubscription, Member, SubscriptionPlan } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
-import { useToast } from '@/providers/ToastProvider'
 import { useGymAdminActions, useGyms } from '@/hooks/useGyms'
 import { useCreateMember, useMembers, useRemoveMember } from '@/hooks/useMembers'
+import { useToastAction } from '@/hooks/useToastAction'
 import { usePlans } from '@/hooks/usePlans'
 import { useRoutines } from '@/hooks/useRoutines'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -30,7 +30,7 @@ import { GymPaymentsModal } from './GymPaymentsModal'
 
 export function SuperGymsPage() {
   const { user } = useAuth()
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: gyms = [], isLoading } = useGyms()
   const { data: plans = [] } = usePlans()
   const { create, remove } = useGymAdminActions()
@@ -52,31 +52,30 @@ export function SuperGymsPage() {
           dueDate: addMonths(new Date(), 1),
         }
       : undefined
-    try {
-      await create.mutateAsync({
-        name: name.trim(),
-        ownerUid: user?.uid ?? '',
-        adminUids: [],
-        subscription,
-      })
-      notify('Gimnasio creado', 'success')
+    const ok = await run(
+      () =>
+        create.mutateAsync({
+          name: name.trim(),
+          ownerUid: user?.uid ?? '',
+          adminUids: [],
+          subscription,
+        }),
+      { success: 'Gimnasio creado', error: 'No se pudo crear el gimnasio' },
+    )
+    if (ok) {
       setName('')
       setPlanId('')
       setNewOpen(false)
-    } catch {
-      notify('No se pudo crear el gimnasio', 'error')
     }
   }
 
   const confirmRemoveGym = async () => {
     if (!toDeleteGym) return
-    try {
-      await remove.mutateAsync(toDeleteGym.id)
-      notify('Gimnasio eliminado', 'success')
-      setToDeleteGym(null)
-    } catch {
-      notify('No se pudo eliminar', 'error')
-    }
+    const ok = await run(() => remove.mutateAsync(toDeleteGym.id), {
+      success: 'Gimnasio eliminado',
+      error: 'No se pudo eliminar',
+    })
+    if (ok) setToDeleteGym(null)
   }
 
   return (
@@ -165,7 +164,7 @@ function GymCard({
 }) {
   const navigate = useNavigate()
   const { selectGym } = useTenant()
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: members = [] } = useMembers(gym.id)
   const { data: routines = [] } = useRoutines(gym.id)
   const createMember = useCreateMember(gym.id)
@@ -196,33 +195,34 @@ function GymCard({
 
   const handleAddAdmin = async () => {
     if (fullName.trim().length < 2 || !email.trim()) return
-    try {
-      await createMember.mutateAsync({
-        fullName: fullName.trim(),
-        email: email.trim(),
-        role: 'admin',
-        status: 'active',
-      })
-      notify('Administrador agregado', 'success')
+    const ok = await run(
+      () =>
+        createMember.mutateAsync({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          role: 'admin',
+          status: 'active',
+        }),
+      { success: 'Administrador agregado', error: 'No se pudo agregar el administrador' },
+    )
+    if (ok) {
       setFullName('')
       setEmail('')
       setAddOpen(false)
-    } catch {
-      notify('No se pudo agregar el administrador', 'error')
     }
   }
 
   const confirmRemoveAdmin = async () => {
     if (!adminToRemove) return
-    try {
-      await removeMember.mutateAsync(adminToRemove.id)
-      if (adminToRemove.uid)
-        await removeAdmin.mutateAsync({ gymId: gym.id, uid: adminToRemove.uid })
-      notify('Administrador eliminado', 'success')
-      setAdminToRemove(null)
-    } catch {
-      notify('No se pudo eliminar', 'error')
-    }
+    const ok = await run(
+      async () => {
+        await removeMember.mutateAsync(adminToRemove.id)
+        if (adminToRemove.uid)
+          await removeAdmin.mutateAsync({ gymId: gym.id, uid: adminToRemove.uid })
+      },
+      { success: 'Administrador eliminado', error: 'No se pudo eliminar' },
+    )
+    if (ok) setAdminToRemove(null)
   }
 
   return (

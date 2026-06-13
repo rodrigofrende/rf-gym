@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { Gym, GymSubscription } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
-import { useToast } from '@/providers/ToastProvider'
 import { useGymPayments, useRegisterGymPayment, useRemoveGymPayment } from '@/hooks/usePayments'
+import { useToastAction } from '@/hooks/useToastAction'
 import { Button, ConfirmDialog, DateInput, FormField, Input, Modal, MoneyInput, Spinner } from '@/components/ui'
 import { parseDateInput, todayDateInput } from '@/utils/dates'
 import { PaymentSummary } from '@/features/payments/PaymentSummary'
@@ -12,7 +12,7 @@ import { PaymentHistoryList } from '@/features/payments/PaymentHistoryList'
 /** Detalle de suscripción + registrar pago + historial de un gym (super-admin). */
 export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => void }) {
   const { user } = useAuth()
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: payments = [], isLoading } = useGymPayments(gym.id)
   const register = useRegisterGymPayment(gym.id)
   const removePayment = useRemoveGymPayment(gym.id)
@@ -26,32 +26,29 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
   const handleRegister = async () => {
     if (amount <= 0) return
     const subscription: GymSubscription = sub ?? { monthlyCost: amount, status: 'active' }
-    try {
-      await register.mutateAsync({
-        payment: {
-          amount,
-          date: parseDateInput(date),
-          comment: comment.trim() || undefined,
-          createdBy: user?.uid ?? '',
-        },
-        subscription,
-      })
-      notify('Pago registrado', 'success')
-      setComment('')
-    } catch {
-      notify('No se pudo registrar el pago', 'error')
-    }
+    const ok = await run(
+      () =>
+        register.mutateAsync({
+          payment: {
+            amount,
+            date: parseDateInput(date),
+            comment: comment.trim() || undefined,
+            createdBy: user?.uid ?? '',
+          },
+          subscription,
+        }),
+      { success: 'Pago registrado', error: 'No se pudo registrar el pago' },
+    )
+    if (ok) setComment('')
   }
 
   const confirmDelete = async () => {
     if (!toDelete) return
-    try {
-      await removePayment.mutateAsync(toDelete)
-      notify('Pago eliminado', 'success')
-      setToDelete(null)
-    } catch {
-      notify('No se pudo eliminar el pago', 'error')
-    }
+    const ok = await run(() => removePayment.mutateAsync(toDelete), {
+      success: 'Pago eliminado',
+      error: 'No se pudo eliminar el pago',
+    })
+    if (ok) setToDelete(null)
   }
 
   return (

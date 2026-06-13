@@ -1,7 +1,7 @@
 import { Dumbbell, Plus, Trash2 } from 'lucide-react'
 import type { Routine } from '@/types'
-import { useToast } from '@/providers/ToastProvider'
 import { useLogs } from '@/hooks/useLogs'
+import { useToastAction } from '@/hooks/useToastAction'
 import {
   useAssignRoutine,
   useMemberAssignments,
@@ -15,7 +15,7 @@ import { routineIconMeta } from '@/utils/routineIcons'
 import { useState } from 'react'
 
 export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: string }) {
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: routines = [] } = useRoutines(gymId)
   const { data: assignments = [], isLoading } = useMemberAssignments(gymId, memberId)
   const { data: logs = [] } = useLogs(gymId, memberId)
@@ -33,13 +33,11 @@ export function AssignmentsTab({ gymId, memberId }: { gymId: string; memberId: s
 
   const doAssign = async () => {
     if (!routineId) return
-    try {
-      await assign.mutateAsync({ memberUid: memberId, routineId, active: true })
-      setRoutineId('')
-      notify('Rutina asignada', 'success')
-    } catch {
-      notify('No se pudo asignar la rutina', 'error')
-    }
+    const ok = await run(() => assign.mutateAsync({ memberUid: memberId, routineId, active: true }), {
+      success: 'Rutina asignada',
+      error: 'No se pudo asignar la rutina',
+    })
+    if (ok) setRoutineId('')
   }
 
   return (

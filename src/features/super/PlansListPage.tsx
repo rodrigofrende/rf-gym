@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Check, Layers, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { SubscriptionPlan } from '@/types'
-import { useToast } from '@/providers/ToastProvider'
 import { useCreatePlan, usePlans, useRemovePlan, useUpdatePlan } from '@/hooks/usePlans'
+import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner } from '@/components/ui'
 import { cn } from '@/utils/cn'
@@ -11,7 +11,7 @@ import { limitLabel, logsCapabilityLabel, whiteLabelLabel } from '@/utils/plans'
 import { PlanFormModal } from './PlanFormModal'
 
 export function PlansListPage() {
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: plans = [], isLoading } = usePlans()
   const create = useCreatePlan()
   const update = useUpdatePlan()
@@ -31,25 +31,24 @@ export function PlansListPage() {
   }
 
   const handleSubmit = async (data: Omit<SubscriptionPlan, 'id'>) => {
-    try {
-      if (editing) await update.mutateAsync({ planId: editing.id, data })
-      else await create.mutateAsync(data)
-      notify(editing ? 'Plan actualizado' : 'Plan creado', 'success')
-      setModalOpen(false)
-    } catch {
-      notify('No se pudo guardar el plan', 'error')
-    }
+    const ok = await run(
+      () =>
+        editing ? update.mutateAsync({ planId: editing.id, data }) : create.mutateAsync(data),
+      {
+        success: editing ? 'Plan actualizado' : 'Plan creado',
+        error: 'No se pudo guardar el plan',
+      },
+    )
+    if (ok) setModalOpen(false)
   }
 
   const confirmDelete = async () => {
     if (!toDelete) return
-    try {
-      await remove.mutateAsync(toDelete.id)
-      notify('Plan eliminado', 'success')
-      setToDelete(null)
-    } catch {
-      notify('No se pudo eliminar', 'error')
-    }
+    const ok = await run(() => remove.mutateAsync(toDelete.id), {
+      success: 'Plan eliminado',
+      error: 'No se pudo eliminar',
+    })
+    if (ok) setToDelete(null)
   }
 
   return (

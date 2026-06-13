@@ -1,6 +1,6 @@
 import type { Member } from '@/types'
-import { useToast } from '@/providers/ToastProvider'
 import { useRegisterMemberPayment } from '@/hooks/usePayments'
+import { useToastAction } from '@/hooks/useToastAction'
 import { RegisterPaymentModal, type PaymentFormValue } from '@/features/payments/RegisterPaymentModal'
 import { toDate } from '@/utils/format'
 
@@ -17,20 +17,19 @@ export function MemberRegisterPaymentModal({
   member: Member
   adminUid: string
 }) {
-  const { notify } = useToast()
+  const run = useToastAction()
   const register = useRegisterMemberPayment(gymId, member.id)
 
   const handleSubmit = async (v: PaymentFormValue) => {
-    try {
-      await register.mutateAsync({
-        payment: { amount: v.amount, date: v.date, comment: v.comment, createdBy: adminUid },
-        currentDueDate: toDate(member.paymentDate) ?? undefined,
-      })
-      notify('Pago registrado', 'success')
-      onClose()
-    } catch {
-      notify('No se pudo registrar el pago', 'error')
-    }
+    const ok = await run(
+      () =>
+        register.mutateAsync({
+          payment: { amount: v.amount, date: v.date, comment: v.comment, createdBy: adminUid },
+          currentDueDate: toDate(member.paymentDate) ?? undefined,
+        }),
+      { success: 'Pago registrado', error: 'No se pudo registrar el pago' },
+    )
+    if (ok) onClose()
   }
 
   if (!open) return null

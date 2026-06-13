@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { Member } from '@/types'
-import { useToast } from '@/providers/ToastProvider'
 import { useMemberPayments, useRemoveMemberPayment } from '@/hooks/usePayments'
+import { useToastAction } from '@/hooks/useToastAction'
 import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, Spinner } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
 import { STATUS_LABEL } from '@/utils/roles'
@@ -19,7 +19,7 @@ export function PaymentsTab({
   member: Member
   adminUid: string
 }) {
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: payments = [], isLoading } = useMemberPayments(gymId, member.id)
   const removePayment = useRemoveMemberPayment(gymId, member.id)
   const [open, setOpen] = useState(false)
@@ -27,13 +27,11 @@ export function PaymentsTab({
 
   const confirmDelete = async () => {
     if (!toDelete) return
-    try {
-      await removePayment.mutateAsync(toDelete)
-      notify('Pago eliminado', 'success')
-      setToDelete(null)
-    } catch {
-      notify('No se pudo eliminar el pago', 'error')
-    }
+    const ok = await run(() => removePayment.mutateAsync(toDelete), {
+      success: 'Pago eliminado',
+      error: 'No se pudo eliminar el pago',
+    })
+    if (ok) setToDelete(null)
   }
 
   return (

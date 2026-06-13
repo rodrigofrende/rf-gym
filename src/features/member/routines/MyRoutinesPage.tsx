@@ -5,6 +5,7 @@ import type { Exercise, LogSet, Routine, WorkoutLog } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useCreateLog, useLogs } from '@/hooks/useLogs'
+import { useToastAction } from '@/hooks/useToastAction'
 import { useMemberAssignments, useRoutines } from '@/hooks/useRoutines'
 import { useGym } from '@/hooks/useGym'
 import { usePlans } from '@/hooks/usePlans'
@@ -22,6 +23,7 @@ export function MyRoutinesPage() {
   const gymId = activeGymId as string
   const memberId = activeMembership?.memberId as string
   const { notify } = useToast()
+  const run = useToastAction()
 
   const { data: assignments = [], isLoading: loadingA } = useMemberAssignments(gymId, memberId)
   const { data: routines = [], isLoading: loadingR } = useRoutines(gymId)
@@ -67,18 +69,17 @@ export function MyRoutinesPage() {
       setActive(null)
       return
     }
-    try {
-      await createLog.mutateAsync({
-        routineId: active.routine.id,
-        exerciseName: active.exercise.name,
-        date: Timestamp.now(),
-        sets,
-      })
-      notify('Carga registrada', 'success')
-      setActive(null)
-    } catch {
-      notify('No se pudo registrar la carga', 'error')
-    }
+    const ok = await run(
+      () =>
+        createLog.mutateAsync({
+          routineId: active.routine.id,
+          exerciseName: active.exercise.name,
+          date: Timestamp.now(),
+          sets,
+        }),
+      { success: 'Carga registrada', error: 'No se pudo registrar la carga' },
+    )
+    if (ok) setActive(null)
   }
 
   if (loadingA || loadingR) {

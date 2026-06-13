@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { NotebookPen, Plus, Target, Trash2, Weight } from 'lucide-react'
 import type { NoteType } from '@/types'
-import { useToast } from '@/providers/ToastProvider'
 import { useCreateNote, useNotes, useRemoveNote } from '@/hooks/useMemberNotes'
+import { useToastAction } from '@/hooks/useToastAction'
 import { Badge, Button, Card, EmptyState, Input, Select, Spinner } from '@/components/ui'
 import { formatDate } from '@/utils/format'
 
@@ -26,7 +26,7 @@ export function NotesTab({
   memberId: string
   adminUid: string
 }) {
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: notes = [], isLoading } = useNotes(gymId, memberId)
   const createNote = useCreateNote(gymId, memberId)
   const removeNote = useRemoveNote(gymId, memberId)
@@ -35,18 +35,17 @@ export function NotesTab({
 
   const add = async () => {
     if (!value.trim()) return
-    try {
-      await createNote.mutateAsync({
-        type,
-        value: value.trim(),
-        date: Timestamp.now(),
-        createdBy: adminUid,
-      })
-      setValue('')
-      notify('Nota agregada', 'success')
-    } catch {
-      notify('No se pudo guardar la nota', 'error')
-    }
+    const ok = await run(
+      () =>
+        createNote.mutateAsync({
+          type,
+          value: value.trim(),
+          date: Timestamp.now(),
+          createdBy: adminUid,
+        }),
+      { success: 'Nota agregada', error: 'No se pudo guardar la nota' },
+    )
+    if (ok) setValue('')
   }
 
   return (

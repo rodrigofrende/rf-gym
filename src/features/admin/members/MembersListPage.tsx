@@ -4,8 +4,8 @@ import { ChevronRight, Plus, Search, Users, Wallet } from 'lucide-react'
 import type { Member, MemberStatus } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
-import { useToast } from '@/providers/ToastProvider'
 import { useCreateMember, useMembers } from '@/hooks/useMembers'
+import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
 import {
   Avatar,
@@ -36,7 +36,7 @@ export function MembersListPage() {
   const { activeGymId } = useTenant()
   const gymId = activeGymId as string
   const navigate = useNavigate()
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: members = [], isLoading } = useMembers(gymId)
   const createMember = useCreateMember(gymId)
   const [search, setSearch] = useState('')
@@ -105,13 +105,11 @@ export function MembersListPage() {
   ]
 
   const handleCreate = async (data: Omit<Member, 'id' | 'uid'>) => {
-    try {
-      await createMember.mutateAsync(data)
-      notify('Socio creado. Podrá ingresar con su email.', 'success')
-      setModalOpen(false)
-    } catch {
-      notify('No se pudo crear el socio', 'error')
-    }
+    const ok = await run(() => createMember.mutateAsync(data), {
+      success: 'Socio creado. Podrá ingresar con su email.',
+      error: 'No se pudo crear el socio',
+    })
+    if (ok) setModalOpen(false)
   }
 
   return (

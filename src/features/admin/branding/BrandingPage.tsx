@@ -2,8 +2,8 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { Dumbbell, RotateCcw } from 'lucide-react'
 import type { GymTheme } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
-import { useToast } from '@/providers/ToastProvider'
 import { useGym, useUpdateGymBranding } from '@/hooks/useGym'
+import { useToastAction } from '@/hooks/useToastAction'
 import {
   applyTenantTheme,
   BRANDING_PRESETS,
@@ -20,7 +20,7 @@ const FIELD_DEFAULTS: Record<keyof GymTheme, string> = { ...PLATFORM_DEFAULT_THE
 export function BrandingPage() {
   const { activeGymId } = useTenant()
   const gymId = activeGymId as string
-  const { notify } = useToast()
+  const run = useToastAction()
   const { data: gym, isLoading } = useGym(gymId)
   const save = useUpdateGymBranding(gymId)
 
@@ -55,14 +55,11 @@ export function BrandingPage() {
 
   const resetAllDefaults = () => setTheme({ ...PLATFORM_DEFAULT_THEME })
 
-  const handleSave = async () => {
-    try {
-      await save.mutateAsync({ theme: current, logoURL: currentLogo || undefined })
-      notify('Branding actualizado', 'success')
-    } catch {
-      notify('No se pudo guardar el branding', 'error')
-    }
-  }
+  const handleSave = () =>
+    run(() => save.mutateAsync({ theme: current, logoURL: currentLogo || undefined }), {
+      success: 'Branding actualizado',
+      error: 'No se pudo guardar el branding',
+    })
 
   const previewStyle = buildThemeVars(current) as CSSProperties
   const isCustomized = JSON.stringify(current) !== JSON.stringify(PLATFORM_DEFAULT_THEME)

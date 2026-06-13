@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { dateInputToTimestamp } from '@/utils/dates'
 import { useTenant } from '@/providers/TenantProvider'
-import { useToast } from '@/providers/ToastProvider'
+import { useToastAction } from '@/hooks/useToastAction'
 import { useMember, useUpdateMemberProfile } from '@/hooks/useMembers'
 import { useTariffs } from '@/hooks/useTariffs'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -28,7 +28,7 @@ export function ProfilePage() {
   const { activeGymId, activeMembership } = useTenant()
   const gymId = activeGymId as string
   const memberId = activeMembership?.memberId as string
-  const { notify } = useToast()
+  const run = useToastAction()
 
   const { data: member, isLoading } = useMember(gymId, memberId)
   const { data: tariffs = [] } = useTariffs(gymId)
@@ -55,18 +55,16 @@ export function ProfilePage() {
     )
   }
 
-  const onSubmit = async (v: FormValues) => {
-    try {
-      await updateProfile.mutateAsync({
-        fullName: v.fullName,
-        phone: v.phone,
-        birthDate: dateInputToTimestamp(v.birthDate),
-      })
-      notify('Datos actualizados', 'success')
-    } catch {
-      notify('No se pudieron guardar los cambios', 'error')
-    }
-  }
+  const onSubmit = (v: FormValues) =>
+    run(
+      () =>
+        updateProfile.mutateAsync({
+          fullName: v.fullName,
+          phone: v.phone,
+          birthDate: dateInputToTimestamp(v.birthDate),
+        }),
+      { success: 'Datos actualizados', error: 'No se pudieron guardar los cambios' },
+    )
 
   return (
     <AppLayout title="Mi perfil">
