@@ -12,6 +12,8 @@ import { db } from '@/lib/firebase'
 import type { Gym, Member, Membership, Role } from '@/types'
 import { env } from '@/config/env'
 import { isSuperAdminEmail } from '@/config/superAdmins'
+import { addGymAdmin } from './gymsService'
+import { syncGymMembershipIndex } from './membershipIndexService'
 import { listGyms } from './gymsService'
 import * as demo from '@/demo/store'
 
@@ -21,7 +23,7 @@ import * as demo from '@/demo/store'
  * al loguearse, antes de listar las membresías.
  */
 export async function claimPendingMemberships(user: User): Promise<void> {
-  if (env.demoMode) return // en demo no hay invitaciones que reclamar
+  if (env.demoMode) return
   if (!user.email) return
   const q = query(
     collectionGroup(db, 'members'),
@@ -29,7 +31,19 @@ export async function claimPendingMemberships(user: User): Promise<void> {
     where('uid', '==', ''),
   )
   const snap = await getDocs(q)
-  await Promise.all(snap.docs.map((d) => updateDoc(d.ref, { uid: user.uid })))
+  await Promise.all(
+    snap.docs.map(async (d) => {
+      const gymId = d.ref.parent.parent?.id
+      if (!gymId) return
+      const member = d.data() as Member
+      await updateDoc(d.ref, { uid: user.uid })
+      await syncGymMembershipIndex(user.uid, gymId, {
+        memberId: d.id,
+        role: member.role,
+      })
+      if (member.role === 'admin') await addGymAdmin(gymId, user.uid)
+    }),
+  )
 }
 
 /** Trae todas las membresías ya reclamadas del usuario, en todos los gyms. */
@@ -39,7 +53,6 @@ export async function listMembershipsForUser(
 ): Promise<Membership[]> {
   if (env.demoMode) return demo.listMembershipsForUser(uid, email)
 
-  // Super-admin: acceso de admin a TODOS los gyms (membresías sintéticas).
   if (isSuperAdminEmail(email)) {
     const gyms = await listGyms()
     return gyms.map(
@@ -62,7 +75,8 @@ export async function listMembershipsForUser(
     snap.docs.map(async (d) => {
       const gymId = d.ref.parent.parent?.id
       if (!gymId) return null
-      const role = (d.data() as Member).role
+      const member = d.data() as Member
+      await syncGymMembershipIndex(uid, gymId, { memberId: d.id, role: member.role })
       const gymSnap = await getDoc(doc(db, 'gyms', gymId))
       const gym = gymSnap.data() as Omit<Gym, 'id'> | undefined
       return {
@@ -71,7 +85,7 @@ export async function listMembershipsForUser(
         gymName: gym?.name ?? 'Gimnasio',
         gymLogoURL: gym?.logoURL,
         gymTheme: gym?.theme,
-        role: role as Role,
+        role: member.role as Role,
       } satisfies Membership
     }),
   )

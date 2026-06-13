@@ -12,5 +12,5 @@ export const env = {
   },
   useEmulator: import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true',
   // Demo en memoria: activo si se fuerza con VITE_DEMO_MODE o si no hay credenciales.
-  demoMode: import.meta.env.VITE_DEMO_MODE === 'true' || !apiKey,
+  demoMode: import.meta.env.VITE_DEMO_MODE === 'true',
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react'
 import { InfoTooltip } from './InfoTooltip'
 
 export function FormField({
@@ -16,21 +16,34 @@ export function FormField({
   required?: boolean
   children: ReactNode
 }) {
-  // El hint deja de ser una línea extra debajo del label (genera saltos y
-  // satura): se muestra como tooltip en el ícono de info. `tooltip` tiene
-  // prioridad si se pasan ambos.
+  const fieldId = useId()
+  const errorId = useId()
   const help = tooltip || hint
+
+  const control =
+    isValidElement(children) && !Array.isArray(children)
+      ? cloneElement(children as ReactElement<{ id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string }>, {
+          id: (children.props as { id?: string }).id ?? fieldId,
+          'aria-invalid': error ? true : (children.props as { 'aria-invalid'?: boolean })['aria-invalid'],
+          'aria-describedby': error ? errorId : undefined,
+        })
+      : children
+
   return (
-    <label className="block space-y-1.5">
-      <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-700">
+    <div className="block space-y-1.5">
+      <label htmlFor={fieldId} className="flex items-center gap-1.5 text-sm font-medium text-zinc-700">
         <span>
           {label}
           {required && <span className="text-red-500"> *</span>}
         </span>
         {help && <InfoTooltip text={help} />}
-      </span>
-      {children}
-      {error && <span className="block text-xs text-red-500">{error}</span>}
-    </label>
+      </label>
+      {control}
+      {error && (
+        <span id={errorId} role="alert" className="block text-xs text-red-500">
+          {error}
+        </span>
+      )}
+    </div>
   )
 }

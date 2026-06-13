@@ -5,7 +5,7 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useGymPayments, useRegisterGymPayment, useRemoveGymPayment } from '@/hooks/usePayments'
 import { Button, ConfirmDialog, DateInput, FormField, Input, Modal, MoneyInput, Spinner } from '@/components/ui'
-import { toDateInput } from '@/utils/format'
+import { parseDateInput, todayDateInput } from '@/utils/dates'
 import { PaymentSummary } from '@/features/payments/PaymentSummary'
 import { PaymentHistoryList } from '@/features/payments/PaymentHistoryList'
 
@@ -19,7 +19,7 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
   const sub = gym.subscription
 
   const [amount, setAmount] = useState(sub?.monthlyCost ?? 0)
-  const [date, setDate] = useState(() => toDateInput(new Date()))
+  const [date, setDate] = useState(() => todayDateInput())
   const [comment, setComment] = useState('')
   const [toDelete, setToDelete] = useState<string | null>(null)
 
@@ -30,7 +30,7 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
       await register.mutateAsync({
         payment: {
           amount,
-          date: new Date(date),
+          date: parseDateInput(date),
           comment: comment.trim() || undefined,
           createdBy: user?.uid ?? '',
         },

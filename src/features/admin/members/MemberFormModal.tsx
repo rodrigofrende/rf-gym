@@ -1,13 +1,12 @@
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Timestamp } from 'firebase/firestore'
 import type { Member } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useTariffs } from '@/hooks/useTariffs'
 import { Button, DateInput, FormField, Input, Modal, MoneyInput, Select } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
-import { addMonths } from '@/utils/payments'
+import { dateInputToTimestamp, parseDateInput, todayDateInput } from '@/utils/dates'
 import { frequencyLabel, tariffLabel } from '@/utils/tariffs'
 
 const schema = z.object({
@@ -24,12 +23,14 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
-const toTs = (value?: string) => (value ? Timestamp.fromDate(new Date(value)) : null)
+const toTs = (value?: string) => dateInputToTimestamp(value)
 
 /** Suma 1 mes exacto a una fecha YYYY-MM-DD (usa mediodía para evitar saltos de día). */
 function plusOneMonth(dateStr: string): string {
   if (!dateStr) return ''
-  return toDateInput(addMonths(new Date(`${dateStr}T12:00:00`), 1))
+  const d = parseDateInput(dateStr)
+  d.setMonth(d.getMonth() + 1)
+  return toDateInput(d)
 }
 
 export function MemberFormModal({
@@ -48,7 +49,7 @@ export function MemberFormModal({
   const { activeGymId } = useTenant()
   const { data: tariffs = [] } = useTariffs(activeGymId ?? '')
 
-  const today = toDateInput(new Date())
+  const today = todayDateInput()
 
   const {
     register,
@@ -106,8 +107,24 @@ export function MemberFormModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={initial ? 'Editar socio' : 'Nuevo socio'} size="lg">
-      <form onSubmit={handleSubmit(submit)} className="space-y-5">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={initial ? 'Editar socio' : 'Nuevo socio'}
+      size="lg"
+      closeOnBackdrop={!saving}
+      footer={
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" form="member-form" fullWidth className="sm:w-auto" loading={saving}>
+            {initial ? 'Guardar cambios' : 'Crear socio'}
+          </Button>
+        </div>
+      }
+    >
+      <form id="member-form" onSubmit={handleSubmit(submit)} className="space-y-5">
         {/* Datos personales */}
         <section className="space-y-3">
           <p className="text-sm font-semibold text-zinc-700">Datos personales</p>
@@ -185,15 +202,6 @@ export function MemberFormModal({
             </FormField>
           </div>
         </section>
-
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            {initial ? 'Guardar cambios' : 'Crear socio'}
-          </Button>
-        </div>
       </form>
     </Modal>
   )

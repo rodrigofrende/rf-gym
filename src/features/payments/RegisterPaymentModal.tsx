@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button, DateInput, FormField, Input, Modal, MoneyInput } from '@/components/ui'
+import { parseDateInput, todayDateInput } from '@/utils/dates'
 
 export interface PaymentFormValue {
   amount: number
@@ -23,14 +24,14 @@ export function RegisterPaymentModal({
   title?: string
 }) {
   const [amount, setAmount] = useState(defaultAmount)
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => todayDateInput())
   const [comment, setComment] = useState('')
 
   const canSubmit = amount > 0 && !!date
 
   const submit = () => {
     if (!canSubmit) return
-    onSubmit({ amount, date: new Date(`${date}T12:00:00`), comment: comment.trim() || undefined })
+    onSubmit({ amount, date: parseDateInput(date), comment: comment.trim() || undefined })
   }
 
   return (
@@ -38,6 +39,7 @@ export function RegisterPaymentModal({
       open={open}
       onClose={onClose}
       title={title}
+      closeOnBackdrop={!saving}
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={onClose}>
@@ -71,6 +73,9 @@ export function RegisterPaymentModal({
             className="h-11 text-base sm:h-10 sm:text-sm"
           />
         </FormField>
+        {!canSubmit && amount <= 0 && (
+          <p className="text-xs text-zinc-500">Ingresá un monto mayor a cero para registrar el pago.</p>
+        )}
       </div>
     </Modal>
   )

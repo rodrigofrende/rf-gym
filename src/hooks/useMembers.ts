@@ -34,6 +34,7 @@ export function useCreateMember(gymId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.members(gymId) })
       qc.invalidateQueries({ queryKey: queryKeys.stats(gymId) })
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard(gymId) })
     },
   })
 }
@@ -69,6 +70,7 @@ export function useRemoveMember(gymId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.members(gymId) })
       qc.invalidateQueries({ queryKey: queryKeys.stats(gymId) })
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard(gymId) })
     },
   })
 }

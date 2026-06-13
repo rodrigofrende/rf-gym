@@ -16,11 +16,11 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
       inputMode="none"
       className={cn(
         'h-11 w-full min-w-0 rounded-lg border bg-surface px-3 text-base text-zinc-900 transition-colors sm:h-10 sm:text-sm',
-        'focus:outline-none focus:ring-2',
+        'focus-visible:outline-none focus-visible:ring-2',
         '[color-scheme:light]',
         invalid
-          ? 'border-red-400 focus:ring-red-300'
-          : 'border-zinc-200 focus:border-brand-400 focus:ring-brand-200',
+          ? 'border-red-400 focus-visible:ring-red-300'
+          : 'border-zinc-200 focus-visible:border-brand-400 focus-visible:ring-brand-200',
         'disabled:cursor-not-allowed disabled:bg-zinc-50',
         className,
       )}

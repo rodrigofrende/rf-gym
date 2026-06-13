@@ -8,6 +8,7 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
 import { APP_NAME } from '@/config/app'
+import { mapAuthError } from '@/utils/authErrors'
 import { Button, Card, FormField, Input } from '@/components/ui'
 
 const schema = z.object({
@@ -40,7 +41,7 @@ export function LoginPage() {
         await loginEmail(values.email, values.password)
       }
     } catch (err) {
-      notify(err instanceof Error ? err.message : 'No se pudo iniciar sesión', 'error')
+      notify(mapAuthError(err), 'error')
     }
   }
 
@@ -49,7 +50,7 @@ export function LoginPage() {
     try {
       await loginGoogle()
     } catch (err) {
-      notify(err instanceof Error ? err.message : 'No se pudo iniciar sesión', 'error')
+      notify(mapAuthError(err), 'error')
     } finally {
       setGoogleLoading(false)
     }
@@ -111,10 +112,10 @@ export function LoginPage() {
               </FormField>
             )}
             <FormField label="Email" error={errors.email?.message} required>
-              <Input type="email" placeholder="vos@email.com" {...register('email')} />
+              <Input type="email" placeholder="vos@email.com" invalid={!!errors.email} {...register('email')} />
             </FormField>
             <FormField label="Contraseña" error={errors.password?.message} required>
-              <Input type="password" placeholder="••••••••" {...register('password')} />
+              <Input type="password" placeholder="••••••••" invalid={!!errors.password} {...register('password')} />
             </FormField>
 
             <Button type="submit" fullWidth loading={isSubmitting}>

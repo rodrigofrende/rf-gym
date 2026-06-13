@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Timestamp } from 'firebase/firestore'
+import { dateInputToTimestamp } from '@/utils/dates'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useMember, useUpdateMemberProfile } from '@/hooks/useMembers'
@@ -60,7 +60,7 @@ export function ProfilePage() {
       await updateProfile.mutateAsync({
         fullName: v.fullName,
         phone: v.phone,
-        birthDate: v.birthDate ? Timestamp.fromDate(new Date(v.birthDate)) : null,
+        birthDate: dateInputToTimestamp(v.birthDate),
       })
       notify('Datos actualizados', 'success')
     } catch {

@@ -30,6 +30,7 @@ export function useRegisterMemberPayment(gymId: string, memberId: string) {
       qc.invalidateQueries({ queryKey: queryKeys.member(gymId, memberId) })
       qc.invalidateQueries({ queryKey: queryKeys.members(gymId) })
       qc.invalidateQueries({ queryKey: queryKeys.stats(gymId) })
+      qc.invalidateQueries({ queryKey: queryKeys.dashboard(gymId) })
     },
   })
 }

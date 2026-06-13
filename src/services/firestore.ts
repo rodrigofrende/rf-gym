@@ -7,9 +7,11 @@ import {
   updateDoc,
   deleteDoc,
   addDoc,
+  writeBatch,
   query,
   type QueryConstraint,
   type DocumentData,
+  type WriteBatch,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
@@ -50,4 +52,8 @@ export async function addToCollection(path: string, data: DocumentData): Promise
 
 export async function removeOne(path: string): Promise<void> {
   await deleteDoc(doc(db, path))
+}
+
+export function createBatch(): WriteBatch {
+  return writeBatch(db)
 }

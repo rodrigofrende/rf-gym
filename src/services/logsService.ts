@@ -1,13 +1,19 @@
-import { orderBy, where } from 'firebase/firestore'
+import { limit, orderBy, where } from 'firebase/firestore'
 import type { WorkoutLog } from '@/types'
 import { env } from '@/config/env'
 import * as demo from '@/demo/store'
 import { addToCollection, getMany, removeOne, updateOne } from './firestore'
 import { paths } from './paths'
 
+const LOGS_LIST_LIMIT = 300
+
 export function listLogs(gymId: string, memberId: string) {
   if (env.demoMode) return demo.listLogs(gymId, memberId)
-  return getMany<WorkoutLog>(paths.logs(gymId, memberId), orderBy('date', 'desc'))
+  return getMany<WorkoutLog>(
+    paths.logs(gymId, memberId),
+    orderBy('date', 'desc'),
+    limit(LOGS_LIST_LIMIT),
+  )
 }
 
 export function listExerciseLogs(gymId: string, memberId: string, exerciseName: string) {
@@ -16,6 +22,7 @@ export function listExerciseLogs(gymId: string, memberId: string, exerciseName: 
     paths.logs(gymId, memberId),
     where('exerciseName', '==', exerciseName),
     orderBy('date', 'desc'),
+    limit(LOGS_LIST_LIMIT),
   )
 }
 

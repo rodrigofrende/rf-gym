@@ -2,6 +2,7 @@
 export const paths = {
   users: () => 'users',
   user: (uid: string) => `users/${uid}`,
+  userGymMembership: (uid: string, gymId: string) => `users/${uid}/gymMemberships/${gymId}`,
 
   gyms: () => 'gyms',
   gym: (gymId: string) => `gyms/${gymId}`,
