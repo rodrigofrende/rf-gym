@@ -65,7 +65,7 @@ export function RegisterPaymentModal({
         <FormField label="Fecha del pago">
           <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
         </FormField>
-        <FormField label="Comentario (opcional)">
+        <FormField label="Comentario">
           <Input
             placeholder="Ej. Pago en efectivo"
             value={comment}

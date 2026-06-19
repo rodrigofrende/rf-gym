@@ -18,14 +18,17 @@ export function FormField({
 }) {
   const fieldId = useId()
   const errorId = useId()
-  const help = tooltip || hint
+  const hintId = useId()
+  const describedBy = [hint ? hintId : undefined, error ? errorId : undefined]
+    .filter(Boolean)
+    .join(' ') || undefined
 
   const control =
     isValidElement(children) && !Array.isArray(children)
       ? cloneElement(children as ReactElement<{ id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string }>, {
           id: (children.props as { id?: string }).id ?? fieldId,
           'aria-invalid': error ? true : (children.props as { 'aria-invalid'?: boolean })['aria-invalid'],
-          'aria-describedby': error ? errorId : undefined,
+          'aria-describedby': describedBy,
         })
       : children
 
@@ -36,9 +39,14 @@ export function FormField({
           {label}
           {required && <span className="text-red-500"> *</span>}
         </span>
-        {help && <InfoTooltip text={help} />}
+        {tooltip && <InfoTooltip text={tooltip} />}
       </label>
       {control}
+      {hint && (
+        <p id={hintId} className="text-xs leading-relaxed text-zinc-500">
+          {hint}
+        </p>
+      )}
       {error && (
         <span id={errorId} role="alert" className="block text-xs text-red-500">
           {error}

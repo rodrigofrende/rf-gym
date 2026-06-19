@@ -143,6 +143,11 @@ service cloud.firestore {
         allow write: if isGymAdmin(gymId);
       }
 
+      match /exercises/{exerciseId} {
+        allow read: if canAccessGym(gymId);
+        allow write: if isGymAdmin(gymId);
+      }
+
       match /assignments/{assignmentId} {
         allow read: if canAccessGym(gymId);
         allow write: if isGymAdmin(gymId);

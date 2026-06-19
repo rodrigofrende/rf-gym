@@ -1,6 +1,7 @@
 import type {
   AdminStats,
   Assignment,
+  ExerciseDefinition,
   Gym,
   GymSubscription,
   Member,
@@ -167,6 +168,32 @@ export function updateRoutine(_gymId: string, routineId: string, payload: Partia
 }
 export function removeRoutine(_gymId: string, routineId: string) {
   data.routines = data.routines.filter((r) => r.id !== routineId)
+  return ok(undefined)
+}
+
+// ---- Exercises ----
+export function listExercises(_gymId: string) {
+  return ok([...data.exercises])
+}
+export function getExercise(_gymId: string, exerciseId: string) {
+  return ok(data.exercises.find((e) => e.id === exerciseId) ?? null)
+}
+export function createExercise(_gymId: string, payload: Omit<ExerciseDefinition, 'id'>) {
+  const id = nextId('exercise')
+  data.exercises.push({ ...payload, id })
+  return ok(id)
+}
+export function updateExercise(
+  _gymId: string,
+  exerciseId: string,
+  payload: Partial<ExerciseDefinition>,
+) {
+  const e = data.exercises.find((x) => x.id === exerciseId)
+  if (e) Object.assign(e, payload)
+  return ok(undefined)
+}
+export function removeExercise(_gymId: string, exerciseId: string) {
+  data.exercises = data.exercises.filter((e) => e.id !== exerciseId)
   return ok(undefined)
 }
 

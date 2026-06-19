@@ -10,6 +10,7 @@ const schema = z.object({
   maxAdmins: z.number().min(0),
   maxMembers: z.number().min(0),
   maxRoutines: z.number().min(0),
+  maxExercises: z.number().min(0),
   logsEnabled: z.boolean(),
   maxLogsPerMember: z.number().min(0),
   whiteLabel: z.enum(['none', 'basic', 'full']),
@@ -44,6 +45,7 @@ export function PlanFormModal({
       maxAdmins: initial?.maxAdmins ?? 1,
       maxMembers: initial?.maxMembers ?? 30,
       maxRoutines: initial?.maxRoutines ?? 10,
+      maxExercises: initial?.maxExercises ?? 30,
       logsEnabled: initial?.logsEnabled ?? false,
       maxLogsPerMember: initial?.maxLogsPerMember ?? 0,
       whiteLabel: initial?.whiteLabel ?? 'none',
@@ -59,6 +61,7 @@ export function PlanFormModal({
       maxAdmins: v.maxAdmins,
       maxMembers: v.maxMembers,
       maxRoutines: v.maxRoutines,
+      maxExercises: v.maxExercises,
       logsEnabled: v.logsEnabled,
       maxLogsPerMember: v.maxLogsPerMember,
       whiteLabel: v.whiteLabel,
@@ -86,7 +89,7 @@ export function PlanFormModal({
           </FormField>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <FormField label="Máx. admins" hint="0 = ilimitado">
             <Input type="number" min={0} {...register('maxAdmins', { valueAsNumber: true })} />
           </FormField>
@@ -95,6 +98,9 @@ export function PlanFormModal({
           </FormField>
           <FormField label="Máx. rutinas" hint="0 = ilimitado">
             <Input type="number" min={0} {...register('maxRoutines', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Máx. ejercicios" hint="0 = ilimitado">
+            <Input type="number" min={0} {...register('maxExercises', { valueAsNumber: true })} />
           </FormField>
         </div>
 
@@ -107,15 +113,23 @@ export function PlanFormModal({
                 checked={field.value}
                 onChange={field.onChange}
                 label="Registro de cargas para alumnos"
+                tooltip="Cuando está activo, los socios pueden registrar series, pesos, reps o segundos según el tipo de carga de cada ejercicio."
               />
             )}
           />
-          <FormField label="Máx. registros por alumno" hint="0 = ilimitado (solo si está habilitado)">
+          <FormField
+            label="Máx. registros por alumno"
+            hint="0 = ilimitado"
+            tooltip="Este límite solo aplica si el registro de cargas para alumnos está habilitado."
+          >
             <Input type="number" min={0} {...register('maxLogsPerMember', { valueAsNumber: true })} />
           </FormField>
         </div>
 
-        <FormField label="White-label">
+        <FormField
+          label="White-label"
+          tooltip="Sin white-label no permite personalización. Basic habilita logo y colores. Full queda reservado para personalización completa."
+        >
           <Select
             {...register('whiteLabel')}
             options={[
@@ -142,6 +156,7 @@ export function PlanFormModal({
               checked={field.value}
               onChange={field.onChange}
               label="Activo (disponible para asignar)"
+              tooltip="Los planes inactivos no deberían asignarse a nuevos gimnasios, pero se conservan para gimnasios existentes."
             />
           )}
         />

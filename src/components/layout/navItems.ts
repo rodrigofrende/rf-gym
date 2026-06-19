@@ -9,6 +9,7 @@ import {
   Building2,
   Tags,
   Layers,
+  ListChecks,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
@@ -24,6 +25,7 @@ export interface NavItem {
 const ADMIN_NAV: NavItem[] = [
   { to: ROUTES.ADMIN_MEMBERS, label: 'Socios', icon: Users },
   { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
+  { to: ROUTES.ADMIN_EXERCISES, label: 'Ejercicios', icon: ListChecks },
   { to: ROUTES.ADMIN_TARIFFS, label: 'Tarifas', icon: Tags },
   { to: ROUTES.ADMIN_BRANDING, label: 'Marca', icon: Palette },
   { to: ROUTES.ADMIN_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },

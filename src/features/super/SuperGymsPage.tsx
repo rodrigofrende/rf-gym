@@ -9,6 +9,7 @@ import { useCreateMember, useMembers, useRemoveMember } from '@/hooks/useMembers
 import { useToastAction } from '@/hooks/useToastAction'
 import { usePlans } from '@/hooks/usePlans'
 import { useRoutines } from '@/hooks/useRoutines'
+import { useExercises } from '@/hooks/useExercises'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { defaultHomeForRole } from '@/routes/routePaths'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
@@ -24,6 +25,7 @@ import {
   FullPageSpinner,
   Heading,
   IconButton,
+  InfoTooltip,
   Input,
   Modal,
   Select,
@@ -84,7 +86,12 @@ export function SuperGymsPage() {
   return (
     <AppLayout
       title="Gimnasios"
-      subtitle="Administrá todos los gimnasios y sus administradores."
+      subtitle={
+        <span className="inline-flex items-center gap-1.5">
+          Administrá todos los gimnasios y sus administradores.
+          <InfoTooltip text="Los límites del plan se comparan contra el uso real del gym: socios, admins, rutinas y ejercicios." />
+        </span>
+      }
       actions={
         <Button leftIcon={<Plus className="size-4" />} onClick={() => setNewOpen(true)}>
           Nuevo gimnasio
@@ -122,7 +129,7 @@ export function SuperGymsPage() {
               autoFocus
             />
           </FormField>
-          <FormField label="Plan de suscripción" hint="Opcional · define el precio y los límites">
+          <FormField label="Plan de suscripción" hint="Define el precio y los límites">
             <Select
               value={planId}
               onChange={(e) => setPlanId(e.target.value)}
@@ -170,6 +177,7 @@ function GymCard({
   const run = useToastAction()
   const { data: members = [] } = useMembers(gym.id)
   const { data: routines = [] } = useRoutines(gym.id)
+  const { data: exercises = [] } = useExercises(gym.id)
   const createMember = useCreateMember(gym.id)
   const removeMember = useRemoveMember(gym.id)
   const { removeAdmin } = useGymAdminActions()
@@ -182,6 +190,7 @@ function GymCard({
     members: members.filter((m) => m.role === 'user').length,
     admins: admins.length,
     routines: routines.length,
+    exercises: exercises.length,
   }
   const overLimit = exceedsLimit(usage, plan)
 
@@ -279,6 +288,7 @@ function GymCard({
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <Badge tone="neutral">{usageLabel(usage.members, plan.maxMembers)} socios</Badge>
             <Badge tone="neutral">{usageLabel(usage.routines, plan.maxRoutines)} rutinas</Badge>
+            <Badge tone="neutral">{usageLabel(usage.exercises, plan.maxExercises)} ejercicios</Badge>
             <Badge tone="neutral">{usageLabel(usage.admins, plan.maxAdmins)} admins</Badge>
           </div>
         </div>
@@ -335,7 +345,10 @@ function GymCard({
           <FormField label="Nombre completo">
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus />
           </FormField>
-          <FormField label="Email" hint="Con este email el admin reclama su acceso al ingresar.">
+          <FormField
+            label="Email"
+            tooltip="El admin reclama su acceso iniciando sesión con este email."
+          >
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </FormField>
           <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">

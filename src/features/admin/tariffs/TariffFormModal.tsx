@@ -95,7 +95,7 @@ export function TariffFormModal({
             />
           </FormField>
         </div>
-        <FormField label="Descripción (opcional)">
+        <FormField label="Descripción">
           <Input placeholder="Ej. Acceso a sala de musculación" {...register('description')} />
         </FormField>
 
@@ -107,6 +107,7 @@ export function TariffFormModal({
               checked={field.value}
               onChange={field.onChange}
               label="Activa (visible para los socios)"
+              tooltip="Solo las tarifas activas aparecen al asignar o editar el servicio de un socio."
             />
           )}
         />

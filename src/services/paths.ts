@@ -32,6 +32,9 @@ export const paths = {
   routines: (gymId: string) => `gyms/${gymId}/routines`,
   routine: (gymId: string, routineId: string) => `gyms/${gymId}/routines/${routineId}`,
 
+  exercises: (gymId: string) => `gyms/${gymId}/exercises`,
+  exercise: (gymId: string, exerciseId: string) => `gyms/${gymId}/exercises/${exerciseId}`,
+
   tariffs: (gymId: string) => `gyms/${gymId}/tariffs`,
   tariff: (gymId: string, tariffId: string) => `gyms/${gymId}/tariffs/${tariffId}`,
 

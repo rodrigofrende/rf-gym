@@ -14,11 +14,13 @@ import {
   Card,
   EmptyState,
   FullPageSpinner,
+  IconButton,
   Input,
   Money,
   Sensitive,
   Text,
   Table,
+  Tooltip,
   type Column,
 } from '@/components/ui'
 import { STATUS_LABEL } from '@/utils/roles'
@@ -93,14 +95,15 @@ export function MembersListPage() {
       header: '',
       className: 'w-px whitespace-nowrap',
       render: (m) => (
-        <Button
-          size="sm"
-          leftIcon={<Wallet className="size-4" />}
-          onClick={(e) => openPay(m, e)}
-          aria-label={`Registrar pago de ${m.fullName}`}
-        >
-          Registrar pago
-        </Button>
+        <Tooltip text={`Registrar pago de ${m.fullName}`}>
+          <IconButton
+            icon={<Wallet className="size-5" />}
+            tone="brand"
+            className="border border-brand-100"
+            onClick={(e) => openPay(m, e)}
+            label={`Registrar pago de ${m.fullName}`}
+          />
+        </Tooltip>
       ),
     },
   ]
@@ -178,13 +181,19 @@ export function MembersListPage() {
                   <ChevronRight className="size-5 shrink-0 text-zinc-300" aria-hidden />
                 </button>
                 <div className="border-t border-zinc-100 p-3">
-                  <Button
-                    fullWidth
-                    leftIcon={<Wallet className="size-4" />}
-                    onClick={() => openPay(m)}
-                  >
-                    Registrar pago
-                  </Button>
+                  <div className="flex justify-end">
+                    <div className="flex items-center">
+                      <Tooltip text={`Registrar pago de ${m.fullName}`}>
+                      <IconButton
+                        icon={<Wallet className="size-5" />}
+                        tone="brand"
+                        className="border border-brand-100"
+                        onClick={() => openPay(m)}
+                        label={`Registrar pago de ${m.fullName}`}
+                      />
+                      </Tooltip>
+                    </div>
+                  </div>
                 </div>
               </Card>
             ))}

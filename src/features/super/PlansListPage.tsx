@@ -4,7 +4,7 @@ import type { SubscriptionPlan } from '@/types'
 import { useCreatePlan, usePlans, useRemovePlan, useUpdatePlan } from '@/hooks/usePlans'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner, Heading, IconButton, Text } from '@/components/ui'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner, Heading, IconButton, InfoTooltip, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatCurrency } from '@/utils/format'
 import { limitLabel, logsCapabilityLabel, whiteLabelLabel } from '@/utils/plans'
@@ -54,7 +54,12 @@ export function PlansListPage() {
   return (
     <AppLayout
       title="Planes"
-      subtitle="Planes de suscripción que pagan los gimnasios."
+      subtitle={
+        <span className="inline-flex items-center gap-1.5">
+          Planes de suscripción que pagan los gimnasios.
+          <InfoTooltip text="Los límites del plan se comparan contra el uso real del gym: socios, admins, rutinas y ejercicios." />
+        </span>
+      }
       actions={
         <Button leftIcon={<Plus className="size-4" />} onClick={openNew}>
           Nuevo plan
@@ -103,6 +108,7 @@ export function PlansListPage() {
                 <Badge tone="neutral">{limitLabel(p.maxAdmins)} admins</Badge>
                 <Badge tone="neutral">{limitLabel(p.maxMembers)} socios</Badge>
                 <Badge tone="neutral">{limitLabel(p.maxRoutines)} rutinas</Badge>
+                <Badge tone="neutral">{limitLabel(p.maxExercises)} ejercicios</Badge>
                 <Badge tone={p.logsEnabled ? 'neutral' : 'amber'}>{logsCapabilityLabel(p)}</Badge>
                 <Badge tone={p.whiteLabel === 'none' ? 'neutral' : 'brand'}>
                   {whiteLabelLabel(p.whiteLabel)}

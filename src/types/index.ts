@@ -36,6 +36,7 @@ export interface SubscriptionPlan {
   maxAdmins: number // 0 = ilimitado
   maxMembers: number // 0 = ilimitado
   maxRoutines: number // 0 = ilimitado
+  maxExercises: number // 0 = ilimitado
   logsEnabled: boolean // si los alumnos pueden registrar cargas
   maxLogsPerMember: number // 0 = ilimitado (solo si logsEnabled)
   whiteLabel: WhiteLabelLevel
@@ -142,6 +143,19 @@ export type LegacyLoadType = 'cable' | 'barbell' | 'unilateral' | 'isometric'
 
 export type StoredLoadType = LoadType | LegacyLoadType
 
+export type MuscleGroup =
+  | 'chest'
+  | 'back'
+  | 'legs'
+  | 'glutes'
+  | 'shoulders'
+  | 'arms'
+  | 'core'
+  | 'fullBody'
+  | 'cardio'
+
+export type ExerciseCategory = 'strength' | 'hypertrophy' | 'cardio' | 'mobility' | 'functional' | 'core'
+
 /** Icono visual de la rutina (cards y vista). */
 export type RoutineIconKey =
   | 'strength'
@@ -170,6 +184,7 @@ export type TariffIconKey =
   | 'sparkles'
 
 export interface Exercise {
+  exerciseId?: string
   name: string
   sets: number
   reps: number
@@ -178,6 +193,20 @@ export interface Exercise {
   loadType?: StoredLoadType // tipo de carga (default 'weight')
   restSec?: number
   notes?: string
+}
+
+/** Ejercicio del catálogo del gym (`gyms/{gymId}/exercises/{exerciseId}`). */
+export interface ExerciseDefinition {
+  id: string
+  name: string
+  category: ExerciseCategory
+  muscleGroups: MuscleGroup[]
+  loadType: LoadType
+  description?: string
+  defaultSets?: number
+  defaultReps?: number
+  defaultRestSec?: number
+  createdBy: string
 }
 
 /** Rutina (`gyms/{gymId}/routines/{routineId}`). */

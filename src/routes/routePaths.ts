@@ -14,6 +14,9 @@ export const ROUTES = {
   ADMIN_MEMBERS: '/admin/members',
   ADMIN_MEMBER_DETAIL: '/admin/members/:uid',
   ADMIN_ROUTINES: '/admin/routines',
+  ADMIN_ROUTINE_NEW: '/admin/routines/new',
+  ADMIN_ROUTINE_DETAIL: '/admin/routines/:routineId',
+  ADMIN_EXERCISES: '/admin/exercises',
   ADMIN_TARIFFS: '/admin/tariffs',
   ADMIN_BRANDING: '/admin/branding',
 
@@ -24,6 +27,7 @@ export const ROUTES = {
 } as const
 
 export const adminMemberDetail = (uid: string) => `/admin/members/${uid}`
+export const adminRoutineDetail = (routineId: string) => `/admin/routines/${routineId}`
 
 /** Home por defecto según rol (Panel al final del menú: carga pesada). */
 export function defaultHomeForRole(

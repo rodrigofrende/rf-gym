@@ -11,6 +11,7 @@ export const queryKeys = {
   payments: (gymId: string, memberId: string) => ['payments', gymId, memberId] as const,
   gymPayments: (gymId: string) => ['gymPayments', gymId] as const,
   routines: (gymId: string) => ['routines', gymId] as const,
+  exercises: (gymId: string) => ['exercises', gymId] as const,
   tariffs: (gymId: string) => ['tariffs', gymId] as const,
   memberAssignments: (gymId: string, uid: string) => ['assignments', gymId, uid] as const,
   assignments: (gymId: string) => ['assignments', gymId] as const,

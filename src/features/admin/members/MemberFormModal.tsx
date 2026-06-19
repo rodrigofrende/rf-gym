@@ -132,7 +132,12 @@ export function MemberFormModal({
             <FormField label="Nombre completo" error={errors.fullName?.message} required>
               <Input {...register('fullName')} invalid={!!errors.fullName} />
             </FormField>
-            <FormField label="Email (para el alta)" error={errors.email?.message} required>
+            <FormField
+              label="Email (para el alta)"
+              error={errors.email?.message}
+              tooltip="El socio reclama su acceso iniciando sesión con este mismo email."
+              required
+            >
               <Input type="email" {...register('email')} invalid={!!errors.email} disabled={!!initial} />
             </FormField>
             <FormField label="Teléfono">
@@ -167,7 +172,11 @@ export function MemberFormModal({
                 ]}
               />
             </FormField>
-            <FormField label="Servicio contratado (tarifa)" hint={tariffHint}>
+            <FormField
+              label="Servicio contratado (tarifa)"
+              hint={tariffHint}
+              tooltip="La tarifa define la cuota y la frecuencia semanal; al guardarla queda como snapshot del socio."
+            >
               <Select
                 {...tariffReg}
                 onChange={(e) => {

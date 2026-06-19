@@ -70,7 +70,7 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
             <FormField label="Fecha">
               <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
             </FormField>
-            <FormField label="Comentario (opcional)">
+            <FormField label="Comentario">
               <Input
                 placeholder="Ej. Transferencia"
                 value={comment}

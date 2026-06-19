@@ -1,11 +1,13 @@
 import { useId } from 'react'
 import { cn } from '@/utils/cn'
+import { InfoTooltip } from './InfoTooltip'
 
 export function Toggle({
   checked,
   onChange,
   label,
   description,
+  tooltip,
   disabled = false,
   id,
   className,
@@ -14,6 +16,7 @@ export function Toggle({
   onChange: (checked: boolean) => void
   label?: string
   description?: string
+  tooltip?: string
   disabled?: boolean
   id?: string
   className?: string
@@ -26,8 +29,9 @@ export function Toggle({
       {(label || description) && (
         <div className="min-w-0 flex-1">
           {label ? (
-            <label htmlFor={toggleId} className="text-sm font-medium text-zinc-700">
-              {label}
+            <label htmlFor={toggleId} className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700">
+              <span>{label}</span>
+              {tooltip ? <InfoTooltip text={tooltip} /> : null}
             </label>
           ) : null}
           {description ? <p className="mt-0.5 text-xs text-zinc-500">{description}</p> : null}

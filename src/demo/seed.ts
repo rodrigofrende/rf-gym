@@ -1,6 +1,7 @@
 import type {
   AdminStats,
   Assignment,
+  ExerciseDefinition,
   Gym,
   Member,
   Note,
@@ -39,6 +40,7 @@ export const DEMO_IDENTITIES = {
 export interface DemoData {
   gym: Gym & { adminUids: string[] }
   members: Member[]
+  exercises: ExerciseDefinition[]
   routines: Routine[]
   assignments: Assignment[]
   notes: Record<string, Note[]> // memberId -> notas
@@ -373,6 +375,142 @@ export function buildSeed(): DemoData {
     { id: 'asg-r4', memberUid: 'demo-socio-rodrigo', routineId: 'rt-espalda-biceps', active: true },
   ]
 
+  const exercises: ExerciseDefinition[] = [
+    {
+      id: 'ex-sentadilla',
+      name: 'Sentadilla',
+      category: 'strength',
+      muscleGroups: ['legs', 'glutes', 'core'],
+      loadType: 'weight',
+      defaultSets: 4,
+      defaultReps: 8,
+      defaultRestSec: 120,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-prensa-45',
+      name: 'Prensa 45°',
+      category: 'hypertrophy',
+      muscleGroups: ['legs', 'glutes'],
+      loadType: 'weight',
+      defaultSets: 4,
+      defaultReps: 10,
+      defaultRestSec: 120,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-press-banca',
+      name: 'Press banca',
+      category: 'strength',
+      muscleGroups: ['chest', 'shoulders', 'arms'],
+      loadType: 'weight',
+      defaultSets: 4,
+      defaultReps: 8,
+      defaultRestSec: 120,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-remo-barra',
+      name: 'Remo con barra',
+      category: 'strength',
+      muscleGroups: ['back', 'arms'],
+      loadType: 'weight',
+      defaultSets: 4,
+      defaultReps: 10,
+      defaultRestSec: 90,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-plancha',
+      name: 'Plancha',
+      category: 'core',
+      muscleGroups: ['core'],
+      loadType: 'time',
+      defaultSets: 3,
+      defaultReps: 1,
+      defaultRestSec: 45,
+      description: 'Isométrico abdominal',
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-press-militar',
+      name: 'Press militar',
+      category: 'strength',
+      muscleGroups: ['shoulders', 'arms'],
+      loadType: 'weight',
+      defaultSets: 4,
+      defaultReps: 8,
+      defaultRestSec: 120,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-dominadas',
+      name: 'Dominadas',
+      category: 'strength',
+      muscleGroups: ['back', 'arms'],
+      loadType: 'bodyweight',
+      defaultSets: 4,
+      defaultReps: 6,
+      defaultRestSec: 120,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-peso-muerto',
+      name: 'Peso muerto',
+      category: 'strength',
+      muscleGroups: ['back', 'legs', 'glutes', 'core'],
+      loadType: 'weight',
+      defaultSets: 4,
+      defaultReps: 5,
+      defaultRestSec: 180,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-hip-thrust',
+      name: 'Hip thrust',
+      category: 'hypertrophy',
+      muscleGroups: ['glutes', 'legs'],
+      loadType: 'weight',
+      defaultSets: 3,
+      defaultReps: 10,
+      defaultRestSec: 90,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-rueda-abdominal',
+      name: 'Rueda abdominal',
+      category: 'core',
+      muscleGroups: ['core'],
+      loadType: 'bodyweight',
+      defaultSets: 3,
+      defaultReps: 12,
+      defaultRestSec: 45,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-elevaciones-laterales',
+      name: 'Elevaciones laterales',
+      category: 'hypertrophy',
+      muscleGroups: ['shoulders'],
+      loadType: 'weight',
+      defaultSets: 3,
+      defaultReps: 15,
+      defaultRestSec: 60,
+      createdBy: 'demo-admin',
+    },
+    {
+      id: 'ex-crunch-polea',
+      name: 'Crunch en polea',
+      category: 'core',
+      muscleGroups: ['core'],
+      loadType: 'weight',
+      defaultSets: 3,
+      defaultReps: 15,
+      defaultRestSec: 45,
+      createdBy: 'demo-admin',
+    },
+  ]
+
   const notes: Record<string, Note[]> = {
     'demo-socio-rodrigo': [
       {
@@ -604,10 +742,11 @@ export function buildSeed(): DemoData {
       maxAdmins: 1,
       maxMembers: 30,
       maxRoutines: 10,
+      maxExercises: 30,
       logsEnabled: false,
       maxLogsPerMember: 0,
       whiteLabel: 'none',
-      features: ['1 administrador', 'Hasta 30 socios', '10 rutinas', 'Sin registro de cargas'],
+      features: ['1 administrador', 'Hasta 30 socios', '10 rutinas', '30 ejercicios', 'Sin registro de cargas'],
       active: true,
     },
     {
@@ -617,6 +756,7 @@ export function buildSeed(): DemoData {
       maxAdmins: 3,
       maxMembers: 150,
       maxRoutines: 50,
+      maxExercises: 150,
       logsEnabled: true,
       maxLogsPerMember: 100,
       whiteLabel: 'basic',
@@ -624,6 +764,7 @@ export function buildSeed(): DemoData {
         'Hasta 3 admins',
         '150 socios',
         '50 rutinas',
+        '150 ejercicios',
         '100 registros por alumno',
         'White-label (logo + colores)',
         'Panel de analíticas',
@@ -637,6 +778,7 @@ export function buildSeed(): DemoData {
       maxAdmins: 0,
       maxMembers: 0,
       maxRoutines: 0,
+      maxExercises: 0,
       logsEnabled: true,
       maxLogsPerMember: 0,
       whiteLabel: 'full',
@@ -644,6 +786,7 @@ export function buildSeed(): DemoData {
         'Admins ilimitados',
         'Socios ilimitados',
         'Rutinas ilimitadas',
+        'Ejercicios ilimitados',
         'Registros ilimitados',
         'White-label completo',
         'Soporte prioritario + export',
@@ -663,5 +806,5 @@ export function buildSeed(): DemoData {
     updatedAt: new Date('2026-06-08'),
   }
 
-  return { gym, members, routines, assignments, notes, logs, payments, tariffs, plans, stats }
+  return { gym, members, exercises, routines, assignments, notes, logs, payments, tariffs, plans, stats }
 }

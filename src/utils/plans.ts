@@ -19,6 +19,7 @@ export interface GymUsage {
   members: number
   admins: number
   routines: number
+  exercises: number
 }
 
 /** ¿El uso supera algún límite del plan? (0 = ilimitado, nunca excede). */
@@ -28,8 +29,20 @@ export function exceedsLimit(usage: GymUsage, plan: SubscriptionPlan | undefined
   return (
     over(usage.members, plan.maxMembers) ||
     over(usage.admins, plan.maxAdmins) ||
-    over(usage.routines, plan.maxRoutines)
+    over(usage.routines, plan.maxRoutines) ||
+    over(usage.exercises, plan.maxExercises)
   )
+}
+
+export function canCreateExercise(
+  plan: SubscriptionPlan | undefined,
+  currentCount: number,
+): { allowed: boolean; reason?: string } {
+  if (!plan || plan.maxExercises === 0 || currentCount < plan.maxExercises) return { allowed: true }
+  return {
+    allowed: false,
+    reason: `Alcanzaste el límite de ejercicios de tu plan (${plan.maxExercises}).`,
+  }
 }
 
 /** "12/40" o "12/∞" si el límite es ilimitado. */

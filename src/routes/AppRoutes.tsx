@@ -15,6 +15,8 @@ const AdminDashboardPage = lazy(() =>
 import { MembersListPage } from '@/features/admin/members/MembersListPage'
 import { MemberDetailPage } from '@/features/admin/members/MemberDetailPage'
 import { RoutinesListPage } from '@/features/admin/routines/RoutinesListPage'
+import { RoutineEditorPage } from '@/features/admin/routines/RoutineEditorPage'
+import { ExercisesListPage } from '@/features/admin/exercises/ExercisesListPage'
 import { TariffsListPage } from '@/features/admin/tariffs/TariffsListPage'
 import { BrandingPage } from '@/features/admin/branding/BrandingPage'
 import { ProfilePage } from '@/features/member/profile/ProfilePage'
@@ -101,6 +103,30 @@ export function AppRoutes() {
         element={
           <PrivateRoute allowedRoles={['admin']}>
             <RoutinesListPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path={ROUTES.ADMIN_ROUTINE_NEW}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <RoutineEditorPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path={ROUTES.ADMIN_ROUTINE_DETAIL}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <RoutineEditorPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path={ROUTES.ADMIN_EXERCISES}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <ExercisesListPage />
           </PrivateRoute>
         }
       />

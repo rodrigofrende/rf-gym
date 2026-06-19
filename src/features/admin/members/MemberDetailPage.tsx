@@ -7,7 +7,18 @@ import { useTenant } from '@/providers/TenantProvider'
 import { useMember, useRemoveMember, useUpdateMember } from '@/hooks/useMembers'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Avatar, Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, FullPageSpinner, Sensitive } from '@/components/ui'
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  ConfirmDialog,
+  FullPageSpinner,
+  IconButton,
+  Sensitive,
+} from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
 import { formatDate } from '@/utils/format'
 import { ROLE_LABEL } from '@/utils/roles'
@@ -102,12 +113,19 @@ export function MemberDetailPage() {
             <Button leftIcon={<Wallet className="size-4" />} onClick={() => setPayOpen(true)}>
               Registrar pago
             </Button>
-            <Button variant="secondary" leftIcon={<Pencil className="size-4" />} onClick={() => setEditOpen(true)}>
-              Editar
-            </Button>
-            <Button variant="danger" leftIcon={<Trash2 className="size-4" />} onClick={() => setDeleteOpen(true)}>
-              Eliminar
-            </Button>
+            <IconButton
+              icon={<Pencil className="size-4" />}
+              label="Editar socio"
+              className="border border-zinc-200 text-zinc-500"
+              onClick={() => setEditOpen(true)}
+            />
+            <IconButton
+              icon={<Trash2 className="size-4" />}
+              label="Eliminar socio"
+              tone="danger"
+              className="border border-red-200 text-red-500"
+              onClick={() => setDeleteOpen(true)}
+            />
           </div>
         </div>
 
