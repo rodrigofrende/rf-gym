@@ -92,12 +92,37 @@ const exerciseSchema = z.object({
   notes: z.string().optional(),
 })
 
-const schema = z.object({
-  name: z.string().min(2, 'Ingresá un nombre'),
-  description: z.string().optional(),
-  icon: z.enum(ROUTINE_ICON_VALUES).optional(),
-  exercises: z.array(exerciseSchema).min(1, 'Agregá al menos un ejercicio'),
-})
+const normalizeExerciseName = (name: string) => name.trim().toLowerCase()
+
+const schema = z
+  .object({
+    name: z.string().min(2, 'Ingresá un nombre'),
+    description: z.string().optional(),
+    icon: z.enum(ROUTINE_ICON_VALUES).optional(),
+    exercises: z.array(exerciseSchema).min(1, 'Agregá al menos un ejercicio'),
+  })
+  .superRefine((values, ctx) => {
+    const seen = new Map<string, number>()
+    values.exercises.forEach((exercise, index) => {
+      const key = normalizeExerciseName(exercise.name)
+      if (!key) return
+      const firstIndex = seen.get(key)
+      if (firstIndex === undefined) {
+        seen.set(key, index)
+        return
+      }
+      ctx.addIssue({
+        code: 'custom',
+        path: ['exercises', index, 'name'],
+        message: 'Este ejercicio ya está en la rutina',
+      })
+      ctx.addIssue({
+        code: 'custom',
+        path: ['exercises'],
+        message: `No repitas ejercicios: "${exercise.name}" ya fue agregado.`,
+      })
+    })
+  })
 type FormValues = z.infer<typeof schema>
 type FormExercise = z.infer<typeof exerciseSchema>
 
@@ -193,7 +218,9 @@ export function RoutineBuilder({
   const sortableItems = fields.map((field) => sortableId(field.id))
 
   const countByExerciseId = new Map<string, number>()
+  const addedExerciseNames = new Set<string>()
   watchedExercises.forEach((exercise) => {
+    if (exercise.name) addedExerciseNames.add(normalizeExerciseName(exercise.name))
     if (exercise.exerciseId) {
       countByExerciseId.set(exercise.exerciseId, (countByExerciseId.get(exercise.exerciseId) ?? 0) + 1)
     }
@@ -205,6 +232,7 @@ export function RoutineBuilder({
   }
 
   const addExerciseFromPool = (exercise: ExerciseDefinition) => {
+    if (addedExerciseNames.has(normalizeExerciseName(exercise.name))) return
     appendExercise(exerciseFromDefinition(exercise))
   }
 
@@ -286,7 +314,7 @@ export function RoutineBuilder({
             <div className="mb-3">
               <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-800">
                 <span>Pool de ejercicios</span>
-                <InfoTooltip text="Tocá Agregar para copiar el ejercicio a la rutina. Podés agregar el mismo ejercicio más de una vez si lo necesitás." />
+                <InfoTooltip text="Tocá Agregar para copiar el ejercicio a la rutina. Cada ejercicio puede aparecer una sola vez." />
               </p>
               <p className="text-xs text-zinc-500">Filtrá el catálogo y sumá ejercicios con un toque.</p>
             </div>
@@ -343,6 +371,7 @@ export function RoutineBuilder({
                     key={exercise.id}
                     exercise={exercise}
                     addedCount={countByExerciseId.get(exercise.id) ?? 0}
+                    disabled={addedExerciseNames.has(normalizeExerciseName(exercise.name))}
                     onAdd={() => addExerciseFromPool(exercise)}
                   />
                 ))
@@ -418,10 +447,12 @@ export function RoutineBuilder({
 function PoolExerciseCard({
   exercise,
   addedCount,
+  disabled,
   onAdd,
 }: {
   exercise: ExerciseDefinition
   addedCount: number
+  disabled: boolean
   onAdd: () => void
 }) {
   const meta = loadTypeMeta(exercise.loadType)
@@ -455,8 +486,8 @@ function PoolExerciseCard({
             {exercise.muscleGroups.length > 2 ? ` · +${exercise.muscleGroups.length - 2}` : ''}
           </p>
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={onAdd}>
-          Agregar
+        <Button type="button" size="sm" variant="secondary" onClick={onAdd} disabled={disabled}>
+          {disabled ? 'Agregado' : 'Agregar'}
         </Button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase/firestore'
+import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { KeyRound, LockKeyhole } from 'lucide-react'
 import { useForm, useWatch } from 'react-hook-form'
@@ -6,10 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
-import { Button, Card, FormField, Heading, Input, Text } from '@/components/ui'
-import { claimPendingMemberships } from '@/services/membershipsService'
+import { Button, Card, FormField, Heading, PasswordInput, Text } from '@/components/ui'
+import { claimMembership, claimPendingMemberships, type ClaimedMembership } from '@/services/membershipsService'
 import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
 import { mapAuthError } from '@/utils/authErrors'
+import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
+import { queryKeys } from '@/hooks/queryKeys'
 import { ROUTES } from '@/routes/routePaths'
 
 const schema = z
@@ -34,7 +37,8 @@ function passwordHint(password: string, email: string) {
 export function SetPasswordPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const { user, registerEmail, changePassword, isInitialized } = useAuth()
+  const queryClient = useQueryClient()
+  const { user, loginEmail, registerEmail, changePassword, isInitialized } = useAuth()
   const { notify } = useToast()
   const email = (params.get('email') ?? user?.email ?? '').trim().toLowerCase()
   const mode = params.get('mode') === 'change' ? 'change' : 'create'
@@ -66,21 +70,54 @@ export function SetPasswordPage() {
         return
       }
 
+      let activatedUser = user
+      let membershipsToActivate: ClaimedMembership[] = []
       if (mode === 'create') {
-        const createdUser = await registerEmail(login.memberName, email, values.password)
-        await claimPendingMemberships(createdUser)
+        let createdUser = user?.email?.toLowerCase() === email ? user : null
+        if (!createdUser) {
+          try {
+            createdUser = await registerEmail(login.memberName, email, values.password)
+          } catch (err) {
+            if (err && typeof err === 'object' && 'code' in err && err.code === 'auth/email-already-in-use') {
+              createdUser = await loginEmail(email, values.password)
+            } else {
+              throw err
+            }
+          }
+        }
+        activatedUser = createdUser
+        const [directClaim, pendingClaims] = await Promise.all([
+          claimMembership(createdUser, login.gymId, login.memberId),
+          claimPendingMemberships(createdUser),
+        ])
+        const unique = new Map<string, ClaimedMembership>()
+        ;[directClaim, ...pendingClaims].forEach((membership) => {
+          if (membership) unique.set(`${membership.gymId}:${membership.memberId}`, membership)
+        })
+        membershipsToActivate = [...unique.values()]
       } else {
         await changePassword(values.password)
+        membershipsToActivate = [{ gymId: login.gymId, memberId: login.memberId, role: login.role }]
       }
 
-      await updateMemberAuthStatus(login.gymId, login.memberId, 'active', {
-        passwordUpdatedAt: Timestamp.now(),
-        passwordResetRequestedAt: null,
-      })
+      await Promise.all(
+        membershipsToActivate.map((membership) =>
+          updateMemberAuthStatus(membership.gymId, membership.memberId, 'active', {
+            passwordUpdatedAt: Timestamp.now(),
+            passwordResetRequestedAt: null,
+          }),
+        ),
+      )
+      if (activatedUser?.uid) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.memberships(activatedUser.uid) })
+      }
       notify(mode === 'create' ? 'Contraseña creada' : 'Contraseña actualizada', 'success')
       navigate('/')
     } catch (err) {
-      notify(mapAuthError(err), 'error')
+      const message = extractFirestoreCode(err)
+        ? mapFirestoreError(err, 'No se pudo activar el acceso al gimnasio')
+        : mapAuthError(err)
+      notify(message, 'error')
     }
   }
 
@@ -100,10 +137,10 @@ export function SetPasswordPage() {
         <Card className="p-5">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <FormField label="Nueva contraseña" error={errors.password?.message} hint={passwordHint(password, email)} required>
-              <Input type="password" placeholder="••••••••" {...register('password')} />
+              <PasswordInput placeholder="••••••••" invalid={!!errors.password} {...register('password')} />
             </FormField>
             <FormField label="Repetir contraseña" error={errors.confirm?.message} required>
-              <Input type="password" placeholder="••••••••" {...register('confirm')} />
+              <PasswordInput placeholder="••••••••" invalid={!!errors.confirm} {...register('confirm')} />
             </FormField>
             <Button type="submit" fullWidth loading={isSubmitting} leftIcon={<KeyRound className="size-4" />}>
               Guardar contraseña

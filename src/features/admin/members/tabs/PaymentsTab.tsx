@@ -25,6 +25,19 @@ export function PaymentsTab({
   const [open, setOpen] = useState(false)
   const [toDelete, setToDelete] = useState<string | null>(null)
 
+  if (member.role === 'admin') {
+    return (
+      <Card>
+        <CardHeader title="Pagos" />
+        <CardBody>
+          <p className="text-sm text-zinc-500">
+            Los administradores no tienen cuota mensual ni registro de pagos dentro del gimnasio.
+          </p>
+        </CardBody>
+      </Card>
+    )
+  }
+
   const confirmDelete = async () => {
     if (!toDelete) return
     const ok = await run(() => removePayment.mutateAsync(toDelete), {

@@ -27,7 +27,7 @@ export type DemoIdentity = keyof typeof DEMO_IDENTITIES
 interface AuthContextValue {
   user: User | null
   isInitialized: boolean
-  loginEmail: (email: string, password: string) => Promise<void>
+  loginEmail: (email: string, password: string) => Promise<User>
   registerEmail: (name: string, email: string, password: string) => Promise<User>
   changePassword: (password: string) => Promise<void>
   loginGoogle: () => Promise<void>
@@ -62,7 +62,11 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user: identity ? identityToUser(identity) : null,
       isInitialized: true,
-      loginEmail: async (email) => setIdentity(email.includes('tigerfit.com') ? 'socio' : 'admin'),
+      loginEmail: async (email) => {
+        const next = email.includes('tigerfit.com') ? 'socio' : 'admin'
+        setIdentity(next)
+        return identityToUser(next)
+      },
       registerEmail: async () => {
         setIdentity('socio')
         return identityToUser('socio')
@@ -95,7 +99,8 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
       user,
       isInitialized,
       loginEmail: async (email, password) => {
-        await signInWithEmailAndPassword(auth, email, password)
+        const cred = await signInWithEmailAndPassword(auth, email, password)
+        return cred.user
       },
       registerEmail: async (name, email, password) => {
         const cred = await createUserWithEmailAndPassword(auth, email, password)

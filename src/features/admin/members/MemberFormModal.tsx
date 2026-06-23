@@ -62,6 +62,7 @@ export function MemberFormModal({
   const { data: plans = [] } = usePlans()
   const gymName = activeMembership?.gymName ?? 'Gimnasio'
   const domain = tenantEmailDomain(gymName)
+  const isEditing = !!initial
 
   const today = todayDateInput()
 
@@ -158,8 +159,8 @@ export function MemberFormModal({
       tariffId: v.tariffId || undefined,
       weeklyFrequency: tariff?.weeklyFrequency,
       monthlyCost: v.monthlyCost ?? 0,
-      startDate: toTs(v.startDate),
-      paymentDate: toTs(v.paymentDate),
+      startDate: initial ? initial.startDate : toTs(v.startDate),
+      paymentDate: initial ? initial.paymentDate : toTs(v.paymentDate),
       status: v.status,
     })
   }
@@ -284,17 +285,21 @@ export function MemberFormModal({
                 )}
               />
             </FormField>
-            <FormField label="Fecha de inicio" hint="Autocompleta el próximo pago a 1 mes">
+            <FormField
+              label="Fecha de inicio"
+              hint={isEditing ? 'Solo lectura en edición' : 'Autocompleta el próximo pago a 1 mes'}
+            >
               <DateInput
                 {...startReg}
+                disabled={isEditing}
                 onChange={(e) => {
                   startReg.onChange(e)
                   if (e.target.value) setValue('paymentDate', plusOneMonth(e.target.value))
                 }}
               />
             </FormField>
-            <FormField label="Próximo pago">
-              <DateInput {...register('paymentDate')} />
+            <FormField label="Próximo pago" hint={isEditing ? 'Se actualiza registrando pagos' : undefined}>
+              <DateInput {...register('paymentDate')} disabled={isEditing} />
             </FormField>
           </div>
         </section>

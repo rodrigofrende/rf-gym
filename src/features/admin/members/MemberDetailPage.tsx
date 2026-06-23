@@ -33,10 +33,10 @@ import { PaymentsTab } from './tabs/PaymentsTab'
 import { ProgressTab } from './tabs/ProgressTab'
 
 type Tab = 'data' | 'notes' | 'payments' | 'routines' | 'progress'
-const TABS: { key: Tab; label: string; locked?: boolean }[] = [
+const TABS: { key: Tab; label: string; locked?: boolean; userOnly?: boolean }[] = [
   { key: 'data', label: 'Datos' },
   { key: 'notes', label: 'Notas privadas', locked: true },
-  { key: 'payments', label: 'Pagos' },
+  { key: 'payments', label: 'Pagos', userOnly: true },
   { key: 'routines', label: 'Rutinas y cargas' },
   { key: 'progress', label: 'Progreso' },
 ]
@@ -73,6 +73,9 @@ export function MemberDetailPage() {
       </AppLayout>
     )
   }
+
+  const isAdminMember = member.role === 'admin'
+  const visibleTabs = TABS.filter((t) => !t.userOnly || !isAdminMember)
 
   const handleEdit = async (data: Omit<Member, 'id' | 'uid'>) => {
     const ok = await run(() => updateMember.mutateAsync({ memberId, data }), {
@@ -129,14 +132,16 @@ export function MemberDetailPage() {
               <Sensitive className="block text-sm text-zinc-500">{member.email}</Sensitive>
               <div className="mt-2 flex items-center gap-2">
                 <Badge tone="brand">{ROLE_LABEL[member.role]}</Badge>
-                {!member.uid && <Badge tone="amber">Invitación pendiente</Badge>}
+                {!member.uid && <Badge tone="amber">Primer acceso pendiente</Badge>}
               </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button leftIcon={<Wallet className="size-4" />} onClick={() => setPayOpen(true)}>
-              Registrar pago
-            </Button>
+            {!isAdminMember && (
+              <Button leftIcon={<Wallet className="size-4" />} onClick={() => setPayOpen(true)}>
+                Registrar pago
+              </Button>
+            )}
             <Button
               variant="secondary"
               leftIcon={<KeyRound className="size-4" />}
@@ -161,7 +166,7 @@ export function MemberDetailPage() {
         </div>
 
         <div className="flex gap-1 overflow-x-auto border-t border-zinc-100 px-3">
-          {TABS.map((t) => (
+          {visibleTabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
@@ -207,7 +212,7 @@ export function MemberDetailPage() {
 
       {tab === 'notes' && <NotesTab gymId={gymId} memberId={memberId} adminUid={user?.uid ?? ''} />}
 
-      {tab === 'payments' && (
+      {tab === 'payments' && !isAdminMember && (
         <PaymentsTab gymId={gymId} member={member} adminUid={user?.uid ?? ''} />
       )}
 
@@ -223,7 +228,7 @@ export function MemberDetailPage() {
         saving={updateMember.isPending}
       />
 
-      {payOpen && (
+      {payOpen && !isAdminMember && (
         <MemberRegisterPaymentModal
           open
           onClose={() => setPayOpen(false)}

@@ -22,7 +22,7 @@ const TARIFF_ICON_VALUES = [
 const schema = z.object({
   name: z.string().min(2, 'Ingresá un nombre'),
   icon: z.enum(TARIFF_ICON_VALUES).optional(),
-  weeklyFrequency: z.number().min(0),
+  weeklyFrequency: z.number().min(0, 'No puede ser menor a 0').max(7, 'El máximo es 7 veces por semana'),
   price: z.number().min(0),
   description: z.string().optional(),
   active: z.boolean(),
@@ -105,11 +105,13 @@ export function TariffFormModal({
           <Input placeholder="Ej. Musculación" {...register('name')} invalid={!!errors.name} />
         </FormField>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="Veces por semana" hint="0 = libre / sin límite">
+          <FormField label="Veces por semana" hint="0 = libre / sin límite" error={errors.weeklyFrequency?.message}>
             <Input
               type="number"
               min={0}
+              max={7}
               {...register('weeklyFrequency', { valueAsNumber: true })}
+              invalid={!!errors.weeklyFrequency}
             />
           </FormField>
           <FormField label="Precio mensual">

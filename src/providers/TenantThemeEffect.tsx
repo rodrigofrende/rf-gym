@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useTenant } from './TenantProvider'
+import { useOptionalTenant } from '@/providers/TenantProvider'
 import { applyTenantTheme } from '@/utils/theme'
 
 /**
@@ -10,10 +10,10 @@ import { applyTenantTheme } from '@/utils/theme'
  * Vive fuera de TenantProvider para mantener ese provider puro (sin efectos).
  */
 export function TenantThemeEffect() {
-  const { activeMembership } = useTenant()
+  const tenant = useOptionalTenant()
   const { pathname } = useLocation()
   const isPlatform = pathname.startsWith('/super')
-  const theme = isPlatform ? null : (activeMembership?.gymTheme ?? null)
+  const theme = isPlatform ? null : (tenant?.activeMembership?.gymTheme ?? null)
 
   useEffect(() => {
     applyTenantTheme(theme)

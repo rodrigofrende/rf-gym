@@ -16,12 +16,19 @@ service cloud.firestore {
     }
 
     function gymAdminUids(gymId) {
-      return gymDoc(gymId).data.adminUids;
+      return gymDoc(gymId).data.get('adminUids', []);
+    }
+
+    function userGymMembership(gymId) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)/gymMemberships/$(gymId));
     }
 
     function isGymAdmin(gymId) {
       return isSuperAdmin()
-        || (isSignedIn() && request.auth.uid in gymAdminUids(gymId));
+        || (isSignedIn() && request.auth.uid in gymAdminUids(gymId))
+        || (isSignedIn()
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid)/gymMemberships/$(gymId))
+          && userGymMembership(gymId).data.role == 'admin');
     }
 
     function isGymMember(gymId) {
@@ -53,27 +60,20 @@ service cloud.firestore {
         && resource.data.uid == ''
         && resource.data.email == request.auth.token.email
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.monthlyCost == resource.data.monthlyCost
-        && request.resource.data.paymentDate == resource.data.paymentDate
-        && request.resource.data.lastPaymentDate == resource.data.lastPaymentDate
-        && request.resource.data.startDate == resource.data.startDate
-        && request.resource.data.tariffId == resource.data.tariffId
-        && request.resource.data['service'] == resource.data['service']
-        && request.resource.data.weeklyFrequency == resource.data.weeklyFrequency
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.loginEmail == resource.data.loginEmail
-        && request.resource.data.fullName == resource.data.fullName
-        && request.resource.data.phone == resource.data.phone
-        && request.resource.data.birthDate == resource.data.birthDate
-        && request.resource.data.photoURL == resource.data.photoURL;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid']);
     }
 
     function isSelfProfileEdit() {
       return isSignedIn()
         && resource.data.uid == request.auth.uid
         && memberBusinessFieldsUnchanged();
+    }
+
+    function isSelfAuthStatusUpdate() {
+      return isSignedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['authStatus', 'passwordUpdatedAt', 'passwordResetRequestedAt']);
     }
 
     // ---- Perfil global ----
@@ -121,7 +121,8 @@ service cloud.firestore {
 
         allow update: if isGymAdmin(gymId)
           || isClaimingMembership()
-          || isSelfProfileEdit();
+          || isSelfProfileEdit()
+          || isSelfAuthStatusUpdate();
 
         match /notes/{noteId} {
           allow read, write: if isGymAdmin(gymId);

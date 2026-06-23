@@ -2,6 +2,7 @@
 export const paths = {
   users: () => 'users',
   user: (uid: string) => `users/${uid}`,
+  userGymMemberships: (uid: string) => `users/${uid}/gymMemberships`,
   userGymMembership: (uid: string, gymId: string) => `users/${uid}/gymMemberships/${gymId}`,
 
   memberLoginIndex: (emailKey: string) => `memberLoginIndex/${emailKey}`,

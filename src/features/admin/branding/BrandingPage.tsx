@@ -1,11 +1,10 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Dumbbell, RotateCcw } from 'lucide-react'
 import type { GymTheme } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useGym, useUpdateGymBranding } from '@/hooks/useGym'
 import { useToastAction } from '@/hooks/useToastAction'
 import {
-  applyTenantTheme,
   BRANDING_PRESETS,
   buildThemeVars,
   normalizeHex,
@@ -26,12 +25,6 @@ export function BrandingPage() {
 
   const [theme, setTheme] = useState<GymTheme | null>(null)
   const [logoURL, setLogoURL] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!gym) return
-    applyTenantTheme(theme ?? gym.theme ?? PLATFORM_DEFAULT_THEME)
-    return () => applyTenantTheme(gym.theme ?? null)
-  }, [theme, gym])
 
   if (isLoading || !gym) {
     return (

@@ -7,6 +7,7 @@ import { useMemberships } from '@/hooks/useMemberships'
 interface TenantContextValue {
   memberships: Membership[]
   isLoading: boolean
+  error: unknown
   activeGymId: string | null
   activeMembership: Membership | null
   role: Role | null
@@ -20,7 +21,7 @@ const STORAGE_KEY = 'gym:activeGymId'
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const { data: memberships = [], isLoading } = useMemberships(user)
+  const { data: memberships = [], isLoading, error } = useMemberships(user)
   const [picked, setPicked] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY))
   const isSuperAdmin = isSuperAdminEmail(user?.email)
 
@@ -43,6 +44,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     return {
       memberships,
       isLoading,
+      error,
       activeGymId,
       activeMembership,
       role: activeMembership?.role ?? null,
@@ -56,14 +58,19 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(STORAGE_KEY)
       },
     }
-  }, [memberships, isLoading, picked, isSuperAdmin, user])
+  }, [memberships, isLoading, error, picked, isSuperAdmin, user])
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
+export function useOptionalTenant() {
+  return useContext(TenantContext)
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTenant() {
-  const ctx = useContext(TenantContext)
+  const ctx = useOptionalTenant()
   if (!ctx) throw new Error('useTenant debe usarse dentro de TenantProvider')
   return ctx
 }

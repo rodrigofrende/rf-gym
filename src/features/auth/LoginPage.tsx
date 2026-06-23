@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Crown, Dumbbell, ShieldCheck, User } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -9,9 +10,13 @@ import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
 import { APP_NAME } from '@/config/app'
 import { isSuperAdminEmail } from '@/config/superAdmins'
+import { queryKeys } from '@/hooks/queryKeys'
 import { getMemberLogin } from '@/services/memberLoginService'
+import type { ClaimedMembership } from '@/services/membershipsService'
+import { claimMembership, claimPendingMemberships } from '@/services/membershipsService'
 import { mapAuthError } from '@/utils/authErrors'
-import { Button, Card, FormField, Heading, Input, Text } from '@/components/ui'
+import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
+import { Button, Card, FormField, Heading, Input, PasswordInput, Text } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
 
 const schema = z.object({
@@ -25,6 +30,7 @@ export function LoginPage() {
   const { user, loginEmail, loginGoogle, setDemoIdentity } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { notify } = useToast()
   const [step, setStep] = useState<LoginStep>('email')
   const [resolvedEmail, setResolvedEmail] = useState('')
@@ -73,12 +79,40 @@ export function LoginPage() {
         return
       }
       const login = await getMemberLogin(resolvedEmail || email)
-      await loginEmail(resolvedEmail || email, values.password)
+      const loggedUser = await loginEmail(resolvedEmail || email, values.password)
+      const claimed = new Map<string, ClaimedMembership>()
+
+      // 1) Claim principal del índice de login (si falla, no lo silenciamos).
+      if (login) {
+        const direct = await claimMembership(loggedUser, login.gymId, login.memberId)
+        if (direct) claimed.set(`${direct.gymId}:${direct.memberId}`, direct)
+      }
+
+      // 2) Claims adicionales por el mismo email (multi-tenant), en best-effort.
+      try {
+        const pending = await claimPendingMemberships(loggedUser)
+        pending.forEach((membership) => {
+          claimed.set(`${membership.gymId}:${membership.memberId}`, membership)
+        })
+      } catch {
+        // Si el claim principal ya salió bien, no bloqueamos el login por claims secundarios.
+      }
+
+      if (!claimed.size && login) {
+        throw new Error('No se pudo vincular tu acceso a ningún gimnasio')
+      }
+
+      await queryClient.invalidateQueries({ queryKey: queryKeys.memberships(loggedUser.uid) })
       if (login?.authStatus === 'password_change_required') {
         navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail || email)}&mode=change`)
       }
     } catch (err) {
-      notify(mapAuthError(err), 'error')
+      const message = extractFirestoreCode(err)
+        ? mapFirestoreError(err, 'No se pudo sincronizar tu acceso al gimnasio')
+        : err instanceof Error && err.message.includes('vincular tu acceso')
+          ? 'Tu cuenta existe, pero no pudimos asociarla a un gimnasio. Pedile al super-admin que revise tu alta.'
+        : mapAuthError(err)
+      notify(message, 'error')
     }
   }
 
@@ -160,7 +194,7 @@ export function LoginPage() {
             <FormField label="Email" error={errors.email?.message} required>
               <Input
                 type="email"
-                placeholder="rodrigo.frende@gmail.com"
+                placeholder="usuario@gimnasio.com"
                 invalid={!!errors.email}
                 disabled={step === 'password'}
                 {...register('email')}
@@ -168,7 +202,7 @@ export function LoginPage() {
             </FormField>
             {step === 'password' && (
               <FormField label="Contraseña" required>
-                <Input type="password" placeholder="••••••••" {...register('password')} />
+                <PasswordInput placeholder="••••••••" {...register('password')} />
               </FormField>
             )}
 

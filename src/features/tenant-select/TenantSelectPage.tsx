@@ -1,16 +1,17 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { Building2, ChevronRight, Dumbbell, LogOut } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { ROLE_LABEL } from '@/utils/roles'
+import { mapFirestoreError } from '@/utils/firestoreErrors'
 import { Button, Card, EmptyState, FullPageSpinner, Heading } from '@/components/ui'
-import { defaultHomeForRole } from '@/routes/routePaths'
+import { defaultHomeForRole, ROUTES } from '@/routes/routePaths'
 
 export function TenantSelectPage() {
   const navigate = useNavigate()
-  const { logout } = useAuth()
-  const { memberships, isLoading, activeGymId, role, selectGym } = useTenant()
+  const { user, logout } = useAuth()
+  const { memberships, isLoading, error, activeGymId, role, selectGym } = useTenant()
 
   // Si ya hay gym activo (auto-seleccionado o elegido), saltar a la home del rol.
   useEffect(() => {
@@ -20,6 +21,12 @@ export function TenantSelectPage() {
   }, [activeGymId, role, navigate])
 
   if (isLoading) return <FullPageSpinner />
+  if (!user) return <Navigate to={ROUTES.LOGIN} replace />
+
+  const handleLogout = async () => {
+    await logout()
+    navigate(ROUTES.LOGIN, { replace: true })
+  }
 
   return (
     <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-zinc-100 p-4">
@@ -34,13 +41,24 @@ export function TenantSelectPage() {
           <p className="text-sm text-zinc-500">Tenés acceso a estos espacios</p>
         </div>
 
-        {memberships.length === 0 ? (
+        {error ? (
+          <EmptyState
+            icon={Building2}
+            title="No pudimos leer tus accesos"
+            description={mapFirestoreError(error, 'Cerrá sesión y volvé a ingresar. Si persiste, revisá el alta del usuario.')}
+            action={
+              <Button variant="secondary" leftIcon={<LogOut className="size-4" />} onClick={handleLogout}>
+                Cerrar sesión
+              </Button>
+            }
+          />
+        ) : memberships.length === 0 ? (
           <EmptyState
             icon={Building2}
             title="Todavía no tenés acceso"
             description="Pedile a tu gimnasio que te agregue como socio para empezar."
             action={
-              <Button variant="secondary" leftIcon={<LogOut className="size-4" />} onClick={() => logout()}>
+              <Button variant="secondary" leftIcon={<LogOut className="size-4" />} onClick={handleLogout}>
                 Cerrar sesión
               </Button>
             }

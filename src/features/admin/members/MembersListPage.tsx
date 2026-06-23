@@ -34,6 +34,10 @@ const STATUS_TONE: Record<MemberStatus, 'green' | 'amber' | 'red'> = {
   overdue: 'red',
 }
 
+function canRegisterPayment(member: Member): boolean {
+  return member.role === 'user'
+}
+
 export function MembersListPage() {
   const { user } = useAuth()
   const { activeGymId } = useTenant()
@@ -56,6 +60,7 @@ export function MembersListPage() {
 
   const openPay = (member: Member, e?: { stopPropagation: () => void }) => {
     e?.stopPropagation()
+    if (!canRegisterPayment(member)) return
     setPayMember(member)
   }
 
@@ -73,11 +78,11 @@ export function MembersListPage() {
         </div>
       ),
     },
-    { key: 'service', header: 'Servicio', render: (m) => m.service || '—' },
+    { key: 'service', header: 'Servicio', render: (m) => (m.role === 'admin' ? 'No aplica' : m.service || '—') },
     {
       key: 'cost',
       header: 'Mensual',
-      render: (m) => <Money value={m.monthlyCost} />,
+      render: (m) => (m.role === 'admin' ? '—' : <Money value={m.monthlyCost} />),
     },
     {
       key: 'status',
@@ -88,23 +93,24 @@ export function MembersListPage() {
       key: 'linked',
       header: '',
       render: (m) =>
-        m.uid ? null : <Badge tone="amber">Invitación pendiente</Badge>,
+        m.uid ? null : <Badge tone="amber">Primer acceso pendiente</Badge>,
     },
     {
       key: 'actions',
       header: '',
       className: 'w-px whitespace-nowrap',
-      render: (m) => (
-        <Tooltip text={`Registrar pago de ${m.fullName}`}>
-          <IconButton
-            icon={<Wallet className="size-5" />}
-            tone="brand"
-            className="border border-brand-100"
-            onClick={(e) => openPay(m, e)}
-            label={`Registrar pago de ${m.fullName}`}
-          />
-        </Tooltip>
-      ),
+      render: (m) =>
+        canRegisterPayment(m) ? (
+          <Tooltip text={`Registrar pago de ${m.fullName}`}>
+            <IconButton
+              icon={<Wallet className="size-5" />}
+              tone="brand"
+              className="border border-brand-100"
+              onClick={(e) => openPay(m, e)}
+              label={`Registrar pago de ${m.fullName}`}
+            />
+          </Tooltip>
+        ) : null,
     },
   ]
 
@@ -170,16 +176,17 @@ export function MembersListPage() {
                     <Sensitive className="block truncate text-xs text-zinc-500">{m.email}</Sensitive>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Badge>
-                      {m.monthlyCost != null ? (
+                      {m.role === 'user' && m.monthlyCost != null ? (
                         <span className="text-xs text-zinc-500">
                           <Money value={m.monthlyCost} /> /mes
                         </span>
                       ) : null}
-                      {!m.uid ? <Badge tone="amber">Pendiente</Badge> : null}
+                      {!m.uid ? <Badge tone="amber">Primer acceso pendiente</Badge> : null}
                     </div>
                   </div>
                   <ChevronRight className="size-5 shrink-0 text-zinc-300" aria-hidden />
                 </button>
+                {canRegisterPayment(m) && (
                 <div className="border-t border-zinc-100 p-3">
                   <div className="flex justify-end">
                     <div className="flex items-center">
@@ -195,6 +202,7 @@ export function MembersListPage() {
                     </div>
                   </div>
                 </div>
+                )}
               </Card>
             ))}
           </div>
