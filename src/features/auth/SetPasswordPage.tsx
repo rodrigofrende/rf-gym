@@ -54,20 +54,22 @@ export function SetPasswordPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
   const password = useWatch({ control, name: 'password' }) ?? ''
 
-  if (!email) return <Navigate to={ROUTES.LOGIN} replace />
-  if (!isInitialized) return null
-  if (mode === 'change' && !user) {
-    return <Navigate to={`${ROUTES.LOGIN}?redirect=${encodeURIComponent(`${ROUTES.SET_PASSWORD}?email=${email}&mode=change`)}`} replace />
-  }
-
   useEffect(() => {
+    if (!isInitialized) return
+    if (!email) return
     if (mode !== 'create') return
     if (!user?.email || user.email.toLowerCase() !== email) return
     if (membershipsLoading) return
     if (memberships.length > 0) {
       navigate('/', { replace: true })
     }
-  }, [mode, user, email, membershipsLoading, memberships.length, navigate])
+  }, [isInitialized, mode, user, email, membershipsLoading, memberships.length, navigate])
+
+  if (!email) return <Navigate to={ROUTES.LOGIN} replace />
+  if (!isInitialized) return null
+  if (mode === 'change' && !user) {
+    return <Navigate to={`${ROUTES.LOGIN}?redirect=${encodeURIComponent(`${ROUTES.SET_PASSWORD}?email=${email}&mode=change`)}`} replace />
+  }
 
   const onSubmit = async (values: FormValues) => {
     if (values.password.toLowerCase() === email.toLowerCase()) {
@@ -91,7 +93,11 @@ export function SetPasswordPage() {
             createdUser = await registerEmail(login.memberName, email, values.password)
           } catch (err) {
             if (err && typeof err === 'object' && 'code' in err && err.code === 'auth/email-already-in-use') {
-              createdUser = await loginEmail(email, values.password)
+              try {
+                createdUser = await loginEmail(email, values.password)
+              } catch {
+                throw new Error('existing-account-password-mismatch')
+              }
             } else {
               throw err
             }
@@ -126,7 +132,10 @@ export function SetPasswordPage() {
       notify(mode === 'create' ? 'Contraseña creada' : 'Contraseña actualizada', 'success')
       navigate('/')
     } catch (err) {
-      const message = extractAuthCode(err)
+      const message =
+        err instanceof Error && err.message === 'existing-account-password-mismatch'
+          ? 'Esta cuenta ya tenía contraseña. Ingresá con esa contraseña desde Login o pedí blanqueo a administración.'
+          : extractAuthCode(err)
         ? mapAuthError(err, 'No se pudo crear la contraseña')
         : extractFirestoreCode(err)
           ? mapFirestoreError(err, 'No se pudo activar el acceso al gimnasio')

@@ -9,6 +9,7 @@ import {
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
   createUserWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -28,6 +29,7 @@ interface AuthContextValue {
   user: User | null
   isInitialized: boolean
   loginEmail: (email: string, password: string) => Promise<User>
+  hasEmailAccount: (email: string) => Promise<boolean>
   registerEmail: (name: string, email: string, password: string) => Promise<User>
   changePassword: (password: string) => Promise<void>
   loginGoogle: () => Promise<void>
@@ -67,6 +69,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
         setIdentity(next)
         return identityToUser(next)
       },
+      hasEmailAccount: async () => false,
       registerEmail: async () => {
         setIdentity('socio')
         return identityToUser('socio')
@@ -101,6 +104,10 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
       loginEmail: async (email, password) => {
         const cred = await signInWithEmailAndPassword(auth, email, password)
         return cred.user
+      },
+      hasEmailAccount: async (email) => {
+        const methods = await fetchSignInMethodsForEmail(auth, email)
+        return methods.length > 0
       },
       registerEmail: async (name, email, password) => {
         const cred = await createUserWithEmailAndPassword(auth, email, password)

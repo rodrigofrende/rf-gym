@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { Timestamp } from 'firebase/firestore'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Crown, Dumbbell, ShieldCheck, User } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -11,7 +12,7 @@ import { env } from '@/config/env'
 import { APP_NAME } from '@/config/app'
 import { isSuperAdminEmail } from '@/config/superAdmins'
 import { queryKeys } from '@/hooks/queryKeys'
-import { getMemberLogin } from '@/services/memberLoginService'
+import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
 import type { ClaimedMembership } from '@/services/membershipsService'
 import { claimMembership, claimPendingMemberships } from '@/services/membershipsService'
 import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
@@ -27,7 +28,7 @@ type FormValues = z.infer<typeof schema>
 type LoginStep = 'email' | 'password'
 
 export function LoginPage() {
-  const { user, loginEmail, loginGoogle, setDemoIdentity } = useAuth()
+  const { user, loginEmail, hasEmailAccount, loginGoogle, setDemoIdentity } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -65,6 +66,14 @@ export function LoginPage() {
           return
         }
         if (login.authStatus === 'pending_password') {
+          const existsInAuth = await hasEmailAccount(email)
+          if (existsInAuth) {
+            notify('Esta cuenta ya tenía contraseña. Ingresá tu contraseña para continuar.', 'info')
+            setResolvedEmail(email)
+            setValue('password', '')
+            setStep('password')
+            return
+          }
           navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(email)}&mode=create`)
           return
         }
@@ -100,6 +109,16 @@ export function LoginPage() {
 
       if (!claimed.size && login) {
         throw new Error('No se pudo vincular tu acceso a ningún gimnasio')
+      }
+
+      if (login?.authStatus === 'pending_password') {
+        await Promise.all(
+          [...claimed.values()].map((membership) =>
+            updateMemberAuthStatus(membership.gymId, membership.memberId, 'active', {
+              passwordUpdatedAt: Timestamp.now(),
+            }),
+          ),
+        )
       }
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.memberships(loggedUser.uid) })
