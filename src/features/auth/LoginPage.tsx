@@ -6,6 +6,7 @@ import { ArrowLeft, Crown, Dumbbell, ShieldCheck, User } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
@@ -13,6 +14,8 @@ import { APP_NAME } from '@/config/app'
 import { isSuperAdminEmail } from '@/config/superAdmins'
 import { queryKeys } from '@/hooks/queryKeys'
 import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
+import { getOne } from '@/services/firestore'
+import { paths } from '@/services/paths'
 import type { ClaimedMembership } from '@/services/membershipsService'
 import { claimMembership, claimPendingMemberships } from '@/services/membershipsService'
 import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
@@ -27,8 +30,13 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 type LoginStep = 'email' | 'password'
 
+function isFirstAccessAuthFailure(err: unknown) {
+  const code = extractAuthCode(err)
+  return code === 'auth/user-not-found' || code === 'auth/invalid-credential'
+}
+
 export function LoginPage() {
-  const { user, loginEmail, hasEmailAccount, loginGoogle, setDemoIdentity } = useAuth()
+  const { user, loginEmail, loginGoogle, setDemoIdentity } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -65,18 +73,6 @@ export function LoginPage() {
           notify('No encontramos un socio con ese email', 'error')
           return
         }
-        if (login.authStatus === 'pending_password') {
-          const existsInAuth = await hasEmailAccount(email)
-          if (existsInAuth) {
-            notify('Esta cuenta ya tenía contraseña. Ingresá tu contraseña para continuar.', 'info')
-            setResolvedEmail(email)
-            setValue('password', '')
-            setStep('password')
-            return
-          }
-          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(email)}&mode=create`)
-          return
-        }
         setResolvedEmail(email)
         setValue('password', '')
         setStep('password')
@@ -88,7 +84,16 @@ export function LoginPage() {
         return
       }
       const login = await getMemberLogin(resolvedEmail || email)
-      const loggedUser = await loginEmail(resolvedEmail || email, values.password)
+      let loggedUser: Awaited<ReturnType<typeof loginEmail>>
+      try {
+        loggedUser = await loginEmail(resolvedEmail || email, values.password)
+      } catch (err) {
+        if (login?.authStatus === 'pending_password' && isFirstAccessAuthFailure(err)) {
+          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail || email)}&mode=create`)
+          return
+        }
+        throw err
+      }
       const claimed = new Map<string, ClaimedMembership>()
 
       // 1) Claim principal del índice de login (si falla, no lo silenciamos).
@@ -111,18 +116,23 @@ export function LoginPage() {
         throw new Error('No se pudo vincular tu acceso a ningún gimnasio')
       }
 
-      if (login?.authStatus === 'pending_password') {
-        await Promise.all(
-          [...claimed.values()].map((membership) =>
-            updateMemberAuthStatus(membership.gymId, membership.memberId, 'active', {
-              passwordUpdatedAt: Timestamp.now(),
-            }),
-          ),
-        )
-      }
+      await Promise.all(
+        [...claimed.values()].map(async (membership) => {
+          const member = await getOne<Member>(paths.member(membership.gymId, membership.memberId))
+          if (!member || member.authStatus === 'active' || member.authStatus === 'password_change_required') return
+          await updateMemberAuthStatus(membership.gymId, membership.memberId, 'active', {
+            passwordUpdatedAt: Timestamp.now(),
+          })
+        }),
+      )
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.memberships(loggedUser.uid) })
-      if (login?.authStatus === 'password_change_required') {
+      let shouldForcePasswordChange = false
+      if (login?.gymId && login?.memberId) {
+        const member = await getOne<Member>(paths.member(login.gymId, login.memberId))
+        shouldForcePasswordChange = member?.authStatus === 'password_change_required'
+      }
+      if (shouldForcePasswordChange) {
         navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail || email)}&mode=change`)
       }
     } catch (err) {

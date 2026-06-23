@@ -40,21 +40,6 @@ service cloud.firestore {
       return isGymAdmin(gymId) || isGymMember(gymId);
     }
 
-    function memberBusinessFieldsUnchanged() {
-      return request.resource.data.role == resource.data.role
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.monthlyCost == resource.data.monthlyCost
-        && request.resource.data.paymentDate == resource.data.paymentDate
-        && request.resource.data.lastPaymentDate == resource.data.lastPaymentDate
-        && request.resource.data.startDate == resource.data.startDate
-        && request.resource.data.tariffId == resource.data.tariffId
-        && request.resource.data['service'] == resource.data['service']
-        && request.resource.data.weeklyFrequency == resource.data.weeklyFrequency
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.loginEmail == resource.data.loginEmail
-        && request.resource.data.uid == resource.data.uid;
-    }
-
     function isClaimingMembership() {
       return isSignedIn()
         && resource.data.uid == ''
@@ -66,7 +51,8 @@ service cloud.firestore {
     function isSelfProfileEdit() {
       return isSignedIn()
         && resource.data.uid == request.auth.uid
-        && memberBusinessFieldsUnchanged();
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['fullName', 'phone', 'birthDate', 'photoURL']);
     }
 
     function isSelfAuthStatusUpdate() {
