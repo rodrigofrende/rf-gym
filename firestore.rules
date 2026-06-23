@@ -148,8 +148,14 @@ service cloud.firestore {
       }
 
       match /attendance/{attendanceId} {
-        allow read: if isGymAdmin(gymId)
-          || (isSignedIn() && resource.data.memberUid == request.auth.uid);
+        allow get: if isGymAdmin(gymId)
+          || (isSignedIn()
+            && exists(/databases/$(database)/documents/gyms/$(gymId)/attendance/$(attendanceId))
+            && resource.data.memberUid == request.auth.uid)
+          || (isSignedIn()
+            && !exists(/databases/$(database)/documents/gyms/$(gymId)/attendance/$(attendanceId))
+            && isGymMember(gymId));
+        allow list: if isGymAdmin(gymId);
         allow create, update: if isSignedIn()
           && request.resource.data.memberUid == request.auth.uid
           && exists(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId))

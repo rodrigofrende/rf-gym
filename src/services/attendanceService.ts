@@ -7,6 +7,7 @@ import {
   orderBy,
   query,
   setDoc,
+  updateDoc,
   where,
   collection,
   type Unsubscribe,
@@ -36,7 +37,6 @@ export async function checkInMember(gymId: string, memberId: string): Promise<At
   const dayKey = localDayKey(now.toDate())
   const id = attendanceId(dayKey, memberId)
   const ref = doc(db, paths.attendanceRecord(gymId, id))
-  const existing = await getDoc(ref)
   const paymentState = getPaymentStatus(member.paymentDate, member.lastPaymentDate).state
 
   const base = {
@@ -50,14 +50,19 @@ export async function checkInMember(gymId: string, memberId: string): Promise<At
     memberStatus: member.status,
   }
 
-  if (existing.exists()) {
-    await setDoc(ref, { ...base, scanCount: increment(1) }, { merge: true })
-  } else {
+  try {
+    await updateDoc(ref, { ...base, scanCount: increment(1) })
+  } catch (err) {
+    if (!isNotFoundError(err)) throw err
     await setDoc(ref, { ...base, checkedInAt: now, scanCount: 1 })
   }
 
   const saved = await getDoc(ref)
   return { id: saved.id, ...(saved.data() as Omit<Attendance, 'id'>) }
+}
+
+function isNotFoundError(err: unknown) {
+  return err && typeof err === 'object' && 'code' in err && err.code === 'not-found'
 }
 
 export function listTodayAttendance(gymId: string, dayKey = localDayKey(new Date())) {
