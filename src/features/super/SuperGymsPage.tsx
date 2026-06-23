@@ -141,6 +141,7 @@ export function SuperGymsPage() {
 }
 
 type GymFormData = Pick<Gym, 'name' | 'logoURL' | 'subscription'>
+type GymFormErrors = Partial<Record<'name' | 'logoURL' | 'planId' | 'monthlyCost' | 'dueDate', string>>
 
 function GymFormModal({
   gym,
@@ -165,9 +166,40 @@ function GymFormModal({
     gym?.subscription?.dueDate ? toDateInput(gym.subscription.dueDate) : toDateInput(addMonths(new Date(), 1)),
   )
   const [status, setStatus] = useState<GymSubscription['status']>(gym?.subscription?.status ?? 'active')
+  const [errors, setErrors] = useState<GymFormErrors>({})
+
+  const clearError = (field: keyof GymFormErrors) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }
+
+  const validate = () => {
+    const next: GymFormErrors = {}
+    const trimmedName = name.trim()
+    const trimmedLogoURL = logoURL.trim()
+
+    if (trimmedName.length < 2) next.name = 'Ingresá el nombre del gimnasio.'
+    if (trimmedLogoURL && !/^https?:\/\/\S+\.\S+/.test(trimmedLogoURL)) {
+      next.logoURL = 'Usá una URL válida que empiece con http:// o https://.'
+    }
+    if (!planId) {
+      next.planId = activePlans.length
+        ? 'Elegí el plan de suscripción del gimnasio.'
+        : 'Primero creá al menos un plan activo.'
+    }
+    if (monthlyCost <= 0) next.monthlyCost = 'Ingresá un costo mensual mayor a cero.'
+    if (!dueDate) next.dueDate = 'Elegí el próximo vencimiento de la suscripción.'
+
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
 
   const submit = async () => {
-    if (name.trim().length < 2) return
+    if (!validate()) return
     const plan = plans.find((p) => p.id === planId)
     await onSubmit({
       name: name.trim(),
@@ -188,37 +220,62 @@ function GymFormModal({
     <Modal open onClose={onClose} title={gym ? `Editar gimnasio — ${gym.name}` : 'Nuevo gimnasio'} size="lg">
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="Nombre del gimnasio" hint="Lo verás en el selector de gimnasios.">
+          <FormField
+            label="Nombre del gimnasio"
+            hint="Lo verás en el selector de gimnasios."
+            error={errors.name}
+            required
+          >
             <Input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value)
+                clearError('name')
+              }}
               placeholder="Ej. PowerHouse Gym"
+              invalid={!!errors.name}
               autoFocus
             />
           </FormField>
-          <FormField label="Logo URL" hint="Opcional, se usa en sidebar y selector.">
+          <FormField label="Logo URL" hint="Opcional, se usa en sidebar y selector." error={errors.logoURL}>
             <Input
               value={logoURL}
-              onChange={(e) => setLogoURL(e.target.value)}
+              onChange={(e) => {
+                setLogoURL(e.target.value)
+                clearError('logoURL')
+              }}
               placeholder="https://..."
+              invalid={!!errors.logoURL}
             />
           </FormField>
-          <FormField label="Plan de suscripción" hint="Define precio y límites del tenant.">
+          <FormField
+            label="Plan de suscripción"
+            hint="Define precio y límites del tenant."
+            error={errors.planId}
+            required
+          >
             <Select
               value={planId}
               onChange={(e) => {
                 const nextPlan = plans.find((p) => p.id === e.target.value)
                 setPlanId(e.target.value)
-                if (nextPlan) setMonthlyCost(nextPlan.price)
+                clearError('planId')
+                if (nextPlan) {
+                  setMonthlyCost(nextPlan.price)
+                  clearError('monthlyCost')
+                } else {
+                  setMonthlyCost(0)
+                }
               }}
               placeholder={activePlans.length ? 'Elegí un plan' : 'No hay planes'}
+              invalid={!!errors.planId}
               options={activePlans.map((p) => ({
                 value: p.id,
                 label: `${p.name} · ${formatCurrency(p.price)}`,
               }))}
             />
           </FormField>
-          <FormField label="Estado de suscripción">
+          <FormField label="Estado de suscripción" required>
             <Select
               value={status}
               onChange={(e) => setStatus(e.target.value as GymSubscription['status'])}
@@ -228,11 +285,25 @@ function GymFormModal({
               ]}
             />
           </FormField>
-          <FormField label="Costo mensual">
-            <MoneyInput value={monthlyCost} onChange={setMonthlyCost} />
+          <FormField label="Costo mensual" error={errors.monthlyCost} required>
+            <MoneyInput
+              value={monthlyCost}
+              onChange={(value) => {
+                setMonthlyCost(value)
+                clearError('monthlyCost')
+              }}
+              invalid={!!errors.monthlyCost}
+            />
           </FormField>
-          <FormField label="Próximo vencimiento">
-            <DateInput value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <FormField label="Próximo vencimiento" error={errors.dueDate} required>
+            <DateInput
+              value={dueDate}
+              onChange={(e) => {
+                setDueDate(e.target.value)
+                clearError('dueDate')
+              }}
+              invalid={!!errors.dueDate}
+            />
           </FormField>
         </div>
         <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">

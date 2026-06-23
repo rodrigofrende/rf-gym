@@ -34,6 +34,9 @@ export function extractFirestoreCode(err: unknown): string | undefined {
  */
 export function mapFirestoreError(err: unknown, fallback = 'Algo salió mal. Probá de nuevo.'): string {
   const code = extractFirestoreCode(err)
+  if (code === 'invalid-argument' && err instanceof Error && err.message.includes('Unsupported field value: undefined')) {
+    return 'Hay campos opcionales sin valor. Revisá los datos y probá de nuevo.'
+  }
   if (code && FIRESTORE_ERROR_MESSAGES[code]) return FIRESTORE_ERROR_MESSAGES[code]
   if (err instanceof Error && !('code' in err) && err.message && !err.message.includes('Firebase')) {
     return err.message

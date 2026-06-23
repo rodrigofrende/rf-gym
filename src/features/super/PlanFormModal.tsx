@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -19,6 +20,37 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
+const DEFAULT_VALUES: FormValues = {
+  name: '',
+  price: 0,
+  maxAdmins: 1,
+  maxMembers: 30,
+  maxRoutines: 10,
+  maxExercises: 30,
+  logsEnabled: false,
+  maxLogsPerMember: 0,
+  whiteLabel: 'none',
+  features: '',
+  active: true,
+}
+
+function valuesFromPlan(plan?: SubscriptionPlan | null): FormValues {
+  if (!plan) return DEFAULT_VALUES
+  return {
+    name: plan.name,
+    price: plan.price,
+    maxAdmins: plan.maxAdmins,
+    maxMembers: plan.maxMembers,
+    maxRoutines: plan.maxRoutines,
+    maxExercises: plan.maxExercises,
+    logsEnabled: plan.logsEnabled,
+    maxLogsPerMember: plan.maxLogsPerMember,
+    whiteLabel: plan.whiteLabel,
+    features: (plan.features ?? []).join('\n'),
+    active: plan.active,
+  }
+}
+
 export function PlanFormModal({
   open,
   onClose,
@@ -36,23 +68,16 @@ export function PlanFormModal({
     register,
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    values: {
-      name: initial?.name ?? '',
-      price: initial?.price ?? 0,
-      maxAdmins: initial?.maxAdmins ?? 1,
-      maxMembers: initial?.maxMembers ?? 30,
-      maxRoutines: initial?.maxRoutines ?? 10,
-      maxExercises: initial?.maxExercises ?? 30,
-      logsEnabled: initial?.logsEnabled ?? false,
-      maxLogsPerMember: initial?.maxLogsPerMember ?? 0,
-      whiteLabel: initial?.whiteLabel ?? 'none',
-      features: (initial?.features ?? []).join('\n'),
-      active: initial?.active ?? true,
-    },
+    defaultValues: DEFAULT_VALUES,
   })
+
+  useEffect(() => {
+    if (open) reset(valuesFromPlan(initial))
+  }, [initial, open, reset])
 
   const submit = (v: FormValues) => {
     onSubmit({

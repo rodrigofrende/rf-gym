@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator, GoogleAuthProvider, type Auth } from 'firebase/auth'
-import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore'
+import { initializeFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore'
 import { env } from '@/config/env'
 
 // En modo demo NO inicializamos Firebase (evita el crash auth/invalid-api-key sin claves).
@@ -12,7 +12,7 @@ let googleProvider: GoogleAuthProvider
 if (!env.demoMode) {
   const app: FirebaseApp = initializeApp(env.firebase)
   auth = getAuth(app)
-  db = getFirestore(app)
+  db = initializeFirestore(app, { ignoreUndefinedProperties: true })
   googleProvider = new GoogleAuthProvider()
 
   if (env.useEmulator) {
