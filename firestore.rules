@@ -48,6 +48,7 @@ service cloud.firestore {
         && request.resource.data.service == resource.data.service
         && request.resource.data.weeklyFrequency == resource.data.weeklyFrequency
         && request.resource.data.email == resource.data.email
+        && request.resource.data.loginEmail == resource.data.loginEmail
         && request.resource.data.uid == resource.data.uid;
     }
 
@@ -66,6 +67,7 @@ service cloud.firestore {
         && request.resource.data.service == resource.data.service
         && request.resource.data.weeklyFrequency == resource.data.weeklyFrequency
         && request.resource.data.email == resource.data.email
+        && request.resource.data.loginEmail == resource.data.loginEmail
         && request.resource.data.fullName == resource.data.fullName
         && request.resource.data.phone == resource.data.phone
         && request.resource.data.birthDate == resource.data.birthDate
@@ -97,6 +99,15 @@ service cloud.firestore {
     match /plans/{planId} {
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
+    }
+
+    match /memberLoginIndex/{emailKey} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isGymAdmin(request.resource.data.gymId)
+        || (isSignedIn()
+          && get(/databases/$(database)/documents/gyms/$(request.resource.data.gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid);
+      allow delete: if isGymAdmin(resource.data.gymId);
     }
 
     match /gyms/{gymId} {
@@ -151,6 +162,15 @@ service cloud.firestore {
       match /assignments/{assignmentId} {
         allow read: if canAccessGym(gymId);
         allow write: if isGymAdmin(gymId);
+      }
+
+      match /attendance/{attendanceId} {
+        allow read: if isGymAdmin(gymId)
+          || (isSignedIn() && resource.data.memberUid == request.auth.uid);
+        allow create, update: if isSignedIn()
+          && request.resource.data.memberUid == request.auth.uid
+          && exists(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId))
+          && get(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid;
       }
 
       match /payments/{paymentId} {

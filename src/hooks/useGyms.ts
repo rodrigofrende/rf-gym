@@ -6,6 +6,7 @@ import {
   listGyms,
   removeGym,
   removeGymAdmin,
+  updateGym,
 } from '@/services/gymsService'
 import { queryKeys } from './queryKeys'
 
@@ -33,6 +34,14 @@ export function useGymAdminActions() {
     mutationFn: (gymId: string) => removeGym(gymId),
     onSuccess: invalidate,
   })
+  const update = useMutation({
+    mutationFn: ({ gymId, data }: { gymId: string; data: Partial<Omit<Gym, 'id'>> }) =>
+      updateGym(gymId, data),
+    onSuccess: (_r, { gymId }) => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: queryKeys.gym(gymId) })
+    },
+  })
   const addAdmin = useMutation({
     mutationFn: ({ gymId, uid }: { gymId: string; uid: string }) => addGymAdmin(gymId, uid),
     onSuccess: invalidate,
@@ -42,5 +51,5 @@ export function useGymAdminActions() {
     onSuccess: invalidate,
   })
 
-  return { create, remove, addAdmin, removeAdmin }
+  return { create, update, remove, addAdmin, removeAdmin }
 }

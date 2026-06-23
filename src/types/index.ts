@@ -4,6 +4,10 @@ export type Role = 'admin' | 'user'
 
 export type MemberStatus = 'active' | 'paused' | 'overdue'
 
+export type AttendancePaymentState = 'al_dia' | 'overdue' | 'blocked'
+
+export type MemberAuthStatus = 'pending_password' | 'active' | 'password_change_required'
+
 export type DateValue = Timestamp | Date | null
 
 /** Perfil global mínimo del usuario (colección `users`). */
@@ -74,6 +78,10 @@ export interface Member {
   id: string
   uid: string // '' = invitación pendiente de reclamar
   email: string
+  loginEmail?: string
+  authStatus?: MemberAuthStatus
+  passwordUpdatedAt?: DateValue
+  passwordResetRequestedAt?: DateValue
   role: Role
   // datos personales (editables por user y admin)
   fullName: string
@@ -89,6 +97,18 @@ export interface Member {
   lastPaymentDate?: DateValue // último pago registrado
   monthlyCost?: number // cuota
   status: MemberStatus
+}
+
+/** Índice público de lookup exacto para login de socios (`memberLoginIndex/{emailKey}`). */
+export interface MemberLoginIndex {
+  id: string
+  email: string
+  gymId: string
+  gymName: string
+  memberId: string
+  memberName: string
+  role: Role
+  authStatus: MemberAuthStatus
 }
 
 /** Tarifa / plan que ofrece el gym (`gyms/{gymId}/tariffs`). */
@@ -233,11 +253,29 @@ export interface LogSet {
   seconds?: number // para ejercicios isométricos (tiempo de tensión)
 }
 
+/** Asistencia diaria por QR (`gyms/{gymId}/attendance/{dayKey_memberId}`). */
+export interface Attendance {
+  id: string
+  memberId: string
+  memberUid: string
+  memberName: string
+  email: string
+  dayKey: string
+  checkedInAt: DateValue
+  lastSeenAt: DateValue
+  scanCount: number
+  paymentState: AttendancePaymentState
+  memberStatus: MemberStatus
+}
+
 /** Registro de carga del propio user (`.../members/{uid}/logs`). */
 export interface WorkoutLog {
   id: string
   routineId: string
+  exerciseKey?: string
   exerciseName: string
+  dayKey?: string
+  trainingDate?: DateValue
   date: DateValue
   sets: LogSet[]
 }

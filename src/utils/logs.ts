@@ -23,6 +23,21 @@ export interface ExerciseProgress {
   delta: number // last.metric - first.metric
 }
 
+export function exerciseLogKey(exerciseName: string, exerciseId?: string): string {
+  const source = exerciseId?.trim() || exerciseName
+  return source
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80)
+}
+
+export function dailyLogId(dayKey: string, routineId: string, exerciseKey: string): string {
+  return `${dayKey}_${routineId}_${exerciseKey}`.replace(/[^a-zA-Z0-9_-]/g, '-')
+}
+
 /**
  * Métrica titular de una sesión según la forma de carga: el peso máximo para
  * cargas con peso, las reps máximas para peso corporal y los segundos para

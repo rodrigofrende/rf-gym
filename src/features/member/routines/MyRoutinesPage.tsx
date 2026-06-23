@@ -4,7 +4,8 @@ import { ChevronDown, ClipboardList, History, Lock } from 'lucide-react'
 import type { Exercise, LogSet, Routine, WorkoutLog } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
-import { useCreateLog, useLogs } from '@/hooks/useLogs'
+import { useLogs, useUpsertDailyLog } from '@/hooks/useLogs'
+import { useMemberAttendance } from '@/hooks/useAttendance'
 import { useToastAction } from '@/hooks/useToastAction'
 import { useMemberAssignments, useRoutines } from '@/hooks/useRoutines'
 import { useGym } from '@/hooks/useGym'
@@ -13,8 +14,10 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, EmptyState, FullPageSpinner, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 import { formatDate } from '@/utils/format'
+import { parseDateInput, todayDateInput } from '@/utils/dates'
 import { formatLogSet, formatExerciseVolume, loadTypeMeta } from '@/utils/loadTypes'
 import { routineIconMeta } from '@/utils/routineIcons'
+import { dailyLogId, exerciseLogKey } from '@/utils/logs'
 import { canMemberLog } from '@/utils/plans'
 import { LogExerciseModal } from './LogExerciseModal'
 
@@ -28,15 +31,21 @@ export function MyRoutinesPage() {
   const { data: assignments = [], isLoading: loadingA } = useMemberAssignments(gymId, memberId)
   const { data: routines = [], isLoading: loadingR } = useRoutines(gymId)
   const { data: logs = [] } = useLogs(gymId, memberId)
+  const dayKey = todayDateInput()
+  const { data: todayAttendance, isLoading: loadingAttendance } = useMemberAttendance(gymId, memberId, dayKey)
   const { data: gym } = useGym(gymId)
   const { data: plans = [] } = usePlans()
-  const createLog = useCreateLog(gymId, memberId)
+  const upsertDailyLog = useUpsertDailyLog(gymId, memberId)
 
   // El plan del gym define si el alumno puede registrar cargas y hasta cuántas.
   const plan = plans.find((p) => p.id === gym?.subscription?.planId)
   const logGate = canMemberLog(plan, logs.length)
 
-  const [active, setActive] = useState<{ routine: Routine; exercise: Exercise } | null>(null)
+  const [active, setActive] = useState<{
+    routine: Routine
+    exercise: Exercise
+    existingLog?: WorkoutLog
+  } | null>(null)
   // Rutinas colapsables: arrancan cerradas para ocupar poco (clave en mobile).
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set())
   const toggle = (id: string) =>
@@ -59,30 +68,50 @@ export function MyRoutinesPage() {
     return map
   }, [logs])
 
+  const dailyLogById = useMemo(() => {
+    const map = new Map<string, WorkoutLog>()
+    for (const log of logs) map.set(log.id, log)
+    return map
+  }, [logs])
+
+  const hasCheckedInToday = !!todayAttendance
+
   const saveLog = async (sets: LogSet[]) => {
     if (!active || sets.length === 0) {
       setActive(null)
       return
     }
-    if (!logGate.allowed) {
+    if (!hasCheckedInToday) {
+      notify('Escaneá el QR del gimnasio para habilitar las cargas de hoy', 'error')
+      setActive(null)
+      return
+    }
+    if (!logGate.allowed && !active.existingLog) {
       notify(logGate.reason ?? 'No podés registrar cargas con tu plan actual', 'error')
       setActive(null)
       return
     }
+    const exerciseKey = exerciseLogKey(active.exercise.name, active.exercise.exerciseId)
     const ok = await run(
       () =>
-        createLog.mutateAsync({
+        upsertDailyLog.mutateAsync({
           routineId: active.routine.id,
+          exerciseKey,
           exerciseName: active.exercise.name,
-          date: Timestamp.now(),
+          dayKey,
+          trainingDate: active.existingLog?.trainingDate ?? Timestamp.fromDate(parseDateInput(dayKey)),
+          date: active.existingLog?.date ?? Timestamp.now(),
           sets,
         }),
-      { success: 'Carga registrada', error: 'No se pudo registrar la carga' },
+      {
+        success: active.existingLog ? 'Carga actualizada' : 'Carga registrada',
+        error: 'No se pudo guardar la carga',
+      },
     )
     if (ok) setActive(null)
   }
 
-  if (loadingA || loadingR) {
+  if (loadingA || loadingR || loadingAttendance) {
     return (
       <AppLayout title="Mis rutinas">
         <FullPageSpinner />
@@ -104,6 +133,12 @@ export function MyRoutinesPage() {
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
               <Lock className="mt-0.5 size-4 shrink-0" />
               <p>{logGate.reason}</p>
+            </div>
+          )}
+          {!hasCheckedInToday && (
+            <div className="flex items-start gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2.5 text-sm text-brand-800">
+              <Lock className="mt-0.5 size-4 shrink-0" />
+              <p>Escaneá el QR del gimnasio al llegar para habilitar las cargas de hoy.</p>
             </div>
           )}
           {myRoutines.map((routine) => {
@@ -141,6 +176,8 @@ export function MyRoutinesPage() {
                   <div className="space-y-2 border-t border-zinc-100 px-4 pb-4 pt-3 sm:px-5">
                     {routine.exercises.map((ex, i) => {
                       const last = lastByExercise.get(ex.name)
+                      const exerciseKey = exerciseLogKey(ex.name, ex.exerciseId)
+                      const todayLog = dailyLogById.get(dailyLogId(dayKey, routine.id, exerciseKey))
                       const meta = loadTypeMeta(ex.loadType)
                       const LoadIcon = meta.icon
                       return (
@@ -179,11 +216,17 @@ export function MyRoutinesPage() {
                             variant="secondary"
                             fullWidth
                             className="sm:w-auto"
-                            disabled={!logGate.allowed}
-                            title={logGate.allowed ? undefined : logGate.reason}
-                            onClick={() => setActive({ routine, exercise: ex })}
+                            disabled={!hasCheckedInToday || (!logGate.allowed && !todayLog)}
+                            title={
+                              !hasCheckedInToday
+                                ? 'Escaneá el QR para habilitar la carga'
+                                : logGate.allowed || todayLog
+                                  ? undefined
+                                  : logGate.reason
+                            }
+                            onClick={() => setActive({ routine, exercise: ex, existingLog: todayLog })}
                           >
-                            Registrar carga
+                            {todayLog ? 'Editar carga' : 'Registrar carga'}
                           </Button>
                         </div>
                       )
@@ -203,8 +246,9 @@ export function MyRoutinesPage() {
           onClose={() => setActive(null)}
           exercise={active.exercise}
           defaultSets={active.exercise.sets}
+          initialSets={active.existingLog?.sets}
           onSave={saveLog}
-          saving={createLog.isPending}
+          saving={upsertDailyLog.isPending}
         />
       )}
     </AppLayout>

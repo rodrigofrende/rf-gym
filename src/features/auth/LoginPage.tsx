@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
-import { Crown, Dumbbell, ShieldCheck, User } from 'lucide-react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Crown, Dumbbell, ShieldCheck, User } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -8,42 +8,90 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
 import { APP_NAME } from '@/config/app'
+import { isSuperAdminEmail } from '@/config/superAdmins'
+import { getMemberLogin } from '@/services/memberLoginService'
 import { mapAuthError } from '@/utils/authErrors'
 import { Button, Card, FormField, Heading, Input, Text } from '@/components/ui'
+import { ROUTES } from '@/routes/routePaths'
 
 const schema = z.object({
-  name: z.string().optional(),
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  password: z.string().optional(),
 })
 type FormValues = z.infer<typeof schema>
+type LoginStep = 'email' | 'password'
 
 export function LoginPage() {
-  const { user, loginEmail, registerEmail, loginGoogle, setDemoIdentity } = useAuth()
+  const { user, loginEmail, loginGoogle, setDemoIdentity } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const { notify } = useToast()
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [step, setStep] = useState<LoginStep>('email')
+  const [resolvedEmail, setResolvedEmail] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
+  const redirect = new URLSearchParams(location.search).get('redirect')
+  const safeRedirect = redirect?.startsWith('/') ? redirect : '/'
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
   // Ya autenticado (login real o demo) → a la home; HomeRedirect resuelve por rol.
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to={safeRedirect} replace />
 
   const onSubmit = async (values: FormValues) => {
     try {
-      if (mode === 'register') {
-        await registerEmail(values.name ?? '', values.email, values.password)
-      } else {
-        await loginEmail(values.email, values.password)
+      const email = values.email.trim().toLowerCase()
+      if (step === 'email') {
+        if (isSuperAdminEmail(email)) {
+          setResolvedEmail(email)
+          setValue('password', '')
+          setStep('password')
+          return
+        }
+        const login = await getMemberLogin(email)
+        if (!login) {
+          notify('No encontramos un socio con ese email', 'error')
+          return
+        }
+        if (login.authStatus === 'pending_password') {
+          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(email)}&mode=create`)
+          return
+        }
+        setResolvedEmail(email)
+        setValue('password', '')
+        setStep('password')
+        return
+      }
+
+      if (!values.password) {
+        notify('Ingresá tu contraseña', 'error')
+        return
+      }
+      const login = await getMemberLogin(resolvedEmail || email)
+      await loginEmail(resolvedEmail || email, values.password)
+      if (login?.authStatus === 'password_change_required') {
+        navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail || email)}&mode=change`)
       }
     } catch (err) {
       notify(mapAuthError(err), 'error')
     }
   }
+
+  const onLegacyRegister = async (identity: 'superadmin' | 'admin' | 'socio') => {
+    if (setDemoIdentity) setDemoIdentity(identity)
+  }
+
+  const resetStep = () => {
+    setStep('email')
+    setResolvedEmail('')
+    setValue('password', '')
+  }
+
+  const onPasswordSubmit = handleSubmit(onSubmit)
 
   const onGoogle = async () => {
     setGoogleLoading(true)
@@ -66,13 +114,25 @@ export function LoginPage() {
           <Heading variant="display" className="mt-4">
             {APP_NAME}
           </Heading>
-          <Text variant="caption">Gestión de gimnasios y entrenamiento</Text>
+          <Text variant="caption">Ingresá con tu email de acceso</Text>
         </div>
 
         <Card className="p-5">
-          <Text variant="label" as="h2">
-            {mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
-          </Text>
+          <div className="flex items-center gap-2">
+            {step === 'password' && (
+              <button
+                type="button"
+                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                onClick={resetStep}
+                aria-label="Volver al email"
+              >
+                <ArrowLeft className="size-4" />
+              </button>
+            )}
+            <Text variant="label" as="h2">
+              {step === 'email' ? 'Email de acceso' : 'Contraseña'}
+            </Text>
+          </div>
 
           {env.demoMode && setDemoIdentity && (
             <div className="mt-4 rounded-xl border border-brand-100 bg-brand-50/60 p-3">
@@ -80,26 +140,14 @@ export function LoginPage() {
                 Modo demo · datos de ejemplo en memoria (TigerFit)
               </p>
               <div className="space-y-2">
-                <Button
-                  fullWidth
-                  leftIcon={<Crown className="size-4" />}
-                  onClick={() => setDemoIdentity('superadmin')}
-                >
+                <Button fullWidth leftIcon={<Crown className="size-4" />} onClick={() => onLegacyRegister('superadmin')}>
                   Entrar al management (Super admin)
                 </Button>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="secondary"
-                    leftIcon={<ShieldCheck className="size-4" />}
-                    onClick={() => setDemoIdentity('admin')}
-                  >
+                  <Button variant="secondary" leftIcon={<ShieldCheck className="size-4" />} onClick={() => onLegacyRegister('admin')}>
                     Entrar como Admin
                   </Button>
-                  <Button
-                    variant="secondary"
-                    leftIcon={<User className="size-4" />}
-                    onClick={() => setDemoIdentity('socio')}
-                  >
+                  <Button variant="secondary" leftIcon={<User className="size-4" />} onClick={() => onLegacyRegister('socio')}>
                     Entrar como Socio
                   </Button>
                 </div>
@@ -107,21 +155,24 @@ export function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4">
-            {mode === 'register' && (
-              <FormField label="Nombre" error={errors.name?.message} required>
-                <Input placeholder="Tu nombre" {...register('name')} />
+          <form onSubmit={onPasswordSubmit} className="mt-4 space-y-4">
+            <FormField label="Email" error={errors.email?.message} required>
+              <Input
+                type="email"
+                placeholder="rodrigo.frende@gmail.com"
+                invalid={!!errors.email}
+                disabled={step === 'password'}
+                {...register('email')}
+              />
+            </FormField>
+            {step === 'password' && (
+              <FormField label="Contraseña" required>
+                <Input type="password" placeholder="••••••••" {...register('password')} />
               </FormField>
             )}
-            <FormField label="Email" error={errors.email?.message} required>
-              <Input type="email" placeholder="vos@email.com" invalid={!!errors.email} {...register('email')} />
-            </FormField>
-            <FormField label="Contraseña" error={errors.password?.message} required>
-              <Input type="password" placeholder="••••••••" invalid={!!errors.password} {...register('password')} />
-            </FormField>
 
             <Button type="submit" fullWidth loading={isSubmitting}>
-              {mode === 'login' ? 'Entrar' : 'Registrarme'}
+              {step === 'email' ? 'Continuar' : 'Entrar'}
             </Button>
           </form>
 
@@ -132,17 +183,6 @@ export function LoginPage() {
           <Button variant="secondary" fullWidth loading={googleLoading} onClick={onGoogle}>
             <GoogleIcon /> Continuar con Google
           </Button>
-
-          <p className="mt-4 text-center text-sm text-zinc-500">
-            {mode === 'login' ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}
-            <button
-              type="button"
-              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              className="font-medium text-brand-600 hover:underline"
-            >
-              {mode === 'login' ? 'Registrate' : 'Iniciá sesión'}
-            </button>
-          </p>
         </Card>
       </div>
     </div>

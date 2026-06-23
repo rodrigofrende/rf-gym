@@ -58,6 +58,12 @@ export function dateInputToTimestamp(value?: string): Timestamp | null {
 /** Fecha de hoy como YYYY-MM-DD en hora local. */
 export function todayDateInput(): string {
   const d = new Date()
+  return localDayKey(d)
+}
+
+/** Fecha como YYYY-MM-DD en hora local. */
+export function localDayKey(date: Date): string {
+  const d = date
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -70,4 +76,9 @@ export function toLocalDate(value: DateValue | undefined): Date | null {
   const d = value instanceof Timestamp ? value.toDate() : value instanceof Date ? value : null
   if (!d) return null
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0)
+}
+
+export function dayKeyFromDateValue(value: DateValue | undefined): string | null {
+  const date = toLocalDate(value)
+  return date ? localDayKey(date) : null
 }

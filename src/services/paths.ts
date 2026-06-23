@@ -4,6 +4,8 @@ export const paths = {
   user: (uid: string) => `users/${uid}`,
   userGymMembership: (uid: string, gymId: string) => `users/${uid}/gymMemberships/${gymId}`,
 
+  memberLoginIndex: (emailKey: string) => `memberLoginIndex/${emailKey}`,
+
   gyms: () => 'gyms',
   gym: (gymId: string) => `gyms/${gymId}`,
 
@@ -21,6 +23,10 @@ export const paths = {
   logs: (gymId: string, uid: string) => `gyms/${gymId}/members/${uid}/logs`,
   log: (gymId: string, uid: string, logId: string) =>
     `gyms/${gymId}/members/${uid}/logs/${logId}`,
+
+  attendance: (gymId: string) => `gyms/${gymId}/attendance`,
+  attendanceRecord: (gymId: string, attendanceId: string) =>
+    `gyms/${gymId}/attendance/${attendanceId}`,
 
   payments: (gymId: string, memberId: string) => `gyms/${gymId}/members/${memberId}/payments`,
   payment: (gymId: string, memberId: string, paymentId: string) =>

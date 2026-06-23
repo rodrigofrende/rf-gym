@@ -13,6 +13,7 @@ import {
   signInWithPopup,
   signOut,
   updateProfile,
+  updatePassword,
   type User,
 } from 'firebase/auth'
 import { auth, googleProvider } from '@/lib/firebase'
@@ -27,7 +28,8 @@ interface AuthContextValue {
   user: User | null
   isInitialized: boolean
   loginEmail: (email: string, password: string) => Promise<void>
-  registerEmail: (name: string, email: string, password: string) => Promise<void>
+  registerEmail: (name: string, email: string, password: string) => Promise<User>
+  changePassword: (password: string) => Promise<void>
   loginGoogle: () => Promise<void>
   logout: () => Promise<void>
   /** Solo en modo demo: cambia la identidad activa (super-admin ↔ admin ↔ socio). */
@@ -60,8 +62,12 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user: identity ? identityToUser(identity) : null,
       isInitialized: true,
-      loginEmail: async () => setIdentity('admin'),
-      registerEmail: async () => setIdentity('admin'),
+      loginEmail: async (email) => setIdentity(email.includes('tigerfit.com') ? 'socio' : 'admin'),
+      registerEmail: async () => {
+        setIdentity('socio')
+        return identityToUser('socio')
+      },
+      changePassword: async () => undefined,
       loginGoogle: async () => setIdentity('admin'),
       logout: async () => setIdentity(null),
       setDemoIdentity: (next) => setIdentity(next),
@@ -95,6 +101,11 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
         const cred = await createUserWithEmailAndPassword(auth, email, password)
         await updateProfile(cred.user, { displayName: name })
         await syncUserProfile(cred.user)
+        return cred.user
+      },
+      changePassword: async (password) => {
+        if (!auth.currentUser) throw new Error('auth/no-current-user')
+        await updatePassword(auth.currentUser, password)
       },
       loginGoogle: async () => {
         const cred = await signInWithPopup(auth, googleProvider)

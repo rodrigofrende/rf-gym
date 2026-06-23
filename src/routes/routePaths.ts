@@ -2,6 +2,7 @@ import type { Role } from '@/types'
 
 export const ROUTES = {
   LOGIN: '/login',
+  SET_PASSWORD: '/set-password',
   SELECT_GYM: '/select-gym',
 
   // Super-admin (global, cross-tenant) — plataforma RF FIT
@@ -19,8 +20,12 @@ export const ROUTES = {
   ADMIN_EXERCISES: '/admin/exercises',
   ADMIN_TARIFFS: '/admin/tariffs',
   ADMIN_BRANDING: '/admin/branding',
+  ADMIN_MY_QR: '/admin/my-qr',
+  ADMIN_TODAY: '/admin/today',
 
   // Socio
+  CHECK_IN: '/check-in/:gymId',
+  APP_SCAN_QR: '/app/scan-qr',
   APP_PROFILE: '/app/profile',
   APP_ROUTINES: '/app/routines',
   APP_LOGS: '/app/logs',
@@ -28,6 +33,7 @@ export const ROUTES = {
 
 export const adminMemberDetail = (uid: string) => `/admin/members/${uid}`
 export const adminRoutineDetail = (routineId: string) => `/admin/routines/${routineId}`
+export const checkInRoute = (gymId: string) => `/check-in/${gymId}`
 
 /** Home por defecto según rol (Panel al final del menú: carga pesada). */
 export function defaultHomeForRole(

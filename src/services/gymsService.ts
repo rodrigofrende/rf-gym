@@ -20,6 +20,11 @@ export function createGym(data: Omit<Gym, 'id'>) {
   return addToCollection(paths.gyms(), data)
 }
 
+export function updateGym(gymId: string, data: Partial<Omit<Gym, 'id'>>) {
+  if (env.demoMode) return demo.updateGym(gymId, data)
+  return updateOne(paths.gym(gymId), data)
+}
+
 export function removeGym(gymId: string) {
   if (env.demoMode) return demo.removeGym(gymId)
   return removeOne(paths.gym(gymId))

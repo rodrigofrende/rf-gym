@@ -3,15 +3,23 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { Member } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
+import { useGym } from '@/hooks/useGym'
+import { useMembers } from '@/hooks/useMembers'
+import { usePlans } from '@/hooks/usePlans'
 import { useTariffs } from '@/hooks/useTariffs'
 import { Button, DateInput, FormField, Input, Modal, MoneyInput, Select, Text } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
 import { dateInputToTimestamp, parseDateInput, todayDateInput } from '@/utils/dates'
+import { emailLocalPart, suggestLoginEmail, tenantEmailDomain } from '@/utils/loginEmail'
+import { canCreateAdmin, usageLabel } from '@/utils/plans'
 import { frequencyLabel, tariffLabel } from '@/utils/tariffs'
 
 const schema = z.object({
   fullName: z.string().min(2, 'Ingresá el nombre'),
-  email: z.string().email('Email inválido'),
+  loginLocal: z
+    .string()
+    .min(2, 'Ingresá el usuario')
+    .regex(/^[a-z0-9._-]+$/, 'Usá solo minúsculas, números, puntos o guiones'),
   phone: z.string().optional(),
   birthDate: z.string().optional(),
   role: z.enum(['user', 'admin']),
@@ -46,8 +54,13 @@ export function MemberFormModal({
   initial?: Member | null
   saving?: boolean
 }) {
-  const { activeGymId } = useTenant()
+  const { activeGymId, activeMembership } = useTenant()
   const { data: tariffs = [] } = useTariffs(activeGymId ?? '')
+  const { data: members = [] } = useMembers(activeGymId ?? '')
+  const { data: gym } = useGym(activeGymId ?? '')
+  const { data: plans = [] } = usePlans()
+  const gymName = activeMembership?.gymName ?? 'Gimnasio'
+  const domain = tenantEmailDomain(gymName)
 
   const today = todayDateInput()
 
@@ -61,7 +74,7 @@ export function MemberFormModal({
     resolver: zodResolver(schema),
     values: {
       fullName: initial?.fullName ?? '',
-      email: initial?.email ?? '',
+      loginLocal: emailLocalPart(initial?.loginEmail || initial?.email || ''),
       phone: initial?.phone ?? '',
       birthDate: toDateInput(initial?.birthDate),
       role: initial?.role ?? 'user',
@@ -75,11 +88,28 @@ export function MemberFormModal({
 
   // Tarifas seleccionables: activas + la actual del socio (aunque esté inactiva).
   const selectable = tariffs.filter((t) => t.active || t.id === initial?.tariffId)
+  const fullName = useWatch({ control, name: 'fullName' })
+  const role = useWatch({ control, name: 'role' })
   const tariffId = useWatch({ control, name: 'tariffId' })
   const selectedTariff = tariffs.find((t) => t.id === tariffId)
+  const plan = plans.find((p) => p.id === gym?.subscription?.planId)
 
   const tariffReg = register('tariffId')
   const startReg = register('startDate')
+  const existingEmails = members
+    .filter((m) => m.id !== initial?.id)
+    .map((m) => m.loginEmail || m.email)
+  const adminCount = members.filter((m) => m.role === 'admin' && m.id !== initial?.id).length
+  const adminGate = role === 'admin' ? canCreateAdmin(plan, adminCount) : { allowed: true }
+  const adminLimitHint =
+    role === 'admin' && plan
+      ? `Administradores del plan: ${usageLabel(adminCount + (initial?.role === 'admin' ? 1 : 0), plan.maxAdmins)}`
+      : undefined
+
+  const applySuggestedEmail = () => {
+    const email = suggestLoginEmail(fullName, gymName, existingEmails)
+    setValue('loginLocal', emailLocalPart(email), { shouldDirty: true, shouldValidate: true })
+  }
 
   const tariffHint =
     tariffs.length === 0
@@ -89,10 +119,14 @@ export function MemberFormModal({
         : 'Elegí un plan; autocompleta el costo'
 
   const submit = (v: FormValues) => {
+    if (v.role === 'admin' && !adminGate.allowed) return
     const tariff = tariffs.find((t) => t.id === v.tariffId)
+    const loginEmail = `${v.loginLocal}@${domain}`
     onSubmit({
       fullName: v.fullName,
-      email: v.email,
+      email: loginEmail,
+      loginEmail,
+      authStatus: initial?.authStatus ?? 'pending_password',
       phone: v.phone,
       birthDate: toTs(v.birthDate),
       role: v.role,
@@ -111,14 +145,21 @@ export function MemberFormModal({
       open={open}
       onClose={onClose}
       title={initial ? 'Editar socio' : 'Nuevo socio'}
-      size="lg"
+      size="xl"
       closeOnBackdrop={!saving}
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" form="member-form" fullWidth className="sm:w-auto" loading={saving}>
+          <Button
+            type="submit"
+            form="member-form"
+            fullWidth
+            className="sm:w-auto"
+            loading={saving}
+            disabled={!adminGate.allowed}
+          >
             {initial ? 'Guardar cambios' : 'Crear socio'}
           </Button>
         </div>
@@ -133,12 +174,34 @@ export function MemberFormModal({
               <Input {...register('fullName')} invalid={!!errors.fullName} />
             </FormField>
             <FormField
-              label="Email (para el alta)"
-              error={errors.email?.message}
-              tooltip="El socio reclama su acceso iniciando sesión con este mismo email."
+              label="Email de acceso"
+              error={errors.loginLocal?.message}
+              tooltip="El socio inicia sesión con este email. El dominio depende del gimnasio."
               required
             >
-              <Input type="email" {...register('email')} invalid={!!errors.email} disabled={!!initial} />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="flex min-w-0 flex-1 rounded-[var(--radius-control)] border border-zinc-200 bg-surface focus-within:ring-2 focus-within:ring-brand-500">
+                  <input
+                    className="min-w-0 flex-1 rounded-l-[var(--radius-control)] bg-transparent px-3 py-2 text-sm outline-none disabled:text-zinc-500"
+                    {...register('loginLocal')}
+                    disabled={!!initial}
+                  />
+                  <span className="flex shrink-0 items-center rounded-r-[var(--radius-control)] border-l border-zinc-200 bg-surface-muted px-3 text-sm text-zinc-500">
+                    @{domain}
+                  </span>
+                </div>
+                {!initial && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-10 shrink-0"
+                    onClick={applySuggestedEmail}
+                  >
+                    Usar sugerido
+                  </Button>
+                )}
+              </div>
             </FormField>
             <FormField label="Teléfono">
               <Input {...register('phone')} />
@@ -153,7 +216,7 @@ export function MemberFormModal({
         <section className="space-y-3 border-t border-zinc-100 pt-4">
           <Text variant="label">Membresía y pago</Text>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField label="Tipo de usuario">
+            <FormField label="Tipo de usuario" hint={adminGate.reason ?? adminLimitHint}>
               <Select
                 {...register('role')}
                 options={[

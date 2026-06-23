@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Dumbbell, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { ChevronDown, Dumbbell, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import type { ExerciseCategory, ExerciseDefinition, MuscleGroup } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -61,8 +61,21 @@ export function ExercisesListPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<ExerciseCategory | 'all'>('all')
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | 'all'>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const filtered = filterExercises(exercises, { search, category, muscleGroup })
+  const activeFilterCount = (category === 'all' ? 0 : 1) + (muscleGroup === 'all' ? 0 : 1)
+  const filterSummary = [
+    category !== 'all' ? categoryLabel(category) : null,
+    muscleGroup !== 'all' ? muscleGroupLabel(muscleGroup) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const clearFilters = () => {
+    setCategory('all')
+    setMuscleGroup('all')
+  }
 
   const openNew = () => {
     if (!createLimit.allowed) {
@@ -122,34 +135,82 @@ export function ExercisesListPage() {
               className="pl-9"
             />
           </div>
-          {plan && (
-            <Badge tone={createLimit.allowed ? 'neutral' : 'amber'}>
-              {usageLabel(exercises.length, plan.maxExercises)} ejercicios del plan
-            </Badge>
-          )}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
+            {plan && (
+              <Badge tone={createLimit.allowed ? 'neutral' : 'amber'}>
+                {usageLabel(exercises.length, plan.maxExercises)} ejercicios del plan
+              </Badge>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="justify-between sm:min-w-36"
+              leftIcon={<SlidersHorizontal className="size-4" />}
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+            >
+              <span>{activeFilterCount ? `Filtros (${activeFilterCount})` : 'Filtros'}</span>
+              <ChevronDown
+                className={cn('size-4 transition-transform', filtersOpen && 'rotate-180')}
+                aria-hidden="true"
+              />
+            </Button>
+          </div>
         </div>
 
-        <FilterRow label="Tipo">
-          <FilterChip selected={category === 'all'} onClick={() => setCategory('all')}>
-            Todos
-          </FilterChip>
-          {EXERCISE_CATEGORY_OPTIONS.map((value) => (
-            <FilterChip key={value} selected={category === value} onClick={() => setCategory(value)}>
-              {categoryLabel(value)}
-            </FilterChip>
-          ))}
-        </FilterRow>
+        {(activeFilterCount > 0 || filtersOpen) && (
+          <div className="rounded-xl border border-zinc-100 bg-surface-muted/60">
+            {activeFilterCount > 0 && !filtersOpen && (
+              <div className="flex items-center justify-between gap-3 px-3 py-2">
+                <Text variant="caption" className="truncate">
+                  {filterSummary}
+                </Text>
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-white hover:text-zinc-700"
+                  onClick={clearFilters}
+                >
+                  <X className="size-3" />
+                  Limpiar
+                </button>
+              </div>
+            )}
+            {filtersOpen && (
+              <div className="space-y-4 p-3">
+                <FilterRow label="Tipo">
+                  <FilterChip selected={category === 'all'} onClick={() => setCategory('all')}>
+                    Todos
+                  </FilterChip>
+                  {EXERCISE_CATEGORY_OPTIONS.map((value) => (
+                    <FilterChip key={value} selected={category === value} onClick={() => setCategory(value)}>
+                      {categoryLabel(value)}
+                    </FilterChip>
+                  ))}
+                </FilterRow>
 
-        <FilterRow label="Músculo">
-          <FilterChip selected={muscleGroup === 'all'} onClick={() => setMuscleGroup('all')}>
-            Todos
-          </FilterChip>
-          {MUSCLE_GROUP_OPTIONS.map((value) => (
-            <FilterChip key={value} selected={muscleGroup === value} onClick={() => setMuscleGroup(value)}>
-              {muscleGroupLabel(value)}
-            </FilterChip>
-          ))}
-        </FilterRow>
+                <FilterRow label="Músculo">
+                  <FilterChip selected={muscleGroup === 'all'} onClick={() => setMuscleGroup('all')}>
+                    Todos
+                  </FilterChip>
+                  {MUSCLE_GROUP_OPTIONS.map((value) => (
+                    <FilterChip key={value} selected={muscleGroup === value} onClick={() => setMuscleGroup(value)}>
+                      {muscleGroupLabel(value)}
+                    </FilterChip>
+                  ))}
+                </FilterRow>
+
+                {activeFilterCount > 0 && (
+                  <div className="flex justify-end border-t border-zinc-200/70 pt-3">
+                    <Button type="button" variant="ghost" size="sm" leftIcon={<X className="size-4" />} onClick={clearFilters}>
+                      Limpiar filtros
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -201,6 +262,12 @@ export function ExercisesListPage() {
       />
     </AppLayout>
   )
+}
+
+function formatRestMinutes(seconds?: number) {
+  if (!seconds) return '-'
+  const minutes = seconds / 60
+  return `${Number.isInteger(minutes) ? minutes : minutes.toFixed(1)} min`
 }
 
 function ExerciseCard({
@@ -263,7 +330,7 @@ function ExerciseCard({
         <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3 text-center">
           <MiniMetric label="Series" value={exercise.defaultSets ?? '-'} />
           <MiniMetric label="Reps" value={exercise.defaultReps ?? '-'} />
-          <MiniMetric label="Descanso" value={exercise.defaultRestSec ? `${exercise.defaultRestSec}s` : '-'} />
+          <MiniMetric label="Descanso" value={formatRestMinutes(exercise.defaultRestSec)} />
         </div>
       )}
     </Card>
@@ -281,9 +348,9 @@ function MiniMetric({ label, value }: { label: string; value: string | number })
 
 function FilterRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <p className="w-16 shrink-0 text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</p>
-      <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">{children}</div>
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
     </div>
   )
 }
@@ -302,7 +369,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'whitespace-nowrap rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm font-medium transition-colors',
+        'min-h-9 whitespace-nowrap rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm font-medium transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
         selected
           ? 'border-brand-500 bg-brand-50 text-brand-700'

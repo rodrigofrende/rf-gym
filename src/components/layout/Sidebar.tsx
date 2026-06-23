@@ -50,7 +50,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             )}
             <div className="min-w-0">
               <p className="truncate text-lg font-bold leading-tight text-zinc-900">{brandName}</p>
-              {!isPlatform && <p className="text-[11px] text-zinc-400">by {APP_NAME}</p>}
+              <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                {!isPlatform && <span>by {APP_NAME}</span>}
+                <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                  v{APP_VERSION}
+                </span>
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="shrink-0 text-zinc-400 lg:hidden" aria-label="Cerrar menú">
@@ -128,9 +133,6 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               </button>
             </div>
 
-            <p className="px-1 pt-1 text-center text-[11px] tracking-wide text-zinc-400">
-              {APP_NAME} · v{APP_VERSION}
-            </p>
           </div>
         </div>
       </aside>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { WorkoutLog } from '@/types'
-import { createLog, listLogs, removeLog, updateLog } from '@/services/logsService'
+import { createLog, listLogs, removeLog, updateLog, upsertDailyLog } from '@/services/logsService'
 import { queryKeys } from './queryKeys'
 
 export function useLogs(gymId: string, uid: string) {
@@ -15,6 +15,15 @@ export function useCreateLog(gymId: string, uid: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Omit<WorkoutLog, 'id'>) => createLog(gymId, uid, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.logs(gymId, uid) }),
+  })
+}
+
+export function useUpsertDailyLog(gymId: string, uid: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Omit<WorkoutLog, 'id'> & { dayKey: string; exerciseKey: string }) =>
+      upsertDailyLog(gymId, uid, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.logs(gymId, uid) }),
   })
 }

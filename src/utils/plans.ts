@@ -45,6 +45,17 @@ export function canCreateExercise(
   }
 }
 
+export function canCreateAdmin(
+  plan: SubscriptionPlan | undefined,
+  currentCount: number,
+): { allowed: boolean; reason?: string } {
+  if (!plan || plan.maxAdmins === 0 || currentCount < plan.maxAdmins) return { allowed: true }
+  return {
+    allowed: false,
+    reason: `Alcanzaste el límite de administradores de tu plan (${plan.maxAdmins}).`,
+  }
+}
+
 /** "12/40" o "12/∞" si el límite es ilimitado. */
 export function usageLabel(used: number, max: number): string {
   return `${used}/${max > 0 ? max : '∞'}`

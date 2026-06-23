@@ -7,6 +7,9 @@ export const queryKeys = {
   members: (gymId: string) => ['members', gymId] as const,
   member: (gymId: string, uid: string) => ['member', gymId, uid] as const,
   notes: (gymId: string, uid: string) => ['notes', gymId, uid] as const,
+  attendanceToday: (gymId: string, dayKey: string) => ['attendance', gymId, dayKey] as const,
+  memberAttendance: (gymId: string, memberId: string, dayKey: string) =>
+    ['attendance', gymId, memberId, dayKey] as const,
   logs: (gymId: string, uid: string) => ['logs', gymId, uid] as const,
   payments: (gymId: string, memberId: string) => ['payments', gymId, memberId] as const,
   gymPayments: (gymId: string) => ['gymPayments', gymId] as const,

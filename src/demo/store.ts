@@ -1,10 +1,14 @@
 import type {
   AdminStats,
   Assignment,
+  Attendance,
+  AttendancePaymentState,
   ExerciseDefinition,
   Gym,
   GymSubscription,
   Member,
+  MemberAuthStatus,
+  MemberLoginIndex,
   Membership,
   Note,
   Payment,
@@ -17,7 +21,10 @@ import { buildSeed, DEMO_GYM_ID } from './seed'
 import { isSuperAdminEmail } from '@/config/superAdmins'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
 import { toDate } from '@/utils/format'
+import { localDayKey } from '@/utils/dates'
 import { buildDashboard } from '@/utils/dashboard'
+import { dailyLogId } from '@/utils/logs'
+import { normalizeEmailKey } from '@/utils/loginEmail'
 
 interface NewPaymentInput {
   amount: number
@@ -40,11 +47,76 @@ const gyms: DemoGym[] = [data.gym]
 // Pagos en memoria: por socio (memberId) y por gym (suscripción).
 const memberPayments: Record<string, Payment[]> = { ...data.payments }
 const gymPayments: Record<string, Payment[]> = {}
+const attendance: Record<string, Attendance[]> = buildDemoAttendance()
+const memberLoginIndex: Record<string, MemberLoginIndex> = buildMemberLoginIndex()
 
 let counter = 0
 const nextId = (prefix: string) => `${prefix}-${++counter}-demo`
 
 const ok = <T>(value: T) => Promise.resolve(value)
+
+function memberAuthStatus(member: Pick<Member, 'uid' | 'authStatus'>): MemberAuthStatus {
+  return member.authStatus ?? (member.uid ? 'active' : 'pending_password')
+}
+
+function loginIndexForMember(member: Member): MemberLoginIndex {
+  const email = member.loginEmail || member.email
+  return {
+    id: normalizeEmailKey(email),
+    email,
+    gymId: DEMO_GYM_ID,
+    gymName: data.gym.name,
+    memberId: member.id,
+    memberName: member.fullName,
+    role: member.role,
+    authStatus: memberAuthStatus(member),
+  }
+}
+
+function buildMemberLoginIndex(): Record<string, MemberLoginIndex> {
+  return Object.fromEntries(data.members.map((m) => [normalizeEmailKey(m.loginEmail || m.email), loginIndexForMember(m)]))
+}
+
+function demoAttendanceId(dayKey: string, memberId: string) {
+  return `${dayKey}_${memberId}`
+}
+
+function buildDemoAttendance(): Record<string, Attendance[]> {
+  const dayKey = localDayKey(new Date())
+  const sample = [
+    demoAttendanceFromMember('demo-socio-rodrigo', dayKey, 12, 'al_dia', 1),
+    demoAttendanceFromMember('demo-socio-1', dayKey, 28, 'overdue', 1),
+    demoAttendanceFromMember('demo-socio-2', dayKey, 46, 'blocked', 2),
+    demoAttendanceFromMember('demo-socio-3', dayKey, 73, 'blocked', 1),
+  ].filter((a) => a !== null) as Attendance[]
+
+  return { [dayKey]: sample }
+}
+
+function demoAttendanceFromMember(
+  memberId: string,
+  dayKey: string,
+  minutesAgo: number,
+  paymentState: AttendancePaymentState,
+  scanCount: number,
+): Attendance | null {
+  const member = data.members.find((m) => m.id === memberId)
+  if (!member) return null
+  const checkedInAt = new Date(Date.now() - minutesAgo * 60 * 1000)
+  return {
+    id: demoAttendanceId(dayKey, memberId),
+    memberId,
+    memberUid: member.uid,
+    memberName: member.fullName,
+    email: member.email,
+    dayKey,
+    checkedInAt,
+    lastSeenAt: checkedInAt,
+    scanCount,
+    paymentState,
+    memberStatus: member.status,
+  }
+}
 
 // ---- Gym (tenant) ----
 const findGym = (gymId: string) => gyms.find((g) => g.id === gymId)
@@ -129,12 +201,25 @@ export function getMember(_gymId: string, memberId: string) {
 }
 export function createMember(_gymId: string, payload: Omit<Member, 'id' | 'uid'>) {
   const id = nextId('member')
-  data.members.push({ ...payload, id, uid: '' })
+  const member = {
+    ...payload,
+    id,
+    uid: '',
+    loginEmail: payload.loginEmail || payload.email,
+    authStatus: payload.authStatus ?? 'pending_password',
+  } satisfies Member
+  data.members.push(member)
+  syncMemberLoginIndex(DEMO_GYM_ID, id, member)
   return ok(id)
 }
 export function updateMember(_gymId: string, memberId: string, payload: Partial<Member>) {
   const m = data.members.find((x) => x.id === memberId)
-  if (m) Object.assign(m, payload)
+  if (m) {
+    const oldEmail = m.loginEmail || m.email
+    Object.assign(m, payload)
+    if ((m.loginEmail || m.email) !== oldEmail) removeMemberLoginIndex(oldEmail)
+    syncMemberLoginIndex(DEMO_GYM_ID, memberId, m)
+  }
   return ok(undefined)
 }
 export function updateMemberProfile(
@@ -145,8 +230,35 @@ export function updateMemberProfile(
   return updateMember(gymId, memberId, payload)
 }
 export function removeMember(_gymId: string, memberId: string) {
+  const prev = data.members.find((m) => m.id === memberId)
+  if (prev) removeMemberLoginIndex(prev.loginEmail || prev.email)
   data.members = data.members.filter((m) => m.id !== memberId)
   return ok(undefined)
+}
+
+export function getMemberLogin(email: string) {
+  return ok(memberLoginIndex[normalizeEmailKey(email)] ?? null)
+}
+
+export function syncMemberLoginIndex(_gymId: string, memberId: string, memberInput: Omit<Member, 'id'> | Member) {
+  const member = 'id' in memberInput ? memberInput : ({ ...memberInput, id: memberId } as Member)
+  const entry = loginIndexForMember(member)
+  memberLoginIndex[entry.id] = entry
+  return ok(undefined)
+}
+
+export function removeMemberLoginIndex(email: string) {
+  delete memberLoginIndex[normalizeEmailKey(email)]
+  return ok(undefined)
+}
+
+export function updateMemberAuthStatus(
+  gymId: string,
+  memberId: string,
+  authStatus: MemberAuthStatus,
+  extra: Partial<Pick<Member, 'passwordUpdatedAt' | 'passwordResetRequestedAt'>> = {},
+) {
+  return updateMember(gymId, memberId, { authStatus, ...extra })
 }
 
 // ---- Routines ----
@@ -242,6 +354,19 @@ export function createLog(_gymId: string, memberId: string, payload: Omit<Workou
   data.logs[memberId] = [...(data.logs[memberId] ?? []), { ...payload, id }]
   return ok(id)
 }
+export function upsertDailyLog(
+  _gymId: string,
+  memberId: string,
+  payload: Omit<WorkoutLog, 'id'> & { dayKey: string; exerciseKey: string },
+) {
+  const id = dailyLogId(payload.dayKey, payload.routineId, payload.exerciseKey)
+  const list = data.logs[memberId] ?? []
+  const existing = list.some((l) => l.id === id)
+  data.logs[memberId] = existing
+    ? list.map((l) => (l.id === id ? { ...l, ...payload, id } : l))
+    : [{ ...payload, id }, ...list]
+  return ok(id)
+}
 export function updateLog(
   _gymId: string,
   memberId: string,
@@ -256,6 +381,55 @@ export function updateLog(
 export function deleteLog(_gymId: string, memberId: string, logId: string) {
   data.logs[memberId] = (data.logs[memberId] ?? []).filter((l) => l.id !== logId)
   return ok(undefined)
+}
+
+// ---- Attendance ----
+export function checkInMember(_gymId: string, memberId: string) {
+  const member = data.members.find((m) => m.id === memberId)
+  if (!member) return Promise.reject(new Error('member-not-found'))
+  const now = new Date()
+  const dayKey = localDayKey(now)
+  const id = demoAttendanceId(dayKey, memberId)
+  const list = attendance[dayKey] ?? []
+  const existing = list.find((a) => a.id === id)
+  const paymentState = getPaymentStatus(member.paymentDate, member.lastPaymentDate).state
+
+  if (existing) {
+    existing.lastSeenAt = now
+    existing.scanCount += 1
+    existing.paymentState = paymentState
+    existing.memberStatus = member.status
+    return ok({ ...existing })
+  }
+
+  const created: Attendance = {
+    id,
+    memberId,
+    memberUid: member.uid,
+    memberName: member.fullName,
+    email: member.email,
+    dayKey,
+    checkedInAt: now,
+    lastSeenAt: now,
+    scanCount: 1,
+    paymentState,
+    memberStatus: member.status,
+  }
+  attendance[dayKey] = [created, ...list]
+  return ok({ ...created })
+}
+
+export function listTodayAttendance(_gymId: string, dayKey: string) {
+  return ok(
+    [...(attendance[dayKey] ?? [])].sort(
+      (a, b) => +new Date(b.checkedInAt as Date) - +new Date(a.checkedInAt as Date),
+    ),
+  )
+}
+
+export function getMemberAttendance(_gymId: string, memberId: string, dayKey: string) {
+  const id = demoAttendanceId(dayKey, memberId)
+  return ok(attendance[dayKey]?.find((a) => a.id === id) ?? null)
 }
 
 // ---- Pagos ----

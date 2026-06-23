@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Timestamp } from 'firebase/firestore'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Lock, Pencil, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, KeyRound, Lock, Pencil, Trash2, Wallet } from 'lucide-react'
 import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
@@ -55,6 +56,7 @@ export function MemberDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
 
   if (isLoading) {
     return (
@@ -88,6 +90,28 @@ export function MemberDetailPage() {
     if (ok) navigate(ROUTES.ADMIN_MEMBERS)
   }
 
+  const requirePasswordChange = async () => {
+    const ok = await run(
+      () =>
+        updateMember.mutateAsync({
+          memberId,
+          data: {
+            authStatus:
+              member.authStatus === 'pending_password' ? 'pending_password' : 'password_change_required',
+            passwordResetRequestedAt: Timestamp.now(),
+          },
+        }),
+      {
+        success:
+          member.authStatus === 'pending_password'
+            ? 'El socio seguirá creando su contraseña en el primer ingreso'
+            : 'Se requerirá cambio de contraseña en el próximo login',
+        error: 'No se pudo actualizar la seguridad del socio',
+      },
+    )
+    if (ok) setPasswordOpen(false)
+  }
+
   return (
     <AppLayout title={member.fullName}>
       <button
@@ -112,6 +136,13 @@ export function MemberDetailPage() {
           <div className="flex flex-wrap gap-2">
             <Button leftIcon={<Wallet className="size-4" />} onClick={() => setPayOpen(true)}>
               Registrar pago
+            </Button>
+            <Button
+              variant="secondary"
+              leftIcon={<KeyRound className="size-4" />}
+              onClick={() => setPasswordOpen(true)}
+            >
+              Requerir cambio
             </Button>
             <IconButton
               icon={<Pencil className="size-4" />}
@@ -156,6 +187,16 @@ export function MemberDetailPage() {
               items={[
                 { label: 'Nombre', value: member.fullName },
                 { label: 'Email', value: <Sensitive>{member.email}</Sensitive> },
+                { label: 'Email de acceso', value: <Sensitive>{member.loginEmail || member.email}</Sensitive> },
+                {
+                  label: 'Contraseña',
+                  value:
+                    member.authStatus === 'pending_password'
+                      ? 'Pendiente de crear'
+                      : member.authStatus === 'password_change_required'
+                        ? 'Cambio requerido'
+                        : 'Activa',
+                },
                 { label: 'Teléfono', value: <Sensitive>{member.phone || '—'}</Sensitive> },
                 { label: 'Nacimiento', value: formatDate(member.birthDate) },
               ]}
@@ -199,6 +240,14 @@ export function MemberDetailPage() {
         title="Eliminar socio"
         description={`¿Querés eliminar a ${member.fullName}? Se borrarán sus datos, pagos y registros. Esta acción no se puede deshacer.`}
         loading={removeMember.isPending}
+      />
+      <ConfirmDialog
+        open={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+        onConfirm={requirePasswordChange}
+        title="Requerir cambio de contraseña"
+        description="En modo client-only no podemos borrar una contraseña olvidada de Firebase Auth. Esta acción marca al socio para cambiarla después de iniciar sesión; si nunca creó contraseña, seguirá el flujo de primer acceso."
+        loading={updateMember.isPending}
       />
     </AppLayout>
   )

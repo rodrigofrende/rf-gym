@@ -10,6 +10,8 @@ import {
   Tags,
   Layers,
   ListChecks,
+  QrCode,
+  CalendarCheck,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
@@ -24,6 +26,8 @@ export interface NavItem {
 
 const ADMIN_NAV: NavItem[] = [
   { to: ROUTES.ADMIN_MEMBERS, label: 'Socios', icon: Users },
+  { to: ROUTES.ADMIN_MY_QR, label: 'Mi QR', icon: QrCode },
+  { to: ROUTES.ADMIN_TODAY, label: 'Hoy', icon: CalendarCheck },
   { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
   { to: ROUTES.ADMIN_EXERCISES, label: 'Ejercicios', icon: ListChecks },
   { to: ROUTES.ADMIN_TARIFFS, label: 'Tarifas', icon: Tags },
@@ -33,6 +37,7 @@ const ADMIN_NAV: NavItem[] = [
 
 const USER_NAV: NavItem[] = [
   { to: ROUTES.APP_ROUTINES, label: 'Mis rutinas', icon: ClipboardList },
+  { to: ROUTES.APP_SCAN_QR, label: 'Escanear QR', icon: QrCode },
   { to: ROUTES.APP_LOGS, label: 'Mis registros', icon: History },
   { to: ROUTES.APP_PROFILE, label: 'Mi perfil', icon: User },
 ]

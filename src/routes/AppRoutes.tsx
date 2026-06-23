@@ -4,12 +4,18 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { FullPageSpinner } from '@/components/ui'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { SetPasswordPage } from '@/features/auth/SetPasswordPage'
 import { TenantSelectPage } from '@/features/tenant-select/TenantSelectPage'
 // Lazy: el panel admin trae recharts; lo separamos para no pesar el bundle inicial
 // (login y vista de socio mobile no lo descargan).
 const AdminDashboardPage = lazy(() =>
   import('@/features/admin/dashboard/AdminDashboardPage').then((m) => ({
     default: m.AdminDashboardPage,
+  })),
+)
+const ScanQrPage = lazy(() =>
+  import('@/features/member/attendance/ScanQrPage').then((m) => ({
+    default: m.ScanQrPage,
   })),
 )
 import { MembersListPage } from '@/features/admin/members/MembersListPage'
@@ -19,6 +25,9 @@ import { RoutineEditorPage } from '@/features/admin/routines/RoutineEditorPage'
 import { ExercisesListPage } from '@/features/admin/exercises/ExercisesListPage'
 import { TariffsListPage } from '@/features/admin/tariffs/TariffsListPage'
 import { BrandingPage } from '@/features/admin/branding/BrandingPage'
+import { AdminQrPage } from '@/features/admin/attendance/AdminQrPage'
+import { TodayAttendancePage } from '@/features/admin/attendance/TodayAttendancePage'
+import { CheckInPage } from '@/features/member/attendance/CheckInPage'
 import { ProfilePage } from '@/features/member/profile/ProfilePage'
 import { MyRoutinesPage } from '@/features/member/routines/MyRoutinesPage'
 import { MyLogsPage } from '@/features/member/logs/MyLogsPage'
@@ -45,6 +54,8 @@ export function AppRoutes() {
     <Suspense fallback={<FullPageSpinner />}>
       <Routes>
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+      <Route path={ROUTES.SET_PASSWORD} element={<SetPasswordPage />} />
+      <Route path={ROUTES.CHECK_IN} element={<CheckInPage />} />
       <Route path={ROUTES.SELECT_GYM} element={<TenantSelectPage />} />
 
       {/* Super-admin (plataforma RF FIT) */}
@@ -146,8 +157,32 @@ export function AppRoutes() {
           </PrivateRoute>
         }
       />
+      <Route
+        path={ROUTES.ADMIN_MY_QR}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <AdminQrPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path={ROUTES.ADMIN_TODAY}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <TodayAttendancePage />
+          </PrivateRoute>
+        }
+      />
 
       {/* Socio */}
+      <Route
+        path={ROUTES.APP_SCAN_QR}
+        element={
+          <PrivateRoute allowedRoles={['user']}>
+            <ScanQrPage />
+          </PrivateRoute>
+        }
+      />
       <Route
         path={ROUTES.APP_ROUTINES}
         element={

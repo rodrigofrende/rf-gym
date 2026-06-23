@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Building2, LogIn, Plus, ShieldCheck, Trash2, UserPlus, Wallet } from 'lucide-react'
+import { AlertTriangle, Building2, LogIn, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Wallet } from 'lucide-react'
 import type { Gym, GymSubscription, Member, SubscriptionPlan } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
@@ -13,13 +13,15 @@ import { useExercises } from '@/hooks/useExercises'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { defaultHomeForRole } from '@/routes/routePaths'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, toDateInput } from '@/utils/format'
+import { dateInputToTimestamp } from '@/utils/dates'
 import { exceedsLimit, usageLabel } from '@/utils/plans'
 import {
   Badge,
   Button,
   Card,
   ConfirmDialog,
+  DateInput,
   EmptyState,
   FormField,
   FullPageSpinner,
@@ -28,6 +30,7 @@ import {
   InfoTooltip,
   Input,
   Modal,
+  MoneyInput,
   Select,
   Text,
 } from '@/components/ui'
@@ -38,41 +41,10 @@ export function SuperGymsPage() {
   const run = useToastAction()
   const { data: gyms = [], isLoading } = useGyms()
   const { data: plans = [] } = usePlans()
-  const { create, remove } = useGymAdminActions()
+  const { create, update, remove } = useGymAdminActions()
   const [newOpen, setNewOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [planId, setPlanId] = useState('')
+  const [editingGym, setEditingGym] = useState<Gym | null>(null)
   const [toDeleteGym, setToDeleteGym] = useState<Gym | null>(null)
-
-  const activePlans = plans.filter((p) => p.active)
-
-  const handleCreate = async () => {
-    if (name.trim().length < 2) return
-    const plan = plans.find((p) => p.id === planId)
-    const subscription: GymSubscription | undefined = plan
-      ? {
-          planId: plan.id,
-          monthlyCost: plan.price,
-          status: 'active',
-          dueDate: addMonths(new Date(), 1),
-        }
-      : undefined
-    const ok = await run(
-      () =>
-        create.mutateAsync({
-          name: name.trim(),
-          ownerUid: user?.uid ?? '',
-          adminUids: [],
-          subscription,
-        }),
-      { success: 'Gimnasio creado', error: 'No se pudo crear el gimnasio' },
-    )
-    if (ok) {
-      setName('')
-      setPlanId('')
-      setNewOpen(false)
-    }
-  }
 
   const confirmRemoveGym = async () => {
     if (!toDeleteGym) return
@@ -113,43 +85,48 @@ export function SuperGymsPage() {
               key={gym.id}
               gym={gym}
               plan={plans.find((p) => p.id === gym.subscription?.planId)}
+              onEdit={() => setEditingGym(gym)}
               onRemoveGym={() => setToDeleteGym(gym)}
             />
           ))}
         </div>
       )}
 
-      <Modal open={newOpen} onClose={() => setNewOpen(false)} title="Nuevo gimnasio">
-        <div className="space-y-4">
-          <FormField label="Nombre del gimnasio" hint="Lo verás en el selector de gimnasios.">
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. PowerHouse Gym"
-              autoFocus
-            />
-          </FormField>
-          <FormField label="Plan de suscripción" hint="Define el precio y los límites">
-            <Select
-              value={planId}
-              onChange={(e) => setPlanId(e.target.value)}
-              placeholder={activePlans.length ? 'Elegí un plan' : 'No hay planes'}
-              options={activePlans.map((p) => ({
-                value: p.id,
-                label: `${p.name} · ${formatCurrency(p.price)}`,
-              }))}
-            />
-          </FormField>
-          <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
-            <Button variant="secondary" onClick={() => setNewOpen(false)}>
-              Cancelar
-            </Button>
-            <Button loading={create.isPending} onClick={handleCreate}>
-              Crear gimnasio
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {newOpen && (
+        <GymFormModal
+          plans={plans}
+          saving={create.isPending}
+          onClose={() => setNewOpen(false)}
+          onSubmit={async (data) => {
+            const ok = await run(
+              () =>
+                create.mutateAsync({
+                  ...data,
+                  ownerUid: user?.uid ?? '',
+                  adminUids: [],
+                }),
+              { success: 'Gimnasio creado', error: 'No se pudo crear el gimnasio' },
+            )
+            if (ok) setNewOpen(false)
+          }}
+        />
+      )}
+
+      {editingGym && (
+        <GymFormModal
+          gym={editingGym}
+          plans={plans}
+          saving={update.isPending}
+          onClose={() => setEditingGym(null)}
+          onSubmit={async (data) => {
+            const ok = await run(
+              () => update.mutateAsync({ gymId: editingGym.id, data }),
+              { success: 'Gimnasio actualizado', error: 'No se pudo actualizar el gimnasio' },
+            )
+            if (ok) setEditingGym(null)
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={!!toDeleteGym}
@@ -163,13 +140,123 @@ export function SuperGymsPage() {
   )
 }
 
+type GymFormData = Pick<Gym, 'name' | 'logoURL' | 'subscription'>
+
+function GymFormModal({
+  gym,
+  plans,
+  saving,
+  onClose,
+  onSubmit,
+}: {
+  gym?: Gym
+  plans: SubscriptionPlan[]
+  saving?: boolean
+  onClose: () => void
+  onSubmit: (data: GymFormData) => Promise<void>
+}) {
+  const activePlans = plans.filter((p) => p.active || p.id === gym?.subscription?.planId)
+  const [name, setName] = useState(gym?.name ?? '')
+  const [logoURL, setLogoURL] = useState(gym?.logoURL ?? '')
+  const [planId, setPlanId] = useState(gym?.subscription?.planId ?? '')
+  const selectedPlan = plans.find((p) => p.id === planId)
+  const [monthlyCost, setMonthlyCost] = useState(gym?.subscription?.monthlyCost ?? selectedPlan?.price ?? 0)
+  const [dueDate, setDueDate] = useState(
+    gym?.subscription?.dueDate ? toDateInput(gym.subscription.dueDate) : toDateInput(addMonths(new Date(), 1)),
+  )
+  const [status, setStatus] = useState<GymSubscription['status']>(gym?.subscription?.status ?? 'active')
+
+  const submit = async () => {
+    if (name.trim().length < 2) return
+    const plan = plans.find((p) => p.id === planId)
+    await onSubmit({
+      name: name.trim(),
+      logoURL: logoURL.trim() || undefined,
+      subscription: planId
+        ? {
+            planId,
+            monthlyCost: monthlyCost || plan?.price || 0,
+            status,
+            dueDate: dateInputToTimestamp(dueDate),
+            lastPaymentDate: gym?.subscription?.lastPaymentDate,
+          }
+        : undefined,
+    })
+  }
+
+  return (
+    <Modal open onClose={onClose} title={gym ? `Editar gimnasio — ${gym.name}` : 'Nuevo gimnasio'} size="lg">
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="Nombre del gimnasio" hint="Lo verás en el selector de gimnasios.">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ej. PowerHouse Gym"
+              autoFocus
+            />
+          </FormField>
+          <FormField label="Logo URL" hint="Opcional, se usa en sidebar y selector.">
+            <Input
+              value={logoURL}
+              onChange={(e) => setLogoURL(e.target.value)}
+              placeholder="https://..."
+            />
+          </FormField>
+          <FormField label="Plan de suscripción" hint="Define precio y límites del tenant.">
+            <Select
+              value={planId}
+              onChange={(e) => {
+                const nextPlan = plans.find((p) => p.id === e.target.value)
+                setPlanId(e.target.value)
+                if (nextPlan) setMonthlyCost(nextPlan.price)
+              }}
+              placeholder={activePlans.length ? 'Elegí un plan' : 'No hay planes'}
+              options={activePlans.map((p) => ({
+                value: p.id,
+                label: `${p.name} · ${formatCurrency(p.price)}`,
+              }))}
+            />
+          </FormField>
+          <FormField label="Estado de suscripción">
+            <Select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as GymSubscription['status'])}
+              options={[
+                { value: 'active', label: 'Activa' },
+                { value: 'suspended', label: 'Suspendida' },
+              ]}
+            />
+          </FormField>
+          <FormField label="Costo mensual">
+            <MoneyInput value={monthlyCost} onChange={setMonthlyCost} />
+          </FormField>
+          <FormField label="Próximo vencimiento">
+            <DateInput value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </FormField>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button loading={saving} onClick={submit}>
+            {gym ? 'Guardar cambios' : 'Crear gimnasio'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 function GymCard({
   gym,
   plan,
+  onEdit,
   onRemoveGym,
 }: {
   gym: Gym
   plan?: SubscriptionPlan
+  onEdit: () => void
   onRemoveGym: () => void
 }) {
   const navigate = useNavigate()
@@ -265,6 +352,11 @@ function GymCard({
           <Button size="sm" variant="secondary" leftIcon={<LogIn className="size-4" />} onClick={enterGym}>
             Entrar
           </Button>
+          <IconButton
+            icon={<Pencil className="size-4" />}
+            label="Editar gimnasio"
+            onClick={onEdit}
+          />
           <IconButton
             icon={<Trash2 className="size-4" />}
             label="Eliminar gimnasio"

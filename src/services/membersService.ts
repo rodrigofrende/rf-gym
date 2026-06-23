@@ -2,13 +2,16 @@ import { orderBy } from 'firebase/firestore'
 import type { Member, Role } from '@/types'
 import { env } from '@/config/env'
 import * as demo from '@/demo/store'
-import { addGymAdmin, removeGymAdmin } from './gymsService'
+import { addGymAdmin, getGym, removeGymAdmin } from './gymsService'
 import {
   removeGymMembershipIndex,
   syncGymMembershipIndex,
 } from './membershipIndexService'
+import { listPlans } from './plansService'
 import { addToCollection, getMany, getOne, removeOne, updateOne } from './firestore'
+import { removeMemberLoginIndex, syncMemberLoginIndex } from './memberLoginService'
 import { paths } from './paths'
+import { canCreateAdmin } from '@/utils/plans'
 
 export function listMembers(gymId: string) {
   if (env.demoMode) return demo.listMembers(gymId)
@@ -26,17 +29,40 @@ async function syncAdminUid(gymId: string, uid: string, role: Role, prevRole?: R
   if (role !== 'admin' && prevRole === 'admin') await removeGymAdmin(gymId, uid)
 }
 
+async function assertCanSaveAdmin(gymId: string, nextRole: Role, currentMemberId?: string) {
+  if (nextRole !== 'admin') return
+  const [members, gym, plans] = await Promise.all([listMembers(gymId), getGym(gymId), listPlans()])
+  const plan = plans.find((p) => p.id === gym?.subscription?.planId)
+  const currentAdmins = members.filter((m) => m.role === 'admin' && m.id !== currentMemberId).length
+  const gate = canCreateAdmin(plan, currentAdmins)
+  if (!gate.allowed) throw new Error(gate.reason)
+}
+
 /** Alta de un socio (admin). Crea la invitación: uid vacío hasta que la reclame. */
 export async function createMember(gymId: string, data: Omit<Member, 'id' | 'uid'>) {
   if (env.demoMode) return demo.createMember(gymId, data)
-  return addToCollection(paths.members(gymId), { ...data, uid: '' })
+  await assertCanSaveAdmin(gymId, data.role)
+  const payload = {
+    ...data,
+    uid: '',
+    loginEmail: data.loginEmail || data.email,
+    authStatus: data.authStatus ?? 'pending_password',
+  } satisfies Omit<Member, 'id'>
+  const memberId = await addToCollection(paths.members(gymId), payload)
+  await syncMemberLoginIndex(gymId, memberId, payload)
+  return memberId
 }
 
 /** Edición completa de datos por el admin. */
 export async function updateMember(gymId: string, memberId: string, data: Partial<Member>) {
   if (env.demoMode) return demo.updateMember(gymId, memberId, data)
   const prev = await getMember(gymId, memberId)
+  await assertCanSaveAdmin(gymId, data.role ?? prev?.role ?? 'user', memberId)
   await updateOne(paths.member(gymId, memberId), data)
+  if (prev && (data.email || data.loginEmail) && (data.email ?? data.loginEmail) !== (prev.loginEmail || prev.email)) {
+    await removeMemberLoginIndex(prev.loginEmail || prev.email)
+  }
+  if (prev) await syncMemberLoginIndex(gymId, memberId, { ...prev, ...data })
   const nextRole = data.role ?? prev?.role
   const uid = data.uid ?? prev?.uid ?? ''
   if (uid && nextRole) {
@@ -62,5 +88,6 @@ export async function removeMember(gymId: string, memberId: string) {
     await removeGymMembershipIndex(prev.uid, gymId)
     if (prev.role === 'admin') await removeGymAdmin(gymId, prev.uid)
   }
+  if (prev) await removeMemberLoginIndex(prev.loginEmail || prev.email)
   return removeOne(paths.member(gymId, memberId))
 }
