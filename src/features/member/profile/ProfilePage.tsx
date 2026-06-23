@@ -107,32 +107,66 @@ export function ProfilePage() {
     <AppLayout title="Mi perfil">
       <div className="mx-auto max-w-5xl">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
-          <Card className="lg:col-span-1">
-            <CardBody>
-              <div className="flex flex-col items-center text-center">
-                <Avatar name={member?.fullName ?? '?'} src={member?.photoURL} size="lg" />
-                <Heading variant="card" className="mt-3 text-lg">
-                  {member?.fullName}
-                </Heading>
-                <Text variant="caption" className="mt-1 break-all">
-                  {member?.email}
-                </Text>
-              </div>
-              {member && (
-                <div className="mt-5 border-t border-zinc-100 pt-5">
-                  <InfoGrid
-                    items={[
-                      { label: 'Servicio', value: member.service || '—' },
-                      {
-                        label: 'Estado',
-                        value: <Badge tone="neutral">{STATUS_LABEL[member.status]}</Badge>,
-                      },
-                    ]}
-                  />
+          <div className="space-y-5 lg:col-span-1">
+            <Card>
+              <CardBody>
+                <div className="flex flex-col items-center text-center">
+                  <Avatar name={member?.fullName ?? '?'} src={member?.photoURL} size="lg" />
+                  <Heading variant="card" className="mt-3 text-lg">
+                    {member?.fullName}
+                  </Heading>
+                  <Text variant="caption" className="mt-1 break-all">
+                    {member?.email}
+                  </Text>
                 </div>
-              )}
-            </CardBody>
-          </Card>
+                {member && (
+                  <div className="mt-5 border-t border-zinc-100 pt-5">
+                    <InfoGrid
+                      items={[
+                        { label: 'Servicio', value: member.service || '—' },
+                        {
+                          label: 'Estado',
+                          value: <Badge tone="neutral">{STATUS_LABEL[member.status]}</Badge>,
+                        },
+                      ]}
+                    />
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+
+            {(currentTariff || member?.service) && (
+              <Card>
+                <CardHeader
+                  title="Plan actual"
+                  subtitle="Tu tarifa vigente"
+                  action={
+                    tariffs.length > 0 ? (
+                      <Button variant="secondary" size="sm" onClick={() => setPlansOpen(true)}>
+                        Ver todos
+                      </Button>
+                    ) : null
+                  }
+                />
+                <CardBody>
+                  {currentTariff ? (
+                    <PlanCard tariff={currentTariff} current />
+                  ) : (
+                    <Card className="border-brand-300 bg-brand-50 p-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Heading variant="card">{member?.service}</Heading>
+                        <Badge tone="brand">Tu plan</Badge>
+                      </div>
+                      <Text variant="metric" className="mt-2">
+                        {formatCurrency(member?.monthlyCost)}
+                        <span className="text-sm font-normal text-zinc-400"> /mes</span>
+                      </Text>
+                    </Card>
+                  )}
+                </CardBody>
+              </Card>
+            )}
+          </div>
 
           <div className="space-y-5 lg:col-span-2">
             <Card>
@@ -222,41 +256,9 @@ export function ProfilePage() {
                   </div>
                 </form>
               </CardBody>
-            </Card>
+          </Card>
           </div>
         </div>
-
-        {(currentTariff || member?.service) && (
-          <Card className="mt-5">
-            <CardHeader
-              title="Plan actual"
-              subtitle="Tu tarifa vigente"
-              action={
-                tariffs.length > 0 ? (
-                  <Button variant="secondary" size="sm" onClick={() => setPlansOpen(true)}>
-                    Ver todos
-                  </Button>
-                ) : null
-              }
-            />
-            <CardBody>
-              {currentTariff ? (
-                <PlanCard tariff={currentTariff} current />
-              ) : (
-                <Card className="border-brand-300 bg-brand-50 p-5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Heading variant="card">{member?.service}</Heading>
-                    <Badge tone="brand">Tu plan</Badge>
-                  </div>
-                  <Text variant="metric" className="mt-2">
-                    {formatCurrency(member?.monthlyCost)}
-                    <span className="text-sm font-normal text-zinc-400"> /mes</span>
-                  </Text>
-                </Card>
-              )}
-            </CardBody>
-          </Card>
-        )}
 
         <Modal open={plansOpen} onClose={() => setPlansOpen(false)} title="Planes del gimnasio" size="lg">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

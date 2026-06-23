@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
@@ -10,9 +11,10 @@ import { useToast } from '@/providers/ToastProvider'
 import { Button, Card, FormField, Heading, PasswordInput, Text } from '@/components/ui'
 import { claimMembership, claimPendingMemberships, type ClaimedMembership } from '@/services/membershipsService'
 import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
-import { mapAuthError } from '@/utils/authErrors'
+import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
 import { queryKeys } from '@/hooks/queryKeys'
+import { useMemberships } from '@/hooks/useMemberships'
 import { ROUTES } from '@/routes/routePaths'
 
 const schema = z
@@ -42,6 +44,7 @@ export function SetPasswordPage() {
   const { notify } = useToast()
   const email = (params.get('email') ?? user?.email ?? '').trim().toLowerCase()
   const mode = params.get('mode') === 'change' ? 'change' : 'create'
+  const { data: memberships = [], isLoading: membershipsLoading } = useMemberships(user)
 
   const {
     register,
@@ -56,6 +59,15 @@ export function SetPasswordPage() {
   if (mode === 'change' && !user) {
     return <Navigate to={`${ROUTES.LOGIN}?redirect=${encodeURIComponent(`${ROUTES.SET_PASSWORD}?email=${email}&mode=change`)}`} replace />
   }
+
+  useEffect(() => {
+    if (mode !== 'create') return
+    if (!user?.email || user.email.toLowerCase() !== email) return
+    if (membershipsLoading) return
+    if (memberships.length > 0) {
+      navigate('/', { replace: true })
+    }
+  }, [mode, user, email, membershipsLoading, memberships.length, navigate])
 
   const onSubmit = async (values: FormValues) => {
     if (values.password.toLowerCase() === email.toLowerCase()) {
@@ -114,9 +126,11 @@ export function SetPasswordPage() {
       notify(mode === 'create' ? 'Contraseña creada' : 'Contraseña actualizada', 'success')
       navigate('/')
     } catch (err) {
-      const message = extractFirestoreCode(err)
-        ? mapFirestoreError(err, 'No se pudo activar el acceso al gimnasio')
-        : mapAuthError(err)
+      const message = extractAuthCode(err)
+        ? mapAuthError(err, 'No se pudo crear la contraseña')
+        : extractFirestoreCode(err)
+          ? mapFirestoreError(err, 'No se pudo activar el acceso al gimnasio')
+          : mapAuthError(err)
       notify(message, 'error')
     }
   }

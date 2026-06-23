@@ -11,7 +11,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/network-request-failed': 'Sin conexión. Revisá tu internet.',
 }
 
-function extractCode(err: unknown): string | undefined {
+export function extractAuthCode(err: unknown): string | undefined {
   if (err && typeof err === 'object' && 'code' in err && typeof err.code === 'string') {
     return err.code
   }
@@ -23,7 +23,7 @@ function extractCode(err: unknown): string | undefined {
 }
 
 export function mapAuthError(err: unknown, fallback = 'No se pudo iniciar sesión'): string {
-  const code = extractCode(err)
+  const code = extractAuthCode(err)
   if (code && AUTH_ERROR_MESSAGES[code]) return AUTH_ERROR_MESSAGES[code]
   return fallback
 }

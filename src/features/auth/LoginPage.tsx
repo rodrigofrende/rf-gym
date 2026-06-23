@@ -14,7 +14,7 @@ import { queryKeys } from '@/hooks/queryKeys'
 import { getMemberLogin } from '@/services/memberLoginService'
 import type { ClaimedMembership } from '@/services/membershipsService'
 import { claimMembership, claimPendingMemberships } from '@/services/membershipsService'
-import { mapAuthError } from '@/utils/authErrors'
+import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
 import { Button, Card, FormField, Heading, Input, PasswordInput, Text } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
@@ -107,11 +107,13 @@ export function LoginPage() {
         navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail || email)}&mode=change`)
       }
     } catch (err) {
-      const message = extractFirestoreCode(err)
-        ? mapFirestoreError(err, 'No se pudo sincronizar tu acceso al gimnasio')
-        : err instanceof Error && err.message.includes('vincular tu acceso')
-          ? 'Tu cuenta existe, pero no pudimos asociarla a un gimnasio. Pedile al super-admin que revise tu alta.'
-        : mapAuthError(err)
+      const message = extractAuthCode(err)
+        ? mapAuthError(err)
+        : extractFirestoreCode(err)
+          ? mapFirestoreError(err, 'No se pudo sincronizar tu acceso al gimnasio')
+          : err instanceof Error && err.message.includes('vincular tu acceso')
+            ? 'Tu cuenta existe, pero no pudimos asociarla a un gimnasio. Pedile al super-admin que revise tu alta.'
+            : mapAuthError(err)
       notify(message, 'error')
     }
   }
