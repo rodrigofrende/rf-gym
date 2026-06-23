@@ -5,6 +5,7 @@ import { useTenant } from '@/providers/TenantProvider'
 import { usePrivacy } from '@/providers/PrivacyProvider'
 import { ROLE_LABEL } from '@/utils/roles'
 import { cn } from '@/utils/cn'
+import { emailLocalPart } from '@/utils/loginEmail'
 import { Avatar, Text, Toggle } from '@/components/ui'
 import { APP_NAME, APP_VERSION } from '@/config/app'
 import { TenantSwitcher } from './TenantSwitcher'
@@ -27,6 +28,9 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const showSwitcher = !isPlatform && memberships.length > 1
   // Modo discreto: por ahora solo para el admin del gym.
   const showDiscreto = role === 'admin' && !isPlatform
+  const userEmail = user?.email ?? ''
+  const userLabel = user?.displayName || emailLocalPart(userEmail) || 'Usuario'
+  const roleLabel = isSuperAdmin ? 'Super administrador' : role ? ROLE_LABEL[role] : ''
 
   return (
     <>
@@ -100,12 +104,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 src={user?.photoURL ?? undefined}
                 size="sm"
               />
-              <div className="min-w-0 flex-1">
-                <Text variant="listItem" className="truncate">
-                  {user?.displayName || user?.email}
+              <div className="min-w-0 flex-1" title={userEmail || userLabel}>
+                <Text variant="listItem" as="p" className="truncate">
+                  {userLabel}
                 </Text>
                 <Text variant="caption" className="truncate">
-                  {isSuperAdmin ? 'Super administrador' : role ? ROLE_LABEL[role] : ''}
+                  {roleLabel}
                 </Text>
               </div>
             </div>

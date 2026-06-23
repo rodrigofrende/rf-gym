@@ -16,6 +16,7 @@ export const env = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
   },
   useEmulator: import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true',
+  googleLoginEnabled: import.meta.env.VITE_ENABLE_GOOGLE_LOGIN === 'true',
   // Demo en memoria: activo si se fuerza con VITE_DEMO_MODE o si no hay credenciales.
   demoMode: import.meta.env.VITE_DEMO_MODE === 'true' || !hasFirebaseConfig(),
 }

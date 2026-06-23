@@ -29,6 +29,7 @@ export function LoginPage() {
   const [step, setStep] = useState<LoginStep>('email')
   const [resolvedEmail, setResolvedEmail] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
+  const canUseGoogle = env.googleLoginEnabled
   const redirect = new URLSearchParams(location.search).get('redirect')
   const safeRedirect = redirect?.startsWith('/') ? redirect : '/'
 
@@ -176,13 +177,17 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-zinc-400">
-            <span className="h-px flex-1 bg-zinc-200" />o<span className="h-px flex-1 bg-zinc-200" />
-          </div>
+          {canUseGoogle && (
+            <>
+              <div className="my-4 flex items-center gap-3 text-xs text-zinc-400">
+                <span className="h-px flex-1 bg-zinc-200" />o<span className="h-px flex-1 bg-zinc-200" />
+              </div>
 
-          <Button variant="secondary" fullWidth loading={googleLoading} onClick={onGoogle}>
-            <GoogleIcon /> Continuar con Google
-          </Button>
+              <Button variant="secondary" fullWidth loading={googleLoading} onClick={onGoogle}>
+                <GoogleIcon /> Continuar con Google
+              </Button>
+            </>
+          )}
         </Card>
       </div>
     </div>
