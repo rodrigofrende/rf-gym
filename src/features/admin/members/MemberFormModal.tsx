@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -69,20 +70,21 @@ export function MemberFormModal({
     control,
     setValue,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    values: {
-      fullName: initial?.fullName ?? '',
-      loginLocal: emailLocalPart(initial?.loginEmail || initial?.email || ''),
-      phone: initial?.phone ?? '',
-      birthDate: toDateInput(initial?.birthDate),
-      role: initial?.role ?? 'user',
-      tariffId: initial?.tariffId ?? '',
-      monthlyCost: initial?.monthlyCost ?? 0,
-      startDate: initial ? toDateInput(initial.startDate) : today,
-      paymentDate: initial ? toDateInput(initial.paymentDate) : plusOneMonth(today),
-      status: initial?.status ?? 'active',
+    defaultValues: {
+      fullName: '',
+      loginLocal: '',
+      phone: '',
+      birthDate: '',
+      role: 'user',
+      tariffId: '',
+      monthlyCost: 0,
+      startDate: today,
+      paymentDate: plusOneMonth(today),
+      status: 'active',
     },
   })
 
@@ -105,6 +107,28 @@ export function MemberFormModal({
     role === 'admin' && plan
       ? `Administradores del plan: ${usageLabel(adminCount + (initial?.role === 'admin' ? 1 : 0), plan.maxAdmins)}`
       : undefined
+
+  const formValues = (): FormValues => ({
+    fullName: initial?.fullName ?? '',
+    loginLocal: emailLocalPart(initial?.loginEmail || initial?.email || ''),
+    phone: initial?.phone ?? '',
+    birthDate: toDateInput(initial?.birthDate),
+    role: initial?.role ?? 'user',
+    tariffId: initial?.tariffId ?? '',
+    monthlyCost: initial?.monthlyCost ?? 0,
+    startDate: initial ? toDateInput(initial.startDate) : today,
+    paymentDate: initial ? toDateInput(initial.paymentDate) : plusOneMonth(today),
+    status: initial?.status ?? 'active',
+  })
+
+  useEffect(() => {
+    if (open) reset(formValues())
+  }, [initial, open, reset])
+
+  const close = () => {
+    reset(formValues())
+    onClose()
+  }
 
   const applySuggestedEmail = () => {
     const email = suggestLoginEmail(fullName, gymName, existingEmails)
@@ -143,13 +167,13 @@ export function MemberFormModal({
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={initial ? 'Editar socio' : 'Nuevo socio'}
       size="xl"
       closeOnBackdrop={!saving}
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={onClose}>
+          <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={close}>
             Cancelar
           </Button>
           <Button

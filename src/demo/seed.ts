@@ -101,6 +101,7 @@ export function buildSeed(): DemoData {
     subscription: {
       monthlyCost: 25000,
       planId: 'tier-pro',
+      startDate: new Date('2026-05-28'),
       lastPaymentDate: new Date('2026-05-28'),
       dueDate: new Date('2026-06-28'),
       status: 'active' as const,

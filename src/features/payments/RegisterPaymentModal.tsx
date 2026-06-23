@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, DateInput, FormField, Input, Modal, MoneyInput } from '@/components/ui'
 import { parseDateInput, todayDateInput } from '@/utils/dates'
 
@@ -28,21 +28,36 @@ export function RegisterPaymentModal({
   const [comment, setComment] = useState('')
 
   const canSubmit = amount > 0 && !!date
+  const resetForm = () => {
+    setAmount(defaultAmount)
+    setDate(todayDateInput())
+    setComment('')
+  }
+
+  useEffect(() => {
+    if (open) resetForm()
+  }, [defaultAmount, open])
 
   const submit = () => {
     if (!canSubmit) return
     onSubmit({ amount, date: parseDateInput(date), comment: comment.trim() || undefined })
+    resetForm()
+  }
+
+  const close = () => {
+    resetForm()
+    onClose()
   }
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={title}
       closeOnBackdrop={!saving}
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={onClose}>
+          <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={close}>
             Cancelar
           </Button>
           <Button

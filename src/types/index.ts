@@ -52,6 +52,7 @@ export interface SubscriptionPlan {
 export interface GymSubscription {
   monthlyCost: number
   planId?: string // plan de suscripción asignado
+  startDate?: DateValue // fecha de ingreso a la plataforma
   lastPaymentDate?: DateValue
   dueDate?: DateValue // próximo vencimiento estipulado
   status: 'active' | 'suspended'

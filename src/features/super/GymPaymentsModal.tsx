@@ -23,6 +23,12 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
   const [comment, setComment] = useState('')
   const [toDelete, setToDelete] = useState<string | null>(null)
 
+  const resetForm = () => {
+    setAmount(sub?.monthlyCost ?? 0)
+    setDate(todayDateInput())
+    setComment('')
+  }
+
   const handleRegister = async () => {
     if (amount <= 0) return
     const subscription: GymSubscription = sub ?? { monthlyCost: amount, status: 'active' }
@@ -39,7 +45,7 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
         }),
       { success: 'Pago registrado', error: 'No se pudo registrar el pago' },
     )
-    if (ok) setComment('')
+    if (ok) resetForm()
   }
 
   const confirmDelete = async () => {
@@ -52,7 +58,15 @@ export function GymPaymentsModal({ gym, onClose }: { gym: Gym; onClose: () => vo
   }
 
   return (
-    <Modal open onClose={onClose} title={`Suscripción — ${gym.name}`} size="lg">
+    <Modal
+      open
+      onClose={() => {
+        resetForm()
+        onClose()
+      }}
+      title={`Suscripción — ${gym.name}`}
+      size="lg"
+    >
       <div className="space-y-6">
         <PaymentSummary
           subject="gym"

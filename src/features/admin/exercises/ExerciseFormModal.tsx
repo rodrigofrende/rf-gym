@@ -1,5 +1,5 @@
 import { Controller, useForm } from 'react-hook-form'
-import { useId } from 'react'
+import { useEffect, useId } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { ExerciseDefinition, LoadType } from '@/types'
@@ -27,11 +27,36 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
+const DEFAULT_VALUES: FormValues = {
+  name: '',
+  category: 'strength',
+  muscleGroups: [],
+  loadType: 'weight',
+  description: '',
+  defaultSets: undefined,
+  defaultReps: undefined,
+  defaultRestMin: undefined,
+}
+
 const optionalNumber = (value: unknown) => (value === '' || value == null ? undefined : Number(value))
 const secondsToMinutes = (seconds?: number) =>
   seconds == null ? undefined : Number((seconds / 60).toFixed(2))
 const minutesToSeconds = (minutes?: number) =>
   minutes == null ? undefined : Math.round(minutes * 60)
+
+function valuesFromExercise(exercise?: ExerciseDefinition | null): FormValues {
+  if (!exercise) return DEFAULT_VALUES
+  return {
+    name: exercise.name,
+    category: exercise.category,
+    muscleGroups: exercise.muscleGroups,
+    loadType: exercise.loadType,
+    description: exercise.description ?? '',
+    defaultSets: exercise.defaultSets,
+    defaultReps: exercise.defaultReps,
+    defaultRestMin: secondsToMinutes(exercise.defaultRestSec),
+  }
+}
 
 export function ExerciseFormModal({
   open,
@@ -53,20 +78,16 @@ export function ExerciseFormModal({
     register,
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    values: {
-      name: initial?.name ?? '',
-      category: initial?.category ?? 'strength',
-      muscleGroups: initial?.muscleGroups ?? [],
-      loadType: initial?.loadType ?? 'weight',
-      description: initial?.description ?? '',
-      defaultSets: initial?.defaultSets,
-      defaultReps: initial?.defaultReps,
-      defaultRestMin: secondsToMinutes(initial?.defaultRestSec),
-    },
+    defaultValues: DEFAULT_VALUES,
   })
+
+  useEffect(() => {
+    if (open) reset(valuesFromExercise(initial))
+  }, [initial, open, reset])
 
   const submit = (v: FormValues) => {
     onSubmit({
@@ -82,15 +103,20 @@ export function ExerciseFormModal({
     })
   }
 
+  const close = () => {
+    reset(valuesFromExercise(initial))
+    onClose()
+  }
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={initial ? 'Editar ejercicio' : 'Nuevo ejercicio'}
       size="xl"
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={onClose}>
+          <Button type="button" variant="secondary" fullWidth className="sm:w-auto" onClick={close}>
             Cancelar
           </Button>
           <Button type="submit" form={formId} fullWidth className="sm:w-auto" loading={saving}>

@@ -22,6 +22,7 @@ export function PaymentSummary({
   const status = getPaymentStatus(dueDate, lastPaymentDate)
   const owed = amountOwed(monthlyCost, status.monthsOwed)
   const blockedLabel = subject === 'gym' ? 'Suspendido' : 'Bloqueado'
+  const dueLabel = subject === 'gym' ? 'Próximo pago' : 'Próximo vencimiento'
 
   return (
     <div className="space-y-3">
@@ -29,7 +30,7 @@ export function PaymentSummary({
         items={[
           { label: 'Cuota', value: <Money value={monthlyCost} /> },
           { label: 'Último pago', value: formatDate(lastPaymentDate) },
-          { label: 'Próximo vencimiento', value: formatDate(dueDate) },
+          { label: dueLabel, value: formatDate(dueDate) },
         ]}
       />
 

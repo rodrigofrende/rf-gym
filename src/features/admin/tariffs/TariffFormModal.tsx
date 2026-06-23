@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -28,6 +29,27 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
+const DEFAULT_VALUES: FormValues = {
+  name: '',
+  icon: 'membership',
+  weeklyFrequency: 3,
+  price: 0,
+  description: '',
+  active: true,
+}
+
+function valuesFromTariff(tariff?: Tariff | null): FormValues {
+  if (!tariff) return DEFAULT_VALUES
+  return {
+    name: tariff.name,
+    icon: tariff.icon ?? 'membership',
+    weeklyFrequency: tariff.weeklyFrequency,
+    price: tariff.price,
+    description: tariff.description ?? '',
+    active: tariff.active,
+  }
+}
+
 export function TariffFormModal({
   open,
   onClose,
@@ -45,21 +67,24 @@ export function TariffFormModal({
     register,
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    values: {
-      name: initial?.name ?? '',
-      icon: initial?.icon ?? 'membership',
-      weeklyFrequency: initial?.weeklyFrequency ?? 3,
-      price: initial?.price ?? 0,
-      description: initial?.description ?? '',
-      active: initial?.active ?? true,
-    },
+    defaultValues: DEFAULT_VALUES,
   })
 
+  useEffect(() => {
+    if (open) reset(valuesFromTariff(initial))
+  }, [initial, open, reset])
+
+  const close = () => {
+    reset(valuesFromTariff(initial))
+    onClose()
+  }
+
   return (
-    <Modal open={open} onClose={onClose} title={initial ? 'Editar tarifa' : 'Nueva tarifa'} size="lg">
+    <Modal open={open} onClose={close} title={initial ? 'Editar tarifa' : 'Nueva tarifa'} size="lg">
       <form onSubmit={handleSubmit((v) => onSubmit(v))} className="space-y-4">
         <FormField label="Icono de la tarifa">
           <Controller
@@ -113,7 +138,7 @@ export function TariffFormModal({
         />
 
         <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={close}>
             Cancelar
           </Button>
           <Button type="submit" loading={saving}>

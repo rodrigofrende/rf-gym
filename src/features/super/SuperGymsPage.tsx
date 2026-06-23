@@ -13,8 +13,8 @@ import { useExercises } from '@/hooks/useExercises'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { defaultHomeForRole } from '@/routes/routePaths'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
-import { formatCurrency, toDateInput } from '@/utils/format'
-import { dateInputToTimestamp } from '@/utils/dates'
+import { formatCurrency, toDate, toDateInput } from '@/utils/format'
+import { dateInputToTimestamp, localDayKey, parseDateInput } from '@/utils/dates'
 import { exceedsLimit, usageLabel } from '@/utils/plans'
 import {
   Badge,
@@ -141,7 +141,7 @@ export function SuperGymsPage() {
 }
 
 type GymFormData = Pick<Gym, 'name' | 'logoURL' | 'subscription'>
-type GymFormErrors = Partial<Record<'name' | 'logoURL' | 'planId' | 'monthlyCost' | 'dueDate', string>>
+type GymFormErrors = Partial<Record<'name' | 'planId' | 'monthlyCost' | 'startDate', string>>
 
 function GymFormModal({
   gym,
@@ -158,13 +158,14 @@ function GymFormModal({
 }) {
   const activePlans = plans.filter((p) => p.active || p.id === gym?.subscription?.planId)
   const [name, setName] = useState(gym?.name ?? '')
-  const [logoURL, setLogoURL] = useState(gym?.logoURL ?? '')
   const [planId, setPlanId] = useState(gym?.subscription?.planId ?? '')
   const selectedPlan = plans.find((p) => p.id === planId)
   const [monthlyCost, setMonthlyCost] = useState(gym?.subscription?.monthlyCost ?? selectedPlan?.price ?? 0)
-  const [dueDate, setDueDate] = useState(
-    gym?.subscription?.dueDate ? toDateInput(gym.subscription.dueDate) : toDateInput(addMonths(new Date(), 1)),
-  )
+  const [startDate, setStartDate] = useState(() => {
+    if (gym?.subscription?.startDate) return toDateInput(gym.subscription.startDate)
+    const dueDate = toDate(gym?.subscription?.dueDate)
+    return dueDate ? localDayKey(addMonths(dueDate, -1)) : localDayKey(new Date())
+  })
   const [status, setStatus] = useState<GymSubscription['status']>(gym?.subscription?.status ?? 'active')
   const [errors, setErrors] = useState<GymFormErrors>({})
 
@@ -180,19 +181,15 @@ function GymFormModal({
   const validate = () => {
     const next: GymFormErrors = {}
     const trimmedName = name.trim()
-    const trimmedLogoURL = logoURL.trim()
 
     if (trimmedName.length < 2) next.name = 'Ingresá el nombre del gimnasio.'
-    if (trimmedLogoURL && !/^https?:\/\/\S+\.\S+/.test(trimmedLogoURL)) {
-      next.logoURL = 'Usá una URL válida que empiece con http:// o https://.'
-    }
     if (!planId) {
       next.planId = activePlans.length
         ? 'Elegí el plan de suscripción del gimnasio.'
         : 'Primero creá al menos un plan activo.'
     }
     if (monthlyCost <= 0) next.monthlyCost = 'Ingresá un costo mensual mayor a cero.'
-    if (!dueDate) next.dueDate = 'Elegí el próximo vencimiento de la suscripción.'
+    if (!startDate) next.startDate = 'Elegí la fecha de ingreso del gimnasio.'
 
     setErrors(next)
     return Object.keys(next).length === 0
@@ -201,15 +198,17 @@ function GymFormModal({
   const submit = async () => {
     if (!validate()) return
     const plan = plans.find((p) => p.id === planId)
+    const firstDueDate = addMonths(parseDateInput(startDate), 1)
     await onSubmit({
       name: name.trim(),
-      logoURL: logoURL.trim() || undefined,
+      logoURL: gym?.logoURL,
       subscription: planId
         ? {
             planId,
             monthlyCost: monthlyCost || plan?.price || 0,
             status,
-            dueDate: dateInputToTimestamp(dueDate),
+            startDate: dateInputToTimestamp(startDate),
+            dueDate: dateInputToTimestamp(localDayKey(firstDueDate)),
             lastPaymentDate: gym?.subscription?.lastPaymentDate,
           }
         : undefined,
@@ -237,15 +236,14 @@ function GymFormModal({
               autoFocus
             />
           </FormField>
-          <FormField label="Logo URL" hint="Opcional, se usa en sidebar y selector." error={errors.logoURL}>
+          <FormField
+            label="Logo"
+            hint="Temporalmente deshabilitado. Lo vamos a reactivar cuando definamos el hosting de imágenes."
+          >
             <Input
-              value={logoURL}
-              onChange={(e) => {
-                setLogoURL(e.target.value)
-                clearError('logoURL')
-              }}
-              placeholder="https://..."
-              invalid={!!errors.logoURL}
+              value={gym?.logoURL ? 'Logo configurado (bloqueado temporalmente)' : ''}
+              placeholder="Bloqueado por el momento"
+              disabled
             />
           </FormField>
           <FormField
@@ -295,14 +293,19 @@ function GymFormModal({
               invalid={!!errors.monthlyCost}
             />
           </FormField>
-          <FormField label="Próximo vencimiento" error={errors.dueDate} required>
+          <FormField
+            label="Fecha de ingreso"
+            hint="El primer vencimiento se calcula automáticamente a 1 mes."
+            error={errors.startDate}
+            required
+          >
             <DateInput
-              value={dueDate}
+              value={startDate}
               onChange={(e) => {
-                setDueDate(e.target.value)
-                clearError('dueDate')
+                setStartDate(e.target.value)
+                clearError('startDate')
               }}
-              invalid={!!errors.dueDate}
+              invalid={!!errors.startDate}
             />
           </FormField>
         </div>
@@ -363,6 +366,12 @@ function GymCard({
     navigate(defaultHomeForRole('admin'))
   }
 
+  const closeAddAdmin = () => {
+    setFullName('')
+    setEmail('')
+    setAddOpen(false)
+  }
+
   const handleAddAdmin = async () => {
     if (fullName.trim().length < 2 || !email.trim()) return
     const ok = await run(
@@ -376,9 +385,7 @@ function GymCard({
       { success: 'Administrador agregado', error: 'No se pudo agregar el administrador' },
     )
     if (ok) {
-      setFullName('')
-      setEmail('')
-      setAddOpen(false)
+      closeAddAdmin()
     }
   }
 
@@ -503,7 +510,7 @@ function GymCard({
         )}
       </div>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title={`Nuevo admin — ${gym.name}`}>
+      <Modal open={addOpen} onClose={closeAddAdmin} title={`Nuevo admin — ${gym.name}`}>
         <div className="space-y-4">
           <FormField label="Nombre completo">
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus />
@@ -515,7 +522,7 @@ function GymCard({
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </FormField>
           <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
-            <Button variant="secondary" onClick={() => setAddOpen(false)}>
+            <Button variant="secondary" onClick={closeAddAdmin}>
               Cancelar
             </Button>
             <Button loading={createMember.isPending} onClick={handleAddAdmin}>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import type { Exercise, LogSet } from '@/types'
 import { Button, InfoTooltip, Input, Modal } from '@/components/ui'
@@ -29,11 +29,15 @@ export function LogExerciseModal({
 
   // En edición arranca con las series guardadas; si no, filas vacías según lo
   // planificado. El padre remonta por ejercicio/registro (key).
-  const [sets, setSets] = useState<LogSet[]>(() =>
+  const initialRows = () =>
     initialSets?.length
       ? initialSets.map((s) => ({ ...s }))
-      : Array.from({ length: Math.max(defaultSets, 1) }, () => ({}) as LogSet),
-  )
+      : Array.from({ length: Math.max(defaultSets, 1) }, () => ({}) as LogSet)
+  const [sets, setSets] = useState<LogSet[]>(initialRows)
+
+  useEffect(() => {
+    if (open) setSets(initialRows())
+  }, [defaultSets, initialSets, open])
 
   const update = (i: number, key: keyof LogSet, value: number) =>
     setSets((prev) => prev.map((s, idx) => (idx === i ? { ...s, [key]: value } : s)))
@@ -43,10 +47,15 @@ export function LogExerciseModal({
   // Columnas dinámicas: serie + un input por campo + botón borrar.
   const gridCols = { gridTemplateColumns: `2.5rem repeat(${fields.length}, 1fr) 2rem` }
 
+  const close = () => {
+    setSets(initialRows())
+    onClose()
+  }
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={exercise ? `${editing ? 'Editar' : 'Registrar'} — ${exercise.name}` : 'Registrar'}
     >
       <div className="space-y-2">
@@ -117,14 +126,14 @@ export function LogExerciseModal({
         </Button>
 
         <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={close}>
             Cancelar
           </Button>
           <Button
             loading={saving}
             onClick={() => {
               onSave(sets.filter(hasValue))
-              setSets([])
+              setSets(initialRows())
             }}
           >
             Guardar

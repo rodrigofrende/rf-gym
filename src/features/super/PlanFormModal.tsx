@@ -79,6 +79,11 @@ export function PlanFormModal({
     if (open) reset(valuesFromPlan(initial))
   }, [initial, open, reset])
 
+  const close = () => {
+    reset(valuesFromPlan(initial))
+    onClose()
+  }
+
   const submit = (v: FormValues) => {
     onSubmit({
       name: v.name,
@@ -99,7 +104,7 @@ export function PlanFormModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={initial ? 'Editar plan' : 'Nuevo plan'} size="xl">
+    <Modal open={open} onClose={close} title={initial ? 'Editar plan' : 'Nuevo plan'} size="xl">
       <form onSubmit={handleSubmit(submit)} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="Nombre del plan" error={errors.name?.message} required>
@@ -187,7 +192,7 @@ export function PlanFormModal({
         />
 
         <div className="flex justify-end gap-2 border-t border-zinc-100 pt-3">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={close}>
             Cancelar
           </Button>
           <Button type="submit" loading={saving}>

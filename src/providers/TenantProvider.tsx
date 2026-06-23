@@ -27,9 +27,18 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const value = useMemo<TenantContextValue>(() => {
     // El gym activo se DERIVA: la elección persistida si sigue siendo válida,
     // o auto-selección si hay una sola membresía. Sin efectos ni estado duplicado.
-    const pickedValid = picked && memberships.some((m) => m.gymId === picked)
+    const pickedValid = picked && (isSuperAdmin || memberships.some((m) => m.gymId === picked))
     const activeGymId = pickedValid ? picked : memberships.length === 1 ? memberships[0].gymId : null
-    const activeMembership = memberships.find((m) => m.gymId === activeGymId) ?? null
+    const activeMembership =
+      memberships.find((m) => m.gymId === activeGymId) ??
+      (isSuperAdmin && activeGymId && user
+        ? {
+            gymId: activeGymId,
+            memberId: user.uid,
+            gymName: 'Gimnasio',
+            role: 'admin',
+          }
+        : null)
 
     return {
       memberships,
@@ -47,7 +56,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(STORAGE_KEY)
       },
     }
-  }, [memberships, isLoading, picked, isSuperAdmin])
+  }, [memberships, isLoading, picked, isSuperAdmin, user])
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
 }
