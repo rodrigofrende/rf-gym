@@ -69,6 +69,56 @@ export interface Gym {
   subscription?: GymSubscription
 }
 
+/** Enlace personalizado de la presentación (título + URL). */
+export interface GymLink {
+  label: string
+  url: string
+}
+
+/**
+ * Snapshot público de una tarifa para mostrar en la presentación. Se copia desde
+ * `gyms/{gymId}/tariffs` al guardar (la subcolección real es privada). Solo campos
+ * pensados para mostrar a prospectos.
+ */
+export interface PublicTariff {
+  id: string // referencia a la tarifa original (para re-seleccionar en el editor)
+  name: string
+  price: number
+  weeklyFrequency?: number
+  description?: string
+  icon?: TariffIconKey
+}
+
+/**
+ * Presentación pública del gym (`publicProfiles/{gymId}`). Documento legible SIN
+ * login (rules: `allow read: if true`), por eso NO contiene datos sensibles: solo
+ * lo que el gym quiere mostrar a prospectos + un snapshot de marca
+ * (name/logoURL/theme) para renderizar branded sin leer el doc protegido `gyms/{gymId}`.
+ */
+export interface GymPresentation {
+  id: string // = gymId
+  // Snapshot de marca (se refresca al guardar)
+  name: string
+  logoURL?: string
+  theme?: GymTheme
+  // Contenido editable por el admin
+  description?: string
+  videos?: string[] // URLs de YouTube/Instagram, en orden
+  links?: GymLink[] // enlaces personalizados (incluye redes), en orden
+  tariffs?: PublicTariff[] // tarifas que el admin elige mostrar (snapshot)
+  // Contacto
+  whatsapp?: string // número crudo; se normaliza a dígitos para wa.me
+  email?: string
+  address?: string
+  openingHours?: string
+  // Campos legacy: solo lectura para compatibilidad con docs viejos. Ya no se
+  // editan; `videos`/`links` los reemplazan. Ver utils/presentation.ts.
+  videoURL?: string
+  instagramURL?: string
+  facebookURL?: string
+  updatedAt?: DateValue
+}
+
 /**
  * Membresía de un usuario en un gym (`gyms/{gymId}/members/{memberId}`).
  * `id` es el id del doc (identificador canónico dentro del gym).

@@ -5,6 +5,9 @@ export const ROUTES = {
   SET_PASSWORD: '/set-password',
   SELECT_GYM: '/select-gym',
 
+  // Presentación pública del gym (sin login, compartible con prospectos)
+  PUBLIC_GYM: '/g/:gymId',
+
   // Super-admin (global, cross-tenant) — plataforma RF FIT
   SUPER_DASHBOARD: '/super',
   SUPER_GYMS: '/super/gyms',
@@ -20,6 +23,7 @@ export const ROUTES = {
   ADMIN_EXERCISES: '/admin/exercises',
   ADMIN_TARIFFS: '/admin/tariffs',
   ADMIN_BRANDING: '/admin/branding',
+  ADMIN_MY_GYM: '/admin/my-gym',
   ADMIN_MY_QR: '/admin/my-qr',
   ADMIN_TODAY: '/admin/today',
 
@@ -29,11 +33,13 @@ export const ROUTES = {
   APP_PROFILE: '/app/profile',
   APP_ROUTINES: '/app/routines',
   APP_LOGS: '/app/logs',
+  APP_MY_GYM: '/app/my-gym',
 } as const
 
 export const adminMemberDetail = (uid: string) => `/admin/members/${uid}`
 export const adminRoutineDetail = (routineId: string) => `/admin/routines/${routineId}`
 export const checkInRoute = (gymId: string) => `/check-in/${gymId}`
+export const publicGymRoute = (gymId: string) => `/g/${gymId}`
 
 /** Home por defecto según rol (Panel al final del menú: carga pesada). */
 export function defaultHomeForRole(

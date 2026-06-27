@@ -18,6 +18,13 @@ const ScanQrPage = lazy(() =>
     default: m.ScanQrPage,
   })),
 )
+// Lazy: la página pública la abren prospectos sin login; la separamos para no
+// arrastrar el resto del bundle a esa primera visita.
+const PublicGymPage = lazy(() =>
+  import('@/features/public/PublicGymPage').then((m) => ({
+    default: m.PublicGymPage,
+  })),
+)
 import { MembersListPage } from '@/features/admin/members/MembersListPage'
 import { MemberDetailPage } from '@/features/admin/members/MemberDetailPage'
 import { RoutinesListPage } from '@/features/admin/routines/RoutinesListPage'
@@ -25,6 +32,8 @@ import { RoutineEditorPage } from '@/features/admin/routines/RoutineEditorPage'
 import { ExercisesListPage } from '@/features/admin/exercises/ExercisesListPage'
 import { TariffsListPage } from '@/features/admin/tariffs/TariffsListPage'
 import { BrandingPage } from '@/features/admin/branding/BrandingPage'
+import { MyGymPage } from '@/features/admin/my-gym/MyGymPage'
+import { MyGymMemberPage } from '@/features/member/my-gym/MyGymMemberPage'
 import { AdminQrPage } from '@/features/admin/attendance/AdminQrPage'
 import { TodayAttendancePage } from '@/features/admin/attendance/TodayAttendancePage'
 import { CheckInPage } from '@/features/member/attendance/CheckInPage'
@@ -56,6 +65,7 @@ export function AppRoutes() {
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.SET_PASSWORD} element={<SetPasswordPage />} />
       <Route path={ROUTES.CHECK_IN} element={<CheckInPage />} />
+      <Route path={ROUTES.PUBLIC_GYM} element={<PublicGymPage />} />
       <Route path={ROUTES.SELECT_GYM} element={<TenantSelectPage />} />
 
       {/* Super-admin (plataforma RF FIT) */}
@@ -158,6 +168,14 @@ export function AppRoutes() {
         }
       />
       <Route
+        path={ROUTES.ADMIN_MY_GYM}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <MyGymPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path={ROUTES.ADMIN_MY_QR}
         element={
           <PrivateRoute allowedRoles={['admin']}>
@@ -210,6 +228,15 @@ export function AppRoutes() {
             <SocioPaymentGate>
               <ProfilePage />
             </SocioPaymentGate>
+          </PrivateRoute>
+        }
+      />
+      {/* Sin SocioPaymentGate: el contacto del gym debe estar siempre accesible. */}
+      <Route
+        path={ROUTES.APP_MY_GYM}
+        element={
+          <PrivateRoute allowedRoles={['user']}>
+            <MyGymMemberPage />
           </PrivateRoute>
         }
       />

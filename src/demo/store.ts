@@ -5,6 +5,7 @@ import type {
   AttendancePaymentState,
   ExerciseDefinition,
   Gym,
+  GymPresentation,
   GymSubscription,
   Member,
   MemberAuthStatus,
@@ -151,6 +152,47 @@ export function addGymAdmin(gymId: string, uid: string) {
 export function removeGymAdmin(gymId: string, uid: string) {
   const g = findGym(gymId)
   if (g) g.adminUids = g.adminUids.filter((u) => u !== uid)
+  return ok(undefined)
+}
+
+// ---- Perfil público (presentación) ----
+const publicProfiles: Record<string, GymPresentation> = {
+  [DEMO_GYM_ID]: {
+    id: DEMO_GYM_ID,
+    name: data.gym.name,
+    logoURL: data.gym.logoURL,
+    theme: data.gym.theme,
+    description:
+      'Somos un gimnasio pensado para que entrenes cómodo y a tu ritmo. Contamos con sala de musculación, clases funcionales y profes que te acompañan en cada objetivo.',
+    videos: ['https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
+    links: [
+      { label: 'Reservá tu clase', url: 'https://example.com/reservas' },
+      { label: 'Instagram', url: 'https://instagram.com/tigerfit' },
+    ],
+    tariffs: data.tariffs.slice(0, 2).map((t) => ({
+      id: t.id,
+      name: t.name,
+      price: t.price,
+      weeklyFrequency: t.weeklyFrequency,
+      description: t.description,
+      icon: t.icon,
+    })),
+    whatsapp: '+54 9 11 1234-5678',
+    email: 'hola@tigerfit.com',
+    address: 'Av. Siempreviva 742, Buenos Aires',
+    openingHours: 'Lun a Vie 7 a 23 hs · Sáb 9 a 14 hs',
+  },
+}
+
+export function getGymPresentation(gymId: string) {
+  return ok((publicProfiles[gymId] ?? null) as GymPresentation | null)
+}
+export function updateGymPresentation(gymId: string, payload: Partial<GymPresentation>) {
+  publicProfiles[gymId] = {
+    ...(publicProfiles[gymId] ?? ({ id: gymId, name: data.gym.name } as GymPresentation)),
+    ...payload,
+    id: gymId,
+  }
   return ok(undefined)
 }
 

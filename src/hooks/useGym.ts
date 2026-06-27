@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Gym } from '@/types'
 import { getGym, updateGymBranding } from '@/services/gymsService'
+import { updateGymPresentation } from '@/services/gymPresentationService'
 import { queryKeys } from './queryKeys'
 
 export function useGym(gymId: string) {
@@ -14,16 +15,21 @@ export function useGym(gymId: string) {
 
 /**
  * Guarda el branding del gym. Invalida el gym y las membresías (de donde el
- * theme se lee y aplica), para que el cambio se refleje al instante.
+ * theme se lee y aplica), para que el cambio se refleje al instante. Además
+ * refresca el snapshot de marca del perfil público (`publicProfiles/{gymId}`)
+ * para que la página pública/del socio no quede con la marca vieja.
  */
 export function useUpdateGymBranding(gymId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Partial<Pick<Gym, 'theme' | 'logoURL'>>) =>
       updateGymBranding(gymId, data),
-    onSuccess: () => {
+    onSuccess: async (_res, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.gym(gymId) })
       qc.invalidateQueries({ queryKey: ['memberships'] })
+      const gym = qc.getQueryData<Gym | null>(queryKeys.gym(gymId))
+      await updateGymPresentation(gymId, { name: gym?.name, ...variables })
+      qc.invalidateQueries({ queryKey: queryKeys.gymPresentation(gymId) })
     },
   })
 }

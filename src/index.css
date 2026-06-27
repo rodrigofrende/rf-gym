@@ -32,6 +32,8 @@
    * caption   → text-xs               (hints, metadata)
    */
   --font-sans: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  /* Display athletic para la landing pública (titulares en mayúsculas, grandes). */
+  --font-display: 'Anton', 'Montserrat', ui-sans-serif, system-ui, sans-serif;
 }
 
 html,

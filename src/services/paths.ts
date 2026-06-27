@@ -10,6 +10,10 @@ export const paths = {
   gyms: () => 'gyms',
   gym: (gymId: string) => `gyms/${gymId}`,
 
+  // Presentación pública del gym (top-level, legible sin login).
+  publicProfiles: () => 'publicProfiles',
+  publicProfile: (gymId: string) => `publicProfiles/${gymId}`,
+
   // Planes de suscripción de la plataforma (top-level).
   plans: () => 'plans',
   plan: (planId: string) => `plans/${planId}`,
