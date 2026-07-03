@@ -33,6 +33,7 @@ import { ExercisesListPage } from '@/features/admin/exercises/ExercisesListPage'
 import { TariffsListPage } from '@/features/admin/tariffs/TariffsListPage'
 import { BrandingPage } from '@/features/admin/branding/BrandingPage'
 import { MyGymPage } from '@/features/admin/my-gym/MyGymPage'
+import { SponsorsPage } from '@/features/admin/sponsors/SponsorsPage'
 import { MyGymMemberPage } from '@/features/member/my-gym/MyGymMemberPage'
 import { AdminQrPage } from '@/features/admin/attendance/AdminQrPage'
 import { TodayAttendancePage } from '@/features/admin/attendance/TodayAttendancePage'
@@ -40,6 +41,7 @@ import { CheckInPage } from '@/features/member/attendance/CheckInPage'
 import { ProfilePage } from '@/features/member/profile/ProfilePage'
 import { MyRoutinesPage } from '@/features/member/routines/MyRoutinesPage'
 import { MyLogsPage } from '@/features/member/logs/MyLogsPage'
+import { MyAttendancePage } from '@/features/member/attendance/MyAttendancePage'
 import { SocioPaymentGate } from '@/features/payments/SocioPaymentGate'
 import { SuperGymsPage } from '@/features/super/SuperGymsPage'
 import { SuperDashboardPage } from '@/features/super/SuperDashboardPage'
@@ -176,6 +178,14 @@ export function AppRoutes() {
         }
       />
       <Route
+        path={ROUTES.ADMIN_SPONSORS}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <SponsorsPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path={ROUTES.ADMIN_MY_QR}
         element={
           <PrivateRoute allowedRoles={['admin']}>
@@ -217,6 +227,16 @@ export function AppRoutes() {
           <PrivateRoute allowedRoles={['user']}>
             <SocioPaymentGate>
               <MyLogsPage />
+            </SocioPaymentGate>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path={ROUTES.APP_ATTENDANCE}
+        element={
+          <PrivateRoute allowedRoles={['user']}>
+            <SocioPaymentGate>
+              <MyAttendancePage />
             </SocioPaymentGate>
           </PrivateRoute>
         }

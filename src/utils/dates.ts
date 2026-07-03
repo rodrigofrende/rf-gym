@@ -5,6 +5,34 @@ import type { DateValue } from '@/types'
 
 const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
+/** Nombres completos de meses (es), index 0 = enero. */
+export const MONTHS_LONG = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
+
+/** Nombres cortos de días, base lunes (coincide con `startOfWeek`). */
+export const WEEKDAYS_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+/** Cantidad de días de un mes (monthIndex 0-based). */
+export function daysInMonth(year: number, monthIndex: number): number {
+  return new Date(year, monthIndex + 1, 0).getDate()
+}
+
+/**
+ * Offset de celdas vacías antes del día 1, con la semana empezando en lunes:
+ * 0 si el 1 cae lunes ... 6 si cae domingo.
+ */
+export function firstWeekdayOffset(year: number, monthIndex: number): number {
+  return (new Date(year, monthIndex, 1).getDay() + 6) % 7
+}
+
+/** Claves YYYY-MM-DD (locales) de todos los días de un mes, en orden. */
+export function monthDayKeys(year: number, monthIndex: number): string[] {
+  const total = daysInMonth(year, monthIndex)
+  return Array.from({ length: total }, (_, i) => localDayKey(new Date(year, monthIndex, i + 1)))
+}
+
 export function monthKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}`
 }

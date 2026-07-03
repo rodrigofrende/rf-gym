@@ -5,6 +5,7 @@ import type { Attendance } from '@/types'
 import {
   checkInMember,
   getMemberAttendance,
+  listMemberAttendanceForMonth,
   listTodayAttendance,
   subscribeTodayAttendance,
 } from '@/services/attendanceService'
@@ -28,6 +29,21 @@ export function useMemberAttendance(gymId: string, memberId: string, dayKey = lo
     queryKey: queryKeys.memberAttendance(gymId, memberId, dayKey),
     queryFn: () => getMemberAttendance(gymId, memberId, dayKey),
     enabled: !!gymId && !!memberId,
+  })
+}
+
+/** Asistencias del socio en un mes (year + monthIndex 0-based). */
+export function useMemberMonthAttendance(
+  gymId: string,
+  memberId: string,
+  year: number,
+  monthIndex: number,
+) {
+  return useQuery({
+    queryKey: queryKeys.memberMonthAttendance(gymId, memberId, `${year}-${monthIndex}`),
+    queryFn: () => listMemberAttendanceForMonth(gymId, memberId, year, monthIndex),
+    enabled: !!gymId && !!memberId,
+    staleTime: 60_000,
   })
 }
 

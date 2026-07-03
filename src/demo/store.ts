@@ -177,6 +177,17 @@ const publicProfiles: Record<string, GymPresentation> = {
       description: t.description,
       icon: t.icon,
     })),
+    sponsors: [
+      {
+        name: 'Suplementos Titan',
+        tier: 'featured',
+        instagram: 'suplementostitan',
+        whatsapp: '+54 9 11 5555-1111',
+        youtubeURL: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      },
+      { name: 'Indumentaria FitWear', tier: 'standard', instagram: 'fitwear' },
+      { name: 'Agua Vital', tier: 'standard', whatsapp: '+54 9 11 5555-2222' },
+    ],
     whatsapp: '+54 9 11 1234-5678',
     email: 'hola@tigerfit.com',
     address: 'Av. Siempreviva 742, Buenos Aires',

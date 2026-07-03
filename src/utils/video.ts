@@ -48,6 +48,11 @@ export function parseVideoUrl(raw?: string): VideoEmbed | null {
   return { kind: 'unknown', url: value }
 }
 
+/** Miniatura de un video de YouTube (hqdefault existe para casi todos los videos). */
+export function youtubeThumbnailUrl(videoId: string): string {
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+}
+
 function extractYouTubeId(url: URL, host: string): string | null {
   if (host === 'youtu.be') {
     const id = url.pathname.slice(1).split('/')[0]

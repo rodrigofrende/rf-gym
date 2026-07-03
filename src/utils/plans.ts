@@ -56,6 +56,19 @@ export function canCreateAdmin(
   }
 }
 
+export function canCreateSponsor(
+  plan: SubscriptionPlan | undefined,
+  currentCount: number,
+): { allowed: boolean; reason?: string } {
+  // `maxSponsors` undefined en planes viejos → ilimitado (back-compat).
+  const max = plan?.maxSponsors ?? 0
+  if (!plan || max === 0 || currentCount < max) return { allowed: true }
+  return {
+    allowed: false,
+    reason: `Alcanzaste el límite de patrocinadores de tu plan (${max}).`,
+  }
+}
+
 /** "12/40" o "12/∞" si el límite es ilimitado. */
 export function usageLabel(used: number, max: number): string {
   return `${used}/${max > 0 ? max : '∞'}`

@@ -11,6 +11,7 @@ import { frequencyLabel } from '@/utils/tariffs'
 import { formatCurrency } from '@/utils/format'
 import { APP_NAME } from '@/config/app'
 import { cn } from '@/utils/cn'
+import { SponsorsShowcase } from '@/features/sponsors/SponsorsShowcase'
 
 /**
  * Landing pública "Athletic Bold": fondo oscuro, tipografía display gigante y el
@@ -30,7 +31,7 @@ export function PublicGymView({
   data: Partial<GymPresentationData>
   gymName: string
 }) {
-  const { videos, links } = resolvePresentation(data)
+  const { videos, links, sponsors } = resolvePresentation(data)
   const tariffs = (data.tariffs ?? []).filter((t) => t && t.name && typeof t.price === 'number')
   const logo = safeHttpUrl(data.logoURL)
   const wa = whatsappLink(data.whatsapp, `Hola, me interesa información sobre ${gymName}`)
@@ -124,6 +125,12 @@ export function PublicGymView({
                 <PublicLinkRow key={`${link.url}-${i}`} link={link} />
               ))}
             </div>
+          </Section>
+        )}
+
+        {sponsors.length > 0 && (
+          <Section label="Auspiciantes">
+            <SponsorsShowcase sponsors={sponsors} variant="dark" />
           </Section>
         )}
 

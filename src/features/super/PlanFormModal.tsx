@@ -12,6 +12,7 @@ const schema = z.object({
   maxMembers: z.number().min(0),
   maxRoutines: z.number().min(0),
   maxExercises: z.number().min(0),
+  maxSponsors: z.number().min(0),
   logsEnabled: z.boolean(),
   maxLogsPerMember: z.number().min(0),
   whiteLabel: z.enum(['none', 'basic', 'full']),
@@ -27,6 +28,7 @@ const DEFAULT_VALUES: FormValues = {
   maxMembers: 30,
   maxRoutines: 10,
   maxExercises: 30,
+  maxSponsors: 3,
   logsEnabled: false,
   maxLogsPerMember: 0,
   whiteLabel: 'none',
@@ -43,6 +45,7 @@ function valuesFromPlan(plan?: SubscriptionPlan | null): FormValues {
     maxMembers: plan.maxMembers,
     maxRoutines: plan.maxRoutines,
     maxExercises: plan.maxExercises,
+    maxSponsors: plan.maxSponsors ?? 0,
     logsEnabled: plan.logsEnabled,
     maxLogsPerMember: plan.maxLogsPerMember,
     whiteLabel: plan.whiteLabel,
@@ -92,6 +95,7 @@ export function PlanFormModal({
       maxMembers: v.maxMembers,
       maxRoutines: v.maxRoutines,
       maxExercises: v.maxExercises,
+      maxSponsors: v.maxSponsors,
       logsEnabled: v.logsEnabled,
       maxLogsPerMember: v.maxLogsPerMember,
       whiteLabel: v.whiteLabel,
@@ -131,6 +135,9 @@ export function PlanFormModal({
           </FormField>
           <FormField label="Máx. ejercicios" hint="0 = ilimitado">
             <Input type="number" min={0} {...register('maxExercises', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Máx. patrocinadores" hint="0 = ilimitado">
+            <Input type="number" min={0} {...register('maxSponsors', { valueAsNumber: true })} />
           </FormField>
         </div>
 

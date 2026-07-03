@@ -101,7 +101,7 @@ service cloud.firestore {
       function validPresentation() {
         let d = request.resource.data;
         return d.keys().hasOnly([
-            'id', 'name', 'logoURL', 'theme', 'description', 'videos', 'links', 'tariffs',
+            'id', 'name', 'logoURL', 'theme', 'description', 'videos', 'links', 'tariffs', 'sponsors',
             'whatsapp', 'email', 'address', 'openingHours',
             'videoURL', 'instagramURL', 'facebookURL', 'updatedAt'
           ])
@@ -110,6 +110,7 @@ service cloud.firestore {
           && (!('videos' in d) || (d.videos is list && d.videos.size() <= 6))
           && (!('links' in d) || (d.links is list && d.links.size() <= 12))
           && (!('tariffs' in d) || (d.tariffs is list && d.tariffs.size() <= 20))
+          && (!('sponsors' in d) || (d.sponsors is list && d.sponsors.size() <= 24))
           && (!('whatsapp' in d) || (d.whatsapp is string && d.whatsapp.size() <= 40))
           && (!('email' in d) || (d.email is string && d.email.size() <= 200))
           && (!('address' in d) || (d.address is string && d.address.size() <= 200))

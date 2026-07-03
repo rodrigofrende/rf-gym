@@ -11,6 +11,8 @@ export const queryKeys = {
   attendanceToday: (gymId: string, dayKey: string) => ['attendance', gymId, dayKey] as const,
   memberAttendance: (gymId: string, memberId: string, dayKey: string) =>
     ['attendance', gymId, memberId, dayKey] as const,
+  memberMonthAttendance: (gymId: string, memberId: string, monthKey: string) =>
+    ['attendance-month', gymId, memberId, monthKey] as const,
   logs: (gymId: string, uid: string) => ['logs', gymId, uid] as const,
   payments: (gymId: string, memberId: string) => ['payments', gymId, memberId] as const,
   gymPayments: (gymId: string) => ['gymPayments', gymId] as const,

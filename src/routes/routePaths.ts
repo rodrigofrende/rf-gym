@@ -24,6 +24,7 @@ export const ROUTES = {
   ADMIN_TARIFFS: '/admin/tariffs',
   ADMIN_BRANDING: '/admin/branding',
   ADMIN_MY_GYM: '/admin/my-gym',
+  ADMIN_SPONSORS: '/admin/sponsors',
   ADMIN_MY_QR: '/admin/my-qr',
   ADMIN_TODAY: '/admin/today',
 
@@ -33,6 +34,7 @@ export const ROUTES = {
   APP_PROFILE: '/app/profile',
   APP_ROUTINES: '/app/routines',
   APP_LOGS: '/app/logs',
+  APP_ATTENDANCE: '/app/attendance',
   APP_MY_GYM: '/app/my-gym',
 } as const
 

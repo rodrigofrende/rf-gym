@@ -41,6 +41,7 @@ export interface SubscriptionPlan {
   maxMembers: number // 0 = ilimitado
   maxRoutines: number // 0 = ilimitado
   maxExercises: number // 0 = ilimitado
+  maxSponsors: number // 0 = ilimitado
   logsEnabled: boolean // si los alumnos pueden registrar cargas
   maxLogsPerMember: number // 0 = ilimitado (solo si logsEnabled)
   whiteLabel: WhiteLabelLevel
@@ -75,6 +76,22 @@ export interface GymLink {
   url: string
 }
 
+/** Nivel de un patrocinador: 'featured' se muestra grande y aparece en el ingreso. */
+export type SponsorTier = 'featured' | 'standard'
+
+/**
+ * Patrocinador/auspiciante que el gym muestra en sus superficies públicas.
+ * Vive dentro de `GymPresentation` (doc world-readable): sin datos sensibles.
+ */
+export interface Sponsor {
+  name: string
+  tier: SponsorTier
+  logoURL?: string // URL http(s) de imagen (safeHttpUrl)
+  instagram?: string // handle normalizado sin @ (la URL se arma al renderizar)
+  whatsapp?: string // número crudo; se normaliza a dígitos con whatsappLink()
+  youtubeURL?: string // URL de YouTube; solo se renderiza en tier 'featured'
+}
+
 /**
  * Snapshot público de una tarifa para mostrar en la presentación. Se copia desde
  * `gyms/{gymId}/tariffs` al guardar (la subcolección real es privada). Solo campos
@@ -106,6 +123,7 @@ export interface GymPresentation {
   videos?: string[] // URLs de YouTube/Instagram, en orden
   links?: GymLink[] // enlaces personalizados (incluye redes), en orden
   tariffs?: PublicTariff[] // tarifas que el admin elige mostrar (snapshot)
+  sponsors?: Sponsor[] // patrocinadores/auspiciantes, en orden
   // Contacto
   whatsapp?: string // número crudo; se normaliza a dígitos para wa.me
   email?: string

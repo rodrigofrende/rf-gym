@@ -15,7 +15,7 @@ import {
 import { env } from '@/config/env'
 import { db } from '@/lib/firebase'
 import type { Attendance } from '@/types'
-import { localDayKey } from '@/utils/dates'
+import { localDayKey, monthDayKeys } from '@/utils/dates'
 import { getPaymentStatus } from '@/utils/payments'
 import * as demo from '@/demo/store'
 import { getMany } from './firestore'
@@ -83,6 +83,24 @@ export async function getMemberAttendance(
   const snap = await getDoc(doc(db, paths.attendanceRecord(gymId, attendanceId(dayKey, memberId))))
   if (!snap.exists()) return null
   return { id: snap.id, ...(snap.data() as Omit<Attendance, 'id'>) }
+}
+
+/**
+ * Asistencias de un socio en un mes. Las reglas no permiten al socio LISTAR
+ * `attendance` (solo admin), pero sí `get` por id determinístico validando
+ * `memberUid == auth.uid`. Por eso resolvemos día a día (≤ un doc por día del mes,
+ * hasta hoy) y filtramos los que existen. Cacheado por React Query por mes.
+ */
+export async function listMemberAttendanceForMonth(
+  gymId: string,
+  memberId: string,
+  year: number,
+  monthIndex: number,
+): Promise<Attendance[]> {
+  const today = localDayKey(new Date())
+  const keys = monthDayKeys(year, monthIndex).filter((k) => k <= today)
+  const results = await Promise.all(keys.map((k) => getMemberAttendance(gymId, memberId, k)))
+  return results.filter((a): a is Attendance => a !== null)
 }
 
 export function subscribeTodayAttendance(

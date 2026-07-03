@@ -109,6 +109,7 @@ export function PlansListPage() {
                 <Badge tone="neutral">{limitLabel(p.maxMembers)} socios</Badge>
                 <Badge tone="neutral">{limitLabel(p.maxRoutines)} rutinas</Badge>
                 <Badge tone="neutral">{limitLabel(p.maxExercises)} ejercicios</Badge>
+                <Badge tone="neutral">{limitLabel(p.maxSponsors)} patrocinadores</Badge>
                 <Badge tone={p.logsEnabled ? 'neutral' : 'amber'}>{logsCapabilityLabel(p)}</Badge>
                 <Badge tone={p.whiteLabel === 'none' ? 'neutral' : 'brand'}>
                   {whiteLabelLabel(p.whiteLabel)}

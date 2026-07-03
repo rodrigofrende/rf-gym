@@ -12,7 +12,15 @@ export function MyGymMemberPage() {
   const { data, isLoading } = useGymPresentation(gymId)
   const gymName = data?.name || activeMembership?.gymName || 'Mi gimnasio'
   const hasContent = Boolean(
-    data && (data.description || data.videoURL || data.whatsapp || data.email || data.address),
+    data &&
+      (data.description ||
+        data.videoURL ||
+        data.whatsapp ||
+        data.email ||
+        data.address ||
+        data.videos?.length ||
+        data.links?.length ||
+        data.sponsors?.length),
   )
 
   return (

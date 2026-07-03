@@ -3,9 +3,12 @@ import { Copy, Maximize2, Printer, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
+import { useGymPresentation } from '@/hooks/useGymPresentation'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button, Card, Heading, Text } from '@/components/ui'
 import { checkInRoute } from '@/routes/routePaths'
+import { resolvePresentation } from '@/utils/presentation'
+import { SponsorSpot } from '@/features/sponsors/SponsorsShowcase'
 
 export function AdminQrPage() {
   const { activeGymId, activeMembership } = useTenant()
@@ -14,6 +17,8 @@ export function AdminQrPage() {
   const gymId = activeGymId as string
   const gymName = activeMembership?.gymName ?? 'Gimnasio'
   const qrUrl = useMemo(() => new URL(checkInRoute(gymId), window.location.origin).toString(), [gymId])
+  const { data: presentation } = useGymPresentation(gymId)
+  const sponsors = resolvePresentation(presentation).sponsors
 
   const copy = async () => {
     await navigator.clipboard.writeText(qrUrl)
@@ -62,6 +67,12 @@ export function AdminQrPage() {
           <div className="mt-5 rounded-xl border border-brand-100 bg-brand-50 p-3 text-sm text-brand-800">
             Es un QR estático: podés imprimirlo una vez y dejarlo pegado. El registro se valida con la sesión del socio.
           </div>
+
+          {sponsors.some((s) => s.tier === 'featured') && (
+            <div className="mt-5">
+              <SponsorSpot sponsors={sponsors} variant="light" />
+            </div>
+          )}
         </Card>
       </div>
 

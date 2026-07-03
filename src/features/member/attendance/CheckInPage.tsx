@@ -5,9 +5,12 @@ import type { AttendancePaymentState, MemberStatus } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { useCheckIn } from '@/hooks/useAttendance'
+import { useGymPresentation } from '@/hooks/useGymPresentation'
 import { Badge, Button, Card, FullPageSpinner, Heading, Text } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
 import { formatDate } from '@/utils/format'
+import { resolvePresentation } from '@/utils/presentation'
+import { SponsorSpot } from '@/features/sponsors/SponsorsShowcase'
 
 const PAYMENT_COPY: Record<AttendancePaymentState, { title: string; description: string; tone: 'green' | 'amber' | 'red' }> = {
   al_dia: {
@@ -40,6 +43,7 @@ export function CheckInPage() {
   const { memberships, isLoading, selectGym, activeGymId } = useTenant()
   const membership = memberships.find((m) => m.gymId === gymId)
   const checkIn = useCheckIn(gymId ?? '', membership?.memberId ?? '')
+  const { data: presentation } = useGymPresentation(gymId ?? '')
   const fired = useRef(false)
 
   useEffect(() => {
@@ -111,6 +115,7 @@ export function CheckInPage() {
 
   const copy = PAYMENT_COPY[checkIn.data.paymentState]
   const isPaused = checkIn.data.memberStatus === 'paused'
+  const sponsors = resolvePresentation(presentation).sponsors
 
   return (
     <CheckInShell>
@@ -129,6 +134,9 @@ export function CheckInPage() {
           Ingreso registrado: {formatDate(checkIn.data.checkedInAt)}
         </div>
       </StatusCard>
+      <div className="mt-4">
+        <SponsorSpot sponsors={sponsors} variant="light" />
+      </div>
     </CheckInShell>
   )
 }
