@@ -13,7 +13,10 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
 
 export function extractAuthCode(err: unknown): string | undefined {
   if (err && typeof err === 'object' && 'code' in err && typeof err.code === 'string') {
-    return err.code
+    // Solo códigos de Firebase Auth (auth/...). Los de Firestore (permission-denied,
+    // failed-precondition, etc.) también tienen `.code`: se dejan pasar para que
+    // los maneje extractFirestoreCode y no se reporten como error de auth.
+    return err.code.startsWith('auth/') ? err.code : undefined
   }
   if (err instanceof Error) {
     const match = err.message.match(/auth\/[\w-]+/)

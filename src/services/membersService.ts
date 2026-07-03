@@ -12,6 +12,7 @@ import { addToCollection, getMany, getOne, removeOne, updateOne } from './firest
 import { removeMemberLoginIndex, syncMemberLoginIndex } from './memberLoginService'
 import { paths } from './paths'
 import { canCreateAdmin } from '@/utils/plans'
+import { normalizeEmailKey } from '@/utils/loginEmail'
 
 export function listMembers(gymId: string) {
   if (env.demoMode) return demo.listMembers(gymId)
@@ -38,10 +39,26 @@ async function assertCanSaveAdmin(gymId: string, nextRole: Role, currentMemberId
   if (!gate.allowed) throw new Error(gate.reason)
 }
 
+/**
+ * Evita dos socios con el mismo email de acceso en el mismo gym: el login se
+ * indexa por email (`memberLoginIndex/{emailKey}`), así que un duplicado
+ * pisaría el índice y rompería el primer login / claim.
+ */
+async function assertUniqueLoginEmail(gymId: string, email: string, currentMemberId?: string) {
+  const target = normalizeEmailKey(email)
+  if (!target) return
+  const members = await listMembers(gymId)
+  const clash = members.some(
+    (m) => m.id !== currentMemberId && normalizeEmailKey(m.loginEmail || m.email) === target,
+  )
+  if (clash) throw new Error('Ya existe un socio con ese email de acceso en este gimnasio')
+}
+
 /** Alta de un socio (admin). Crea la invitación: uid vacío hasta que la reclame. */
 export async function createMember(gymId: string, data: Omit<Member, 'id' | 'uid'>) {
   if (env.demoMode) return demo.createMember(gymId, data)
   await assertCanSaveAdmin(gymId, data.role)
+  await assertUniqueLoginEmail(gymId, data.loginEmail || data.email)
   const payload = {
     ...data,
     uid: '',
@@ -58,6 +75,10 @@ export async function updateMember(gymId: string, memberId: string, data: Partia
   if (env.demoMode) return demo.updateMember(gymId, memberId, data)
   const prev = await getMember(gymId, memberId)
   await assertCanSaveAdmin(gymId, data.role ?? prev?.role ?? 'user', memberId)
+  const nextEmail = data.loginEmail ?? data.email
+  if (prev && nextEmail && normalizeEmailKey(nextEmail) !== normalizeEmailKey(prev.loginEmail || prev.email)) {
+    await assertUniqueLoginEmail(gymId, nextEmail, memberId)
+  }
   await updateOne(paths.member(gymId, memberId), data)
   if (prev && (data.email || data.loginEmail) && (data.email ?? data.loginEmail) !== (prev.loginEmail || prev.email)) {
     await removeMemberLoginIndex(prev.loginEmail || prev.email)

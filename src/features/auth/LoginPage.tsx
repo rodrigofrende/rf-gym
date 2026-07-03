@@ -73,6 +73,13 @@ export function LoginPage() {
           notify('No encontramos un socio con ese email', 'error')
           return
         }
+        // Alta por "invitación reclamable": si todavía no creó su contraseña,
+        // lo mandamos directo a crearla en vez de pedirle una que no existe.
+        if (login.authStatus === 'pending_password') {
+          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(email)}&mode=create`)
+          return
+        }
+        // 'active' | 'password_change_required' | undefined (legacy) → paso password.
         setResolvedEmail(email)
         setValue('password', '')
         setStep('password')

@@ -11,7 +11,7 @@ import { useTariffs } from '@/hooks/useTariffs'
 import { Button, DateInput, FormField, Input, Modal, MoneyInput, Select, Text } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
 import { dateInputToTimestamp, parseDateInput, todayDateInput } from '@/utils/dates'
-import { emailLocalPart, suggestLoginEmail, tenantEmailDomain } from '@/utils/loginEmail'
+import { emailLocalPart, normalizeEmailKey, suggestLoginEmail, tenantEmailDomain } from '@/utils/loginEmail'
 import { canCreateAdmin, usageLabel } from '@/utils/plans'
 import { frequencyLabel, tariffLabel } from '@/utils/tariffs'
 
@@ -70,6 +70,7 @@ export function MemberFormModal({
     register,
     control,
     setValue,
+    setError,
     handleSubmit,
     reset,
     formState: { errors },
@@ -145,8 +146,14 @@ export function MemberFormModal({
 
   const submit = (v: FormValues) => {
     if (v.role === 'admin' && !adminGate.allowed) return
-    const tariff = tariffs.find((t) => t.id === v.tariffId)
     const loginEmail = `${v.loginLocal}@${domain}`
+    // El login se indexa por email: no puede haber dos socios con el mismo en el gym.
+    const emailTaken = existingEmails.some((e) => normalizeEmailKey(e) === normalizeEmailKey(loginEmail))
+    if (emailTaken) {
+      setError('loginLocal', { type: 'manual', message: 'Ya existe un socio con ese email de acceso' })
+      return
+    }
+    const tariff = tariffs.find((t) => t.id === v.tariffId)
     onSubmit({
       fullName: v.fullName,
       email: loginEmail,

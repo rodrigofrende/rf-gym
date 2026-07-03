@@ -104,14 +104,25 @@ export function SetPasswordPage() {
           }
         }
         activatedUser = createdUser
-        const [directClaim, pendingClaims] = await Promise.all([
-          claimMembership(createdUser, login.gymId, login.memberId),
-          claimPendingMemberships(createdUser),
-        ])
         const unique = new Map<string, ClaimedMembership>()
-        ;[directClaim, ...pendingClaims].forEach((membership) => {
-          if (membership) unique.set(`${membership.gymId}:${membership.memberId}`, membership)
-        })
+
+        // 1) Claim REQUERIDO: por path directo (getDoc + updateDoc). No usa
+        //    collectionGroup ni requiere índice. Si falla, es error real → propaga.
+        const directClaim = await claimMembership(createdUser, login.gymId, login.memberId)
+        if (directClaim) unique.set(`${directClaim.gymId}:${directClaim.memberId}`, directClaim)
+
+        // 2) Claims adicionales por email (multi-tenant), BEST-EFFORT: si el índice
+        //    compuesto no está desplegado, esto lanza failed-precondition; no debe
+        //    abortar la activación del claim principal.
+        try {
+          const pendingClaims = await claimPendingMemberships(createdUser)
+          pendingClaims.forEach((membership) => {
+            unique.set(`${membership.gymId}:${membership.memberId}`, membership)
+          })
+        } catch {
+          // best-effort; el claim principal ya quedó hecho.
+        }
+
         membershipsToActivate = [...unique.values()]
       } else {
         await changePassword(values.password)
