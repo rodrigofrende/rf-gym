@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowRight, Clock, Mail, MapPin, MessageCircle, PlayCircle } from 'lucide-react'
 import type { GymLink, GymPresentation as GymPresentationData, PublicTariff } from '@/types'
 import { LogoImage } from '@/components/ui'
@@ -12,6 +12,8 @@ import { formatCurrency } from '@/utils/format'
 import { APP_NAME } from '@/config/app'
 import { cn } from '@/utils/cn'
 import { SponsorPlaceholder, SponsorsShowcase } from '@/features/sponsors/SponsorsShowcase'
+
+const CURRENT_YEAR = new Date().getFullYear()
 
 /**
  * Landing pública "Athletic Bold": fondo oscuro, tipografía display gigante y el
@@ -47,10 +49,33 @@ export function PublicGymView({
   const wideVideos = parsedVideos.filter((v) => v.video?.kind === 'youtube')
   const tallVideos = parsedVideos.filter((v) => v.video?.kind !== 'youtube')
 
+  // La barra sticky aparece recién al scrollear pasado el inicio del hero (el
+  // sentinel invisible sale del viewport). Con IntersectionObserver funciona
+  // igual en la página real y embebida en las previews del admin.
+  const [showBar, setShowBar] = useState(false)
+  const heroSentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = heroSentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(([entry]) => setShowBar(!entry.isIntersecting))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <div className="@container min-h-full bg-zinc-950 text-white">
-      {/* Barra sticky: marca + CTA siempre a mano mientras se recorre la página. */}
-      <div className="sticky top-0 z-30 border-b border-white/10 bg-zinc-950/80 backdrop-blur">
+    <div className="@container relative min-h-full bg-zinc-950 text-white">
+      {/* Sentinel invisible: mientras esta franja superior está en pantalla, la
+          barra sticky permanece oculta (el hero ya muestra la marca). */}
+      <div ref={heroSentinelRef} aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-32" />
+
+      {/* Barra sticky: marca + CTA siempre a mano; aparece al scrollear. El -mb
+          compensa su alto para que oculta no deje una franja vacía sobre el hero. */}
+      <div
+        className={cn(
+          'sticky top-0 z-30 -mb-14 border-b border-white/10 bg-zinc-950/80 backdrop-blur transition-all duration-300',
+          showBar ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-full opacity-0',
+        )}
+      >
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-6">
           <LogoImage
             src={data.logoURL}
@@ -251,9 +276,18 @@ export function PublicGymView({
       <footer className="border-t border-white/10 px-6 py-10">
         <div className="mx-auto max-w-5xl space-y-8">
           {sponsors.length === 0 && <SponsorPlaceholder variant="dark" whatsapp={data.whatsapp} />}
-          <p className="text-center text-xs uppercase tracking-widest text-zinc-500">
-            by <span className="font-semibold text-zinc-300">{APP_NAME}</span>
-          </p>
+          <div className="space-y-2 text-center">
+            <p className="text-xs uppercase tracking-widest text-zinc-500">
+              by <span className="font-semibold text-zinc-300">{APP_NAME}</span>
+            </p>
+            <p className="text-[11px] leading-relaxed text-zinc-600">
+              Gestión y presencia online para gimnasios.
+            </p>
+            <p className="text-[11px] leading-relaxed text-zinc-600">
+              © {CURRENT_YEAR} {gymName} · Todos los derechos reservados. Precios, horarios y
+              promociones sujetos a cambios sin previo aviso.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
