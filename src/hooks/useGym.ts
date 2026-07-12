@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Gym } from '@/types'
-import { getGym, updateGymBranding } from '@/services/gymsService'
+import type { Gym, GymPresentation } from '@/types'
+import { getGym, updateGymBranding, type GymBrandingUpdate } from '@/services/gymsService'
 import { updateGymPresentation } from '@/services/gymPresentationService'
 import { queryKeys } from './queryKeys'
 
@@ -22,13 +22,17 @@ export function useGym(gymId: string) {
 export function useUpdateGymBranding(gymId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Partial<Pick<Gym, 'theme' | 'logoURL'>>) =>
-      updateGymBranding(gymId, data),
+    mutationFn: (data: GymBrandingUpdate) => updateGymBranding(gymId, data),
     onSuccess: async (_res, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.gym(gymId) })
       qc.invalidateQueries({ queryKey: ['memberships'] })
       const gym = qc.getQueryData<Gym | null>(queryKeys.gym(gymId))
-      await updateGymPresentation(gymId, { name: gym?.name, ...variables })
+      // Espejo explícito del snapshot de marca: los campos de rate-limit del logo
+      // no viajan a publicProfiles (la whitelist de las rules los rechazaría).
+      const mirror: Partial<Omit<GymPresentation, 'id'>> = { name: gym?.name }
+      if (variables.theme !== undefined) mirror.theme = variables.theme
+      if (variables.logoURL !== undefined) mirror.logoURL = variables.logoURL
+      await updateGymPresentation(gymId, mirror)
       qc.invalidateQueries({ queryKey: queryKeys.gymPresentation(gymId) })
     },
   })

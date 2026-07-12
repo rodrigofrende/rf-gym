@@ -114,7 +114,8 @@ service cloud.firestore {
           && (!('whatsapp' in d) || (d.whatsapp is string && d.whatsapp.size() <= 40))
           && (!('email' in d) || (d.email is string && d.email.size() <= 200))
           && (!('address' in d) || (d.address is string && d.address.size() <= 200))
-          && (!('openingHours' in d) || (d.openingHours is string && d.openingHours.size() <= 200));
+          && (!('openingHours' in d) || (d.openingHours is string && d.openingHours.size() <= 200))
+          && (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 200000));
       }
       allow read: if true;
       allow create, update: if isGymAdmin(gymId) && validPresentation();
@@ -122,9 +123,33 @@ service cloud.firestore {
     }
 
     match /gyms/{gymId} {
+      // Rate-limit del logo: máximo 3 cambios por ventana fija de 24hs, y tope de
+      // tamaño del data URL (el logo se guarda inline como string en el doc).
+      // El cliente manda logoWindowStart (serverTimestamp) + logoChangeCount.
+      function logoLimitOk() {
+        let d = request.resource.data;
+        return !d.diff(resource.data).affectedKeys().hasAny(['logoURL'])
+          || (
+            (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 200000))
+            && (
+              // Ventana nueva: primera vez o la anterior ya venció.
+              (d.get('logoWindowStart', null) == request.time
+                && d.get('logoChangeCount', 99) == 1
+                && (!('logoWindowStart' in resource.data)
+                  || resource.data.logoWindowStart + duration.value(24, 'h') < request.time))
+              ||
+              // Misma ventana: suma exactamente 1, hasta 3.
+              (d.get('logoWindowStart', null) == resource.data.get('logoWindowStart', null)
+                && d.get('logoChangeCount', 99) == resource.data.get('logoChangeCount', 0) + 1
+                && d.get('logoChangeCount', 99) <= 3)
+            )
+          );
+      }
+
       allow read: if canAccessGym(gymId) || isSuperAdmin();
       allow create: if isSuperAdmin();
-      allow update, delete: if isGymAdmin(gymId) || isSuperAdmin();
+      allow update: if (isGymAdmin(gymId) && logoLimitOk()) || isSuperAdmin();
+      allow delete: if isGymAdmin(gymId) || isSuperAdmin();
 
       // ---- Socios / membresías ----
       match /members/{memberId} {

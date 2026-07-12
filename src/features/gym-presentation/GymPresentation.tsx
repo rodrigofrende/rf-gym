@@ -34,7 +34,7 @@ export function GymPresentation({
   const hasContact = wa || mail || data.address || data.openingHours
 
   return (
-    <div className="space-y-6">
+    <div className="@container space-y-6">
       {!hideHeader && (
         <div className="flex items-center gap-3">
           <LogoImage src={data.logoURL} alt={gymName} className="size-12 rounded-2xl" />
@@ -65,7 +65,7 @@ export function GymPresentation({
       {tariffs.length > 0 && (
         <div className="space-y-3">
           <Heading variant="card">Planes</Heading>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-2">
             {tariffs.map((tariff) => (
               <PublicTariffCard key={tariff.id} tariff={tariff} />
             ))}
@@ -74,7 +74,7 @@ export function GymPresentation({
       )}
 
       {links.length > 0 && (
-        <div className="space-y-2">
+        <div className="grid gap-2 @2xl:grid-cols-2">
           {links.map((link, i) => {
             const Icon = linkIcon(link.url)
             return (

@@ -12,11 +12,24 @@ import {
 } from '@/utils/theme'
 import { fileToLogoDataUrl } from '@/utils/image'
 import { isSafeImageSrc } from '@/utils/url'
+import { toDate } from '@/utils/format'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Heading, Input, LogoImage, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 
 const FIELD_DEFAULTS: Record<keyof GymTheme, string> = { ...PLATFORM_DEFAULT_THEME }
+
+// Límite de cambios de logo, espejado en firestore.rules (logoLimitOk).
+const LOGO_CHANGES_PER_DAY = 3
+const LOGO_WINDOW_MS = 24 * 60 * 60 * 1000
+
+const formatResetTime = (d: Date) =>
+  new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d)
 
 export function BrandingPage() {
   const { activeGymId } = useTenant()
@@ -52,8 +65,18 @@ export function BrandingPage() {
 
   const resetAllDefaults = () => setTheme({ ...PLATFORM_DEFAULT_THEME })
 
-  // Logo subido desde archivo (data URL) vs URL externa pegada por el admin.
-  const isUploadedLogo = currentLogo.startsWith('data:image/')
+  // Ventana de rate-limit del logo (espejo de lo que validan las firestore.rules).
+  const windowStart = toDate(gym.logoWindowStart)
+  // Lectura del reloj solo para la leyenda y el estado de los botones: al guardar
+  // se recalcula fresco, y la validación real la aplican las firestore.rules.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now()
+  const windowActive = !!windowStart && nowMs - windowStart.getTime() < LOGO_WINDOW_MS
+  const logoChangesUsed = windowActive ? (gym.logoChangeCount ?? 0) : 0
+  const logoChangesLeft = Math.max(0, LOGO_CHANGES_PER_DAY - logoChangesUsed)
+  const logoBlocked = logoChangesLeft === 0
+  const logoResetAt = windowStart ? new Date(windowStart.getTime() + LOGO_WINDOW_MS) : null
+  const logoChanged = currentLogo !== (gym.logoURL ?? '')
 
   const handleLogoFile = async (file?: File) => {
     if (!file) return
@@ -70,10 +93,29 @@ export function BrandingPage() {
   const handleSave = () =>
     run(
       async () => {
-        if (currentLogo && !isSafeImageSrc(currentLogo)) {
-          throw new Error('El logo debe ser una URL http(s) directa a una imagen, o una imagen subida.')
+        if (!logoChanged) {
+          await save.mutateAsync({ theme: current })
+          return
         }
-        await save.mutateAsync({ theme: current, logoURL: currentLogo || undefined })
+        if (currentLogo && !isSafeImageSrc(currentLogo)) {
+          throw new Error('El logo debe ser una imagen válida. Volvé a subirla.')
+        }
+        // Recalcular la ventana con el reloj actual (la de render puede estar vieja).
+        const activeNow = !!windowStart && Date.now() - windowStart.getTime() < LOGO_WINDOW_MS
+        const usedNow = activeNow ? (gym.logoChangeCount ?? 0) : 0
+        if (usedNow >= LOGO_CHANGES_PER_DAY) {
+          throw new Error(
+            `Alcanzaste el límite de ${LOGO_CHANGES_PER_DAY} cambios de logo por día.` +
+              (logoResetAt ? ` Podés volver a cambiarlo el ${formatResetTime(logoResetAt)}.` : ''),
+          )
+        }
+        // El logo viaja solo si cambió: los guardados de colores no consumen el límite.
+        await save.mutateAsync({
+          theme: current,
+          logoURL: currentLogo,
+          logoChangeCount: usedNow + 1,
+          ...(activeNow ? {} : { startLogoWindow: true }),
+        })
       },
       {
         success: 'Branding actualizado',
@@ -96,53 +138,62 @@ export function BrandingPage() {
             subtitle="Logo, colores y paletas sugeridas para tu marca."
           />
           <CardBody className="space-y-5">
-            <FormField
-              label="Logo"
-              hint="Imagen cuadrada; se muestra en el menú lateral. Subí un archivo (recomendado) o pegá una URL directa y estable de imagen — los links de Instagram vencen a los pocos días."
-            >
+            <FormField label="Logo" hint="Imagen cuadrada; se muestra en el menú lateral.">
               <div className="space-y-2">
-                {isUploadedLogo ? (
-                  <div className="flex items-center gap-3 rounded-[var(--radius-control)] border border-zinc-200 bg-zinc-50/60 px-3 py-2">
-                    <LogoImage
-                      src={currentLogo}
-                      alt="Logo subido"
-                      className="size-9 shrink-0 rounded-lg"
-                      iconClassName="size-4"
-                    />
-                    <span className="min-w-0 flex-1 truncate text-sm text-zinc-600">
-                      Imagen subida
-                    </span>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setLogoURL('')}>
+                <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border border-zinc-200 bg-zinc-50/60 px-3 py-2">
+                  <LogoImage
+                    src={currentLogo}
+                    alt="Logo del gimnasio"
+                    className="size-9 shrink-0 rounded-lg"
+                    iconClassName="size-4"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm text-zinc-600">
+                    {currentLogo ? 'Imagen cargada' : 'Sin logo'}
+                  </span>
+                  {currentLogo && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={logoBlocked}
+                      onClick={() => setLogoURL('')}
+                    >
                       Quitar
                     </Button>
-                  </div>
-                ) : (
-                  <Input
-                    placeholder="https://..."
-                    value={currentLogo}
-                    onChange={(e) => setLogoURL(e.target.value)}
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    leftIcon={<Upload className="size-3.5" />}
+                    loading={processingLogo}
+                    disabled={logoBlocked}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Subir imagen
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      void handleLogoFile(e.target.files?.[0])
+                      e.target.value = ''
+                    }}
                   />
-                )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  leftIcon={<Upload className="size-3.5" />}
-                  loading={processingLogo}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Subir imagen
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    void handleLogoFile(e.target.files?.[0])
-                    e.target.value = ''
-                  }}
-                />
+                </div>
+                {logoBlocked && logoResetAt ? (
+                  <p className="text-xs font-medium text-amber-600">
+                    Alcanzaste el límite de {LOGO_CHANGES_PER_DAY} cambios de logo por día. Podés
+                    volver a cambiarlo el {formatResetTime(logoResetAt)}.
+                  </p>
+                ) : windowActive && logoChangesUsed > 0 ? (
+                  <p className="text-xs text-zinc-500">
+                    Te {logoChangesLeft === 1 ? 'queda' : 'quedan'} {logoChangesLeft}{' '}
+                    {logoChangesLeft === 1 ? 'cambio' : 'cambios'} de logo hoy.
+                  </p>
+                ) : null}
               </div>
             </FormField>
 

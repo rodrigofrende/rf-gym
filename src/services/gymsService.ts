@@ -1,4 +1,4 @@
-import { arrayRemove, arrayUnion } from 'firebase/firestore'
+import { arrayRemove, arrayUnion, serverTimestamp } from 'firebase/firestore'
 import type { Gym } from '@/types'
 import { env } from '@/config/env'
 import * as demo from '@/demo/store'
@@ -30,10 +30,28 @@ export function removeGym(gymId: string) {
   return removeOne(paths.gym(gymId))
 }
 
-/** Actualiza el branding del gym (paleta y/o logo). */
-export function updateGymBranding(gymId: string, data: Partial<Pick<Gym, 'theme' | 'logoURL'>>) {
-  if (env.demoMode) return demo.updateGym(gymId, data)
-  return updateOne(paths.gym(gymId), data)
+export interface GymBrandingUpdate
+  extends Partial<Pick<Gym, 'theme' | 'logoURL' | 'logoChangeCount'>> {
+  /** true → estampa el inicio de una nueva ventana de 24hs de cambios de logo. */
+  startLogoWindow?: boolean
+}
+
+/**
+ * Actualiza el branding del gym (paleta y/o logo). Cuando cambia el logo, el
+ * caller debe mandar `logoChangeCount` (y `startLogoWindow` si la ventana de
+ * 24hs venció): firestore.rules valida el límite de 3 cambios por día.
+ */
+export function updateGymBranding(gymId: string, data: GymBrandingUpdate) {
+  const { startLogoWindow, ...rest } = data
+  if (env.demoMode)
+    return demo.updateGym(gymId, {
+      ...rest,
+      ...(startLogoWindow ? { logoWindowStart: new Date() } : {}),
+    })
+  return updateOne(paths.gym(gymId), {
+    ...rest,
+    ...(startLogoWindow ? { logoWindowStart: serverTimestamp() } : {}),
+  })
 }
 
 export function addGymAdmin(gymId: string, uid: string) {

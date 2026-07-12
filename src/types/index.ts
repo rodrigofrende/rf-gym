@@ -64,6 +64,9 @@ export interface Gym {
   id: string
   name: string
   logoURL?: string
+  // Ventana de rate-limit de cambios de logo (máx. 3 por 24hs, validado en firestore.rules)
+  logoWindowStart?: DateValue
+  logoChangeCount?: number
   ownerUid: string
   adminUids?: string[] // uids con permisos de admin (fuente de verdad en las rules)
   theme?: GymTheme

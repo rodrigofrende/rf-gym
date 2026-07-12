@@ -36,75 +36,157 @@ export function PublicGymView({
   const wa = whatsappLink(data.whatsapp, `Hola, me interesa información sobre ${gymName}`)
   const mail = mailtoLink(data.email, `Consulta sobre ${gymName}`)
   const hasContact = wa || mail || data.address || data.openingHours
+  const minPrice = tariffs.length ? Math.min(...tariffs.map((t) => t.price)) : null
+  const hasQuickInfo = Boolean(data.address || data.openingHours || minPrice != null)
+
+  // Videos separados por formato: los 16:9 (YouTube) y los verticales (Instagram)
+  // van en grillas distintas para que cada fila tenga alturas coherentes.
+  const parsedVideos = videos
+    .map((url) => ({ url, video: parseVideoUrl(url) }))
+    .filter((v) => v.video != null)
+  const wideVideos = parsedVideos.filter((v) => v.video?.kind === 'youtube')
+  const tallVideos = parsedVideos.filter((v) => v.video?.kind !== 'youtube')
 
   return (
-    <div className="min-h-full bg-zinc-950 text-white">
+    <div className="@container min-h-full bg-zinc-950 text-white">
+      {/* Barra sticky: marca + CTA siempre a mano mientras se recorre la página. */}
+      <div className="sticky top-0 z-30 border-b border-white/10 bg-zinc-950/80 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-6">
+          <LogoImage
+            src={data.logoURL}
+            alt={gymName}
+            className="size-8 shrink-0 rounded-lg"
+            fallbackClassName="bg-brand-500"
+            iconClassName="size-4"
+          />
+          <span className="min-w-0 flex-1 truncate font-display text-lg uppercase tracking-wide">
+            {gymName}
+          </span>
+          {wa && (
+            <a
+              href={wa}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-500 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-white transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+            >
+              <MessageCircle className="size-3.5" />
+              WhatsApp
+            </a>
+          )}
+        </div>
+      </div>
+
       <header className="relative overflow-hidden">
         <div
           aria-hidden
           className="pointer-events-none absolute -top-40 left-1/2 size-[42rem] -translate-x-1/2 rounded-full bg-brand-500/25 blur-[120px]"
         />
-        <div className="relative mx-auto max-w-3xl px-6 pb-14 pt-16 sm:pb-20 sm:pt-24">
-          <div className="flex items-center gap-3">
-            <LogoImage
-              src={data.logoURL}
-              alt={gymName}
-              className="size-11 rounded-xl ring-1 ring-white/15"
-              fallbackClassName="bg-brand-500 ring-0"
-            />
-            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-400">
-              by {APP_NAME}
-            </span>
-          </div>
+        <div className="relative mx-auto max-w-5xl px-6 pb-14 pt-12 sm:pb-20 sm:pt-16">
+          <div className="flex flex-col gap-10 @4xl:flex-row @4xl:items-start @4xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3">
+                <LogoImage
+                  src={data.logoURL}
+                  alt={gymName}
+                  className="size-11 rounded-xl ring-1 ring-white/15"
+                  fallbackClassName="bg-brand-500 ring-0"
+                />
+                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-400">
+                  by {APP_NAME}
+                </span>
+              </div>
 
-          <h1 className="mt-8 break-words font-display text-6xl uppercase leading-[0.85] tracking-tight sm:text-8xl">
-            {gymName}
-          </h1>
-          <div className="mt-5 h-1.5 w-24 rounded-full bg-brand-500" />
+              <h1 className="mt-8 break-words font-display text-6xl uppercase leading-[0.85] tracking-tight sm:text-8xl">
+                {gymName}
+              </h1>
+              <div className="mt-5 h-1.5 w-24 rounded-full bg-brand-500" />
 
-          {data.description && (
-            <p className="mt-6 max-w-xl whitespace-pre-line text-base leading-relaxed text-zinc-300 sm:text-lg">
-              {data.description}
-            </p>
-          )}
-
-          {(wa || mail) && (
-            <div className="mt-8 flex flex-wrap gap-3">
-              {wa && (
-                <CtaButton href={wa} primary icon={<MessageCircle className="size-4" />}>
-                  Escribinos
-                </CtaButton>
+              {data.description && (
+                <p className="mt-6 max-w-xl whitespace-pre-line text-base leading-relaxed text-zinc-300 sm:text-lg">
+                  {data.description}
+                </p>
               )}
-              {mail && (
-                <CtaButton href={mail} icon={<Mail className="size-4" />}>
-                  Email
-                </CtaButton>
+
+              {(wa || mail) && (
+                <div className="mt-8 flex flex-wrap gap-3">
+                  {wa && (
+                    <CtaButton href={wa} primary icon={<MessageCircle className="size-4" />}>
+                      Escribinos
+                    </CtaButton>
+                  )}
+                  {mail && (
+                    <CtaButton href={mail} icon={<Mail className="size-4" />}>
+                      Email
+                    </CtaButton>
+                  )}
+                </div>
               )}
             </div>
-          )}
+
+            {hasQuickInfo && (
+              <aside className="w-full shrink-0 space-y-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-5 @4xl:mt-14 @4xl:w-80">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                  Info rápida
+                </p>
+                {data.address && (
+                  <p className="flex items-start gap-2 text-sm text-zinc-300">
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-brand-400" />
+                    {data.address}
+                  </p>
+                )}
+                {data.openingHours && (
+                  <p className="flex items-start gap-2 text-sm text-zinc-300">
+                    <Clock className="mt-0.5 size-4 shrink-0 text-brand-400" />
+                    {data.openingHours}
+                  </p>
+                )}
+                {minPrice != null && (
+                  <div className="border-t border-white/10 pt-4">
+                    <p className="text-xs uppercase tracking-wide text-zinc-500">Planes desde</p>
+                    <p className="font-display text-3xl">
+                      {formatCurrency(minPrice)}
+                      <span className="font-sans text-sm text-zinc-500"> /mes</span>
+                    </p>
+                  </div>
+                )}
+              </aside>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl space-y-16 px-6 pb-20">
-        {videos.length > 0 && (
+      <div className="mx-auto max-w-5xl space-y-16 px-6 pb-20 @4xl:space-y-20">
+        {parsedVideos.length > 0 && (
           <Section label="En acción">
-            {/* Container query: 2 columnas solo cuando el contenedor es ancho (web),
-                así la preview angosta del admin queda en 1 columna. */}
-            <div className="@container">
-              <div
-                className={cn('grid gap-5', videos.length > 1 && '@2xl:grid-cols-2 @2xl:items-start')}
-              >
-                {videos.map((url, i) => (
-                  <PublicVideo key={`${url}-${i}`} url={url} />
-                ))}
-              </div>
+            {/* Variantes @: responden al ancho del contenedor, así la preview
+                angosta del admin queda en 1 columna aunque el viewport sea ancho. */}
+            <div className="space-y-5">
+              {wideVideos.length > 0 && (
+                <div
+                  className={cn(
+                    'grid gap-5',
+                    wideVideos.length > 1 && '@2xl:grid-cols-2 @2xl:items-start',
+                  )}
+                >
+                  {wideVideos.map(({ url }, i) => (
+                    <PublicVideo key={`${url}-${i}`} url={url} />
+                  ))}
+                </div>
+              )}
+              {tallVideos.length > 0 && (
+                <div className="grid gap-5 @lg:grid-cols-2 @4xl:grid-cols-3">
+                  {tallVideos.map(({ url }, i) => (
+                    <PublicVideo key={`${url}-${i}`} url={url} />
+                  ))}
+                </div>
+              )}
             </div>
           </Section>
         )}
 
         {tariffs.length > 0 && (
           <Section label="Planes">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
               {tariffs.map((tariff) => (
                 <PublicTariffCard key={tariff.id} tariff={tariff} />
               ))}
@@ -114,7 +196,7 @@ export function PublicGymView({
 
         {links.length > 0 && (
           <Section label="Links">
-            <div className="space-y-3">
+            <div className="grid gap-3 @2xl:grid-cols-2">
               {links.map((link, i) => (
                 <PublicLinkRow key={`${link.url}-${i}`} link={link} />
               ))}
@@ -130,7 +212,7 @@ export function PublicGymView({
 
         {hasContact && (
           <Section label="Sumate">
-            <div className="space-y-5">
+            <div className="flex flex-col gap-8 @3xl:flex-row @3xl:items-center @3xl:justify-between">
               {(wa || mail) && (
                 <div className="flex flex-wrap gap-3">
                   {wa && (
@@ -166,8 +248,8 @@ export function PublicGymView({
         )}
       </div>
 
-      <footer className="border-t border-white/10 px-6 py-8">
-        <div className="mx-auto max-w-3xl space-y-8">
+      <footer className="border-t border-white/10 px-6 py-10">
+        <div className="mx-auto max-w-5xl space-y-8">
           {sponsors.length === 0 && <SponsorPlaceholder variant="dark" whatsapp={data.whatsapp} />}
           <p className="text-center text-xs uppercase tracking-widest text-zinc-500">
             by <span className="font-semibold text-zinc-300">{APP_NAME}</span>
