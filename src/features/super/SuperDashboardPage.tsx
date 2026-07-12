@@ -6,7 +6,7 @@ import { usePlatformStats } from '@/hooks/useDashboard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ROUTES, defaultHomeForRole } from '@/routes/routePaths'
 import { getPaymentStatus } from '@/utils/payments'
-import { Badge, Button, Card, CardHeader, EmptyState, FullPageSpinner, StatCard } from '@/components/ui'
+import { Badge, Button, Card, CardHeader, EmptyState, FullPageSpinner, LogoImage, StatCard } from '@/components/ui'
 
 export function SuperDashboardPage() {
   const navigate = useNavigate()
@@ -75,13 +75,14 @@ export function SuperDashboardPage() {
                 <div className="divide-y divide-zinc-100">
                   {gyms.map((g) => (
                     <div key={g.id} className="flex items-center gap-3 px-5 py-3">
-                      {g.logoURL ? (
-                        <img src={g.logoURL} alt={g.name} className="size-9 rounded-xl object-cover" />
-                      ) : (
-                        <div className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                          <Building2 className="size-5" />
-                        </div>
-                      )}
+                      <LogoImage
+                        src={g.logoURL}
+                        alt={g.name}
+                        className="size-9 shrink-0 rounded-xl"
+                        fallbackClassName="bg-brand-50 text-brand-600"
+                        fallbackIcon={Building2}
+                        iconClassName="size-5"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-zinc-900">{g.name}</p>
                         <Badge tone={g.adminUids?.length ? 'neutral' : 'amber'}>

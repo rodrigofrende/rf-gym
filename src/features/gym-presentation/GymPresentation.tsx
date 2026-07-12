@@ -1,11 +1,10 @@
-import { Clock, Dumbbell, ExternalLink, Mail, MapPin, MessageCircle, PlayCircle } from 'lucide-react'
+import { Clock, ExternalLink, Mail, MapPin, MessageCircle, PlayCircle } from 'lucide-react'
 import type { GymPresentation as GymPresentationData, PublicTariff } from '@/types'
-import { Button, Card, CardBody, Heading, Text } from '@/components/ui'
+import { Button, Card, CardBody, Heading, LogoImage, Text } from '@/components/ui'
 import { parseVideoUrl, type VideoEmbed } from '@/utils/video'
 import { mailtoLink, whatsappLink } from '@/utils/contact'
 import { resolvePresentation } from '@/utils/presentation'
 import { linkIcon } from '@/utils/links'
-import { safeHttpUrl } from '@/utils/url'
 import { tariffIconMeta } from '@/utils/tariffIcons'
 import { frequencyLabel } from '@/utils/tariffs'
 import { formatCurrency } from '@/utils/format'
@@ -38,13 +37,7 @@ export function GymPresentation({
     <div className="space-y-6">
       {!hideHeader && (
         <div className="flex items-center gap-3">
-          {safeHttpUrl(data.logoURL) ? (
-            <img src={data.logoURL} alt={gymName} className="size-12 rounded-2xl object-cover" />
-          ) : (
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-brand-600 text-white">
-              <Dumbbell className="size-6" />
-            </div>
-          )}
+          <LogoImage src={data.logoURL} alt={gymName} className="size-12 rounded-2xl" />
           <div className="min-w-0">
             <Heading variant="display">{gymName}</Heading>
             <p className="text-xs font-medium text-brand-700">by {APP_NAME}</p>

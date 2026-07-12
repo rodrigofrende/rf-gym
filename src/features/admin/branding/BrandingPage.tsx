@@ -1,5 +1,5 @@
-import { useState, type CSSProperties } from 'react'
-import { Dumbbell, RotateCcw } from 'lucide-react'
+import { useRef, useState, type CSSProperties } from 'react'
+import { RotateCcw, Upload } from 'lucide-react'
 import type { GymTheme } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useGym, useUpdateGymBranding } from '@/hooks/useGym'
@@ -10,8 +10,10 @@ import {
   normalizeHex,
   PLATFORM_DEFAULT_THEME,
 } from '@/utils/theme'
+import { fileToLogoDataUrl } from '@/utils/image'
+import { isSafeImageSrc } from '@/utils/url'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Heading, Input, Text } from '@/components/ui'
+import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Heading, Input, LogoImage, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
 
 const FIELD_DEFAULTS: Record<keyof GymTheme, string> = { ...PLATFORM_DEFAULT_THEME }
@@ -25,6 +27,8 @@ export function BrandingPage() {
 
   const [theme, setTheme] = useState<GymTheme | null>(null)
   const [logoURL, setLogoURL] = useState<string | null>(null)
+  const [processingLogo, setProcessingLogo] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   if (isLoading || !gym) {
     return (
@@ -48,11 +52,34 @@ export function BrandingPage() {
 
   const resetAllDefaults = () => setTheme({ ...PLATFORM_DEFAULT_THEME })
 
+  // Logo subido desde archivo (data URL) vs URL externa pegada por el admin.
+  const isUploadedLogo = currentLogo.startsWith('data:image/')
+
+  const handleLogoFile = async (file?: File) => {
+    if (!file) return
+    setProcessingLogo(true)
+    try {
+      await run(async () => setLogoURL(await fileToLogoDataUrl(file)), {
+        error: 'No se pudo procesar la imagen.',
+      })
+    } finally {
+      setProcessingLogo(false)
+    }
+  }
+
   const handleSave = () =>
-    run(() => save.mutateAsync({ theme: current, logoURL: currentLogo || undefined }), {
-      success: 'Branding actualizado',
-      error: 'No se pudo guardar el branding',
-    })
+    run(
+      async () => {
+        if (currentLogo && !isSafeImageSrc(currentLogo)) {
+          throw new Error('El logo debe ser una URL http(s) directa a una imagen, o una imagen subida.')
+        }
+        await save.mutateAsync({ theme: current, logoURL: currentLogo || undefined })
+      },
+      {
+        success: 'Branding actualizado',
+        error: 'No se pudo guardar el branding',
+      },
+    )
 
   const previewStyle = buildThemeVars(current) as CSSProperties
   const isCustomized = JSON.stringify(current) !== JSON.stringify(PLATFORM_DEFAULT_THEME)
@@ -69,12 +96,54 @@ export function BrandingPage() {
             subtitle="Logo, colores y paletas sugeridas para tu marca."
           />
           <CardBody className="space-y-5">
-            <FormField label="Logo (URL)" hint="Imagen cuadrada; se muestra en el menú lateral.">
-              <Input
-                placeholder="https://..."
-                value={currentLogo}
-                onChange={(e) => setLogoURL(e.target.value)}
-              />
+            <FormField
+              label="Logo"
+              hint="Imagen cuadrada; se muestra en el menú lateral. Subí un archivo (recomendado) o pegá una URL directa y estable de imagen — los links de Instagram vencen a los pocos días."
+            >
+              <div className="space-y-2">
+                {isUploadedLogo ? (
+                  <div className="flex items-center gap-3 rounded-[var(--radius-control)] border border-zinc-200 bg-zinc-50/60 px-3 py-2">
+                    <LogoImage
+                      src={currentLogo}
+                      alt="Logo subido"
+                      className="size-9 shrink-0 rounded-lg"
+                      iconClassName="size-4"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm text-zinc-600">
+                      Imagen subida
+                    </span>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setLogoURL('')}>
+                      Quitar
+                    </Button>
+                  </div>
+                ) : (
+                  <Input
+                    placeholder="https://..."
+                    value={currentLogo}
+                    onChange={(e) => setLogoURL(e.target.value)}
+                  />
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  leftIcon={<Upload className="size-3.5" />}
+                  loading={processingLogo}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Subir imagen
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    void handleLogoFile(e.target.files?.[0])
+                    e.target.value = ''
+                  }}
+                />
+              </div>
             </FormField>
 
             <fieldset>
@@ -171,13 +240,7 @@ export function BrandingPage() {
             className="space-y-4 rounded-[var(--radius-card)] border border-zinc-200 bg-surface-muted p-5 shadow-sm"
           >
             <div className="flex items-center gap-2">
-              {currentLogo ? (
-                <img src={currentLogo} alt="Logo" className="size-9 rounded-xl object-cover" />
-              ) : (
-                <div className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-                  <Dumbbell className="size-5" />
-                </div>
-              )}
+              <LogoImage src={currentLogo} alt="Logo" className="size-9 rounded-xl" iconClassName="size-5" />
               <Heading variant="page">{gym.name}</Heading>
             </div>
 

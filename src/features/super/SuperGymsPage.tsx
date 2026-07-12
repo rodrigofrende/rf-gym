@@ -29,6 +29,7 @@ import {
   IconButton,
   InfoTooltip,
   Input,
+  LogoImage,
   Modal,
   MoneyInput,
   Select,
@@ -406,13 +407,14 @@ function GymCard({
     <Card className="flex flex-col p-5">
       <div className="flex items-start justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          {gym.logoURL ? (
-            <img src={gym.logoURL} alt={gym.name} className="size-10 rounded-xl object-cover" />
-          ) : (
-            <div className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-              <Building2 className="size-5" />
-            </div>
-          )}
+          <LogoImage
+            src={gym.logoURL}
+            alt={gym.name}
+            className="size-10 shrink-0 rounded-xl"
+            fallbackClassName="bg-brand-50 text-brand-600"
+            fallbackIcon={Building2}
+            iconClassName="size-5"
+          />
           <div className="min-w-0">
             <Heading variant="card" className="truncate">
               {gym.name}

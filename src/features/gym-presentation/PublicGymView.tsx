@@ -1,17 +1,17 @@
 import { createElement, type ReactNode } from 'react'
-import { ArrowRight, Clock, Dumbbell, Mail, MapPin, MessageCircle, PlayCircle } from 'lucide-react'
+import { ArrowRight, Clock, Mail, MapPin, MessageCircle, PlayCircle } from 'lucide-react'
 import type { GymLink, GymPresentation as GymPresentationData, PublicTariff } from '@/types'
+import { LogoImage } from '@/components/ui'
 import { parseVideoUrl } from '@/utils/video'
 import { mailtoLink, whatsappLink } from '@/utils/contact'
 import { resolvePresentation } from '@/utils/presentation'
 import { linkIcon } from '@/utils/links'
-import { safeHttpUrl } from '@/utils/url'
 import { tariffIconMeta } from '@/utils/tariffIcons'
 import { frequencyLabel } from '@/utils/tariffs'
 import { formatCurrency } from '@/utils/format'
 import { APP_NAME } from '@/config/app'
 import { cn } from '@/utils/cn'
-import { SponsorsShowcase } from '@/features/sponsors/SponsorsShowcase'
+import { SponsorPlaceholder, SponsorsShowcase } from '@/features/sponsors/SponsorsShowcase'
 
 /**
  * Landing pública "Athletic Bold": fondo oscuro, tipografía display gigante y el
@@ -33,7 +33,6 @@ export function PublicGymView({
 }) {
   const { videos, links, sponsors } = resolvePresentation(data)
   const tariffs = (data.tariffs ?? []).filter((t) => t && t.name && typeof t.price === 'number')
-  const logo = safeHttpUrl(data.logoURL)
   const wa = whatsappLink(data.whatsapp, `Hola, me interesa información sobre ${gymName}`)
   const mail = mailtoLink(data.email, `Consulta sobre ${gymName}`)
   const hasContact = wa || mail || data.address || data.openingHours
@@ -47,17 +46,12 @@ export function PublicGymView({
         />
         <div className="relative mx-auto max-w-3xl px-6 pb-14 pt-16 sm:pb-20 sm:pt-24">
           <div className="flex items-center gap-3">
-            {logo ? (
-              <img
-                src={logo}
-                alt={gymName}
-                className="size-11 rounded-xl object-cover ring-1 ring-white/15"
-              />
-            ) : (
-              <div className="flex size-11 items-center justify-center rounded-xl bg-brand-500 text-white">
-                <Dumbbell className="size-6" />
-              </div>
-            )}
+            <LogoImage
+              src={data.logoURL}
+              alt={gymName}
+              className="size-11 rounded-xl ring-1 ring-white/15"
+              fallbackClassName="bg-brand-500 ring-0"
+            />
             <span className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-400">
               by {APP_NAME}
             </span>
@@ -172,11 +166,13 @@ export function PublicGymView({
         )}
       </div>
 
-      <footer className="border-t border-white/10 py-8 text-center">
-        <p className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-zinc-500">
-          <Dumbbell className="size-3.5" />
-          Potenciado por <span className="font-semibold text-zinc-300">{APP_NAME}</span>
-        </p>
+      <footer className="border-t border-white/10 px-6 py-8">
+        <div className="mx-auto max-w-3xl space-y-8">
+          {sponsors.length === 0 && <SponsorPlaceholder variant="dark" whatsapp={data.whatsapp} />}
+          <p className="text-center text-xs uppercase tracking-widest text-zinc-500">
+            by <span className="font-semibold text-zinc-300">{APP_NAME}</span>
+          </p>
+        </div>
       </footer>
     </div>
   )

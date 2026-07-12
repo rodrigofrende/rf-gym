@@ -206,6 +206,33 @@ export function SponsorsShowcase({ sponsors, variant }: { sponsors: Sponsor[]; v
 }
 
 /**
+ * Espacio reservado para cuando el gym todavía no tiene patrocinadores: invita
+ * a las marcas a sumarse. El CTA abre WhatsApp con el número del gimnasio (el
+ * campo de contacto de "Mi gimnasio"); si no está cargado, muestra solo el texto.
+ */
+export function SponsorPlaceholder({ whatsapp, variant }: { whatsapp?: string; variant: Variant }) {
+  const wa = whatsappLink(whatsapp, 'Hola! Quiero publicitar mi marca en el gimnasio.')
+  return (
+    <div
+      className={cn(
+        'flex flex-col items-center gap-3 rounded-2xl border border-dashed p-6 text-center',
+        variant === 'dark' ? 'border-white/15' : 'border-zinc-300',
+      )}
+    >
+      <p className={cn('text-lg font-bold', V[variant].name)}>Tu marca acá</p>
+      <p className={cn('max-w-xs text-sm', V[variant].muted)}>
+        Sumá tu marca como auspiciante del gimnasio.
+      </p>
+      {wa && (
+        <SponsorPill href={wa} variant={variant} primary icon={<MessageCircle className="size-4" />}>
+          Quiero auspiciar
+        </SponsorPill>
+      )}
+    </div>
+  )
+}
+
+/**
  * Bloque compacto y no intrusivo para las superficies de ingreso (check-in, QR):
  * solo patrocinadores destacados, con rótulo "Patrocinado" y video como thumbnail
  * (nunca iframe/autoplay, para no frenar la carga del QR). Renderiza el primero

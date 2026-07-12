@@ -1,13 +1,13 @@
 import {
-  Activity,
+  BatteryCharging,
+  BicepsFlexed,
   Dumbbell,
   Flame,
   Flower2,
   Footprints,
-  HeartHandshake,
   HeartPulse,
+  Move,
   Route,
-  Sparkles,
   Swords,
   Target,
   type LucideIcon,
@@ -24,15 +24,23 @@ export interface RoutineIconMeta {
 export const ROUTINE_ICONS: Record<RoutineIconKey, RoutineIconMeta> = {
   strength: { label: 'Fuerza', icon: Dumbbell, keywords: ['pesas', 'musculación', 'gym'] },
   lower: { label: 'Tren inferior', icon: Footprints, keywords: ['pierna', 'squat', 'prensa'] },
-  upper: { label: 'Tren superior', icon: Activity, keywords: ['pecho', 'espalda', 'hombro'] },
+  upper: {
+    label: 'Tren superior',
+    icon: BicepsFlexed,
+    keywords: ['pecho', 'espalda', 'hombro', 'brazo', 'bíceps'],
+  },
   cardio: { label: 'Cardio', icon: HeartPulse, keywords: ['correr', 'bici', 'aeróbico'] },
-  mobility: { label: 'Movilidad', icon: Sparkles, keywords: ['stretch', 'flexibilidad'] },
+  mobility: { label: 'Movilidad', icon: Move, keywords: ['stretch', 'flexibilidad', 'movimiento'] },
   core: { label: 'Core', icon: Target, keywords: ['abdomen', 'plancha'] },
   functional: { label: 'Funcional', icon: Flame, keywords: ['crossfit', 'hiit', 'wod'] },
   boxing: { label: 'Boxeo', icon: Swords, keywords: ['combate', 'martial', 'kick'] },
   yoga: { label: 'Yoga', icon: Flower2, keywords: ['pilates', 'mindfulness', 'stretch'] },
   running: { label: 'Running', icon: Route, keywords: ['carrera', 'trote', 'cinta'] },
-  recovery: { label: 'Recuperación', icon: HeartHandshake, keywords: ['descanso', 'rehab', 'foam'] },
+  recovery: {
+    label: 'Recuperación',
+    icon: BatteryCharging,
+    keywords: ['descanso', 'rehab', 'foam', 'energía', 'recargar'],
+  },
 }
 
 export const ROUTINE_ICON_OPTIONS: IconSelectOption<RoutineIconKey>[] = (

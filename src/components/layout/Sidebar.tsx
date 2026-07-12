@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Dumbbell, LogOut, X } from 'lucide-react'
+import { LogOut, X } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { usePrivacy } from '@/providers/PrivacyProvider'
 import { ROLE_LABEL } from '@/utils/roles'
 import { cn } from '@/utils/cn'
 import { emailLocalPart } from '@/utils/loginEmail'
-import { Avatar, Text, Toggle } from '@/components/ui'
+import { Avatar, LogoImage, Text, Toggle } from '@/components/ui'
 import { APP_NAME, APP_VERSION } from '@/config/app'
 import { TenantSwitcher } from './TenantSwitcher'
 import { navForRole, PLATFORM_NAV, SUPER_NAV_ITEM } from './navItems'
@@ -45,13 +45,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         {/* Marca: logo grande + nombre del gym */}
         <div className="flex items-center justify-between gap-2 px-4 py-5">
           <div className="flex min-w-0 items-center gap-3">
-            {logoURL ? (
-              <img src={logoURL} alt={brandName} className="size-11 shrink-0 rounded-xl object-cover" />
-            ) : (
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white">
-                <Dumbbell className="size-6" />
-              </div>
-            )}
+            <LogoImage src={logoURL} alt={brandName} className="size-11 shrink-0 rounded-xl" />
             <div className="min-w-0">
               <p className="truncate text-lg font-bold leading-tight text-zinc-900">{brandName}</p>
               <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
