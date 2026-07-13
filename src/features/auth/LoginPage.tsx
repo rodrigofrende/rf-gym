@@ -11,7 +11,6 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
 import { APP_NAME } from '@/config/app'
-import { isSuperAdminEmail } from '@/config/superAdmins'
 import { queryKeys } from '@/hooks/queryKeys'
 import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
 import { getOne } from '@/services/firestore'
@@ -62,24 +61,15 @@ export function LoginPage() {
     try {
       const email = values.email.trim().toLowerCase()
       if (step === 'email') {
-        if (isSuperAdminEmail(email)) {
-          setResolvedEmail(email)
-          setValue('password', '')
-          setStep('password')
-          return
-        }
         const login = await getMemberLogin(email)
-        if (!login) {
-          notify('No encontramos un socio con ese email', 'error')
-          return
-        }
         // Alta por "invitación reclamable": si todavía no creó su contraseña,
         // lo mandamos directo a crearla en vez de pedirle una que no existe.
-        if (login.authStatus === 'pending_password') {
+        if (login?.authStatus === 'pending_password') {
           navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(email)}&mode=create`)
           return
         }
-        // 'active' | 'password_change_required' | undefined (legacy) → paso password.
+        // Socio con contraseña, super-admin o cuenta directa (Google/email) sin
+        // índice de socio → paso contraseña. No revelamos si el email es socio.
         setResolvedEmail(email)
         setValue('password', '')
         setStep('password')

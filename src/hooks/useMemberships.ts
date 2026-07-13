@@ -7,11 +7,11 @@ import { queryKeys } from './queryKeys'
  * Lista las membresías ya sincronizadas del usuario.
  * Las mutaciones de claim se hacen explícitamente en login / crear contraseña.
  */
-export function useMemberships(user: User | null | undefined) {
+export function useMemberships(user: User | null | undefined, isSuperAdmin: boolean) {
   return useQuery({
-    queryKey: queryKeys.memberships(user?.uid ?? ''),
+    queryKey: [...queryKeys.memberships(user?.uid ?? ''), isSuperAdmin],
     queryFn: async () => {
-      return listMembershipsForUser((user as User).uid, (user as User).email)
+      return listMembershipsForUser((user as User).uid, isSuperAdmin)
     },
     enabled: !!user?.uid,
     staleTime: 0,

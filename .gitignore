@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Service account keys del Admin SDK (scripts/set-super-admin.mjs). NUNCA commitear.
+serviceAccount*.json
+*service-account*.json
+*.serviceaccount.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

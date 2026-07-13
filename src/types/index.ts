@@ -171,15 +171,17 @@ export interface Member {
   status: MemberStatus
 }
 
-/** Índice público de lookup exacto para login de socios (`memberLoginIndex/{emailKey}`). */
+/**
+ * Índice público de lookup exacto para login de socios (`memberLoginIndex/{emailKey}`).
+ * Es world-readable (el login lo lee antes de autenticar), así que NO guarda PII de
+ * más: sin nombre completo ni rol, solo lo mínimo para rutear y reclamar el acceso.
+ */
 export interface MemberLoginIndex {
   id: string
   email: string
   gymId: string
   gymName: string
   memberId: string
-  memberName: string
-  role: Role
   authStatus: MemberAuthStatus
 }
 

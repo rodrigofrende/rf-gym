@@ -27,9 +27,13 @@ export type DemoIdentity = keyof typeof DEMO_IDENTITIES
 interface AuthContextValue {
   user: User | null
   isInitialized: boolean
+  /** Capacidad global de super-admin, leída del custom claim `superAdmin` del token. */
+  isSuperAdmin: boolean
   loginEmail: (email: string, password: string) => Promise<User>
   registerEmail: (name: string, email: string, password: string) => Promise<User>
   changePassword: (password: string) => Promise<void>
+  /** Actualiza el displayName del usuario y lo persiste en su perfil global. */
+  updateDisplayName: (name: string) => Promise<void>
   loginGoogle: () => Promise<void>
   logout: () => Promise<void>
   /** Solo en modo demo: cambia la identidad activa (super-admin ↔ admin ↔ socio). */
@@ -62,6 +66,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user: identity ? identityToUser(identity) : null,
       isInitialized: true,
+      isSuperAdmin: identity === 'superadmin',
       loginEmail: async (email) => {
         const next = email.includes('tigerfit.com') ? 'socio' : 'admin'
         setIdentity(next)
@@ -72,6 +77,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
         return identityToUser('socio')
       },
       changePassword: async () => undefined,
+      updateDisplayName: async () => undefined,
       loginGoogle: async () => setIdentity('admin'),
       logout: async () => setIdentity(null),
       setDemoIdentity: (next) => setIdentity(next),
@@ -86,9 +92,22 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
 function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
+    return onAuthStateChanged(auth, async (u) => {
+      // Resolvemos el claim ANTES de marcar inicializado para que los guards
+      // (SuperAdminRoute) y useMemberships no vean un estado intermedio incorrecto.
+      let superAdmin = false
+      if (u) {
+        try {
+          const token = await u.getIdTokenResult()
+          superAdmin = token.claims.superAdmin === true
+        } catch {
+          superAdmin = false
+        }
+      }
+      setIsSuperAdmin(superAdmin)
       setUser(u)
       setIsInitialized(true)
     })
@@ -98,6 +117,7 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isInitialized,
+      isSuperAdmin,
       loginEmail: async (email, password) => {
         const cred = await signInWithEmailAndPassword(auth, email, password)
         return cred.user
@@ -112,6 +132,11 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
         if (!auth.currentUser) throw new Error('auth/no-current-user')
         await updatePassword(auth.currentUser, password)
       },
+      updateDisplayName: async (name) => {
+        if (!auth.currentUser) throw new Error('auth/no-current-user')
+        await updateProfile(auth.currentUser, { displayName: name })
+        await syncUserProfile(auth.currentUser)
+      },
       loginGoogle: async () => {
         const cred = await signInWithPopup(auth, googleProvider)
         await syncUserProfile(cred.user)
@@ -120,7 +145,7 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
         await signOut(auth)
       },
     }),
-    [user, isInitialized],
+    [user, isInitialized, isSuperAdmin],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

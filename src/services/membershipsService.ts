@@ -11,7 +11,6 @@ import type { User } from 'firebase/auth'
 import { db } from '@/lib/firebase'
 import type { Gym, Member, Membership, Role } from '@/types'
 import { env } from '@/config/env'
-import { isSuperAdminEmail } from '@/config/superAdmins'
 import { syncGymMembershipIndex, type GymMembershipIndex } from './membershipIndexService'
 import { listGyms } from './gymsService'
 import { getMany } from './firestore'
@@ -76,11 +75,11 @@ export async function claimMembership(user: User, gymId: string, memberId: strin
 /** Trae todas las membresías ya reclamadas del usuario, en todos los gyms. */
 export async function listMembershipsForUser(
   uid: string,
-  email?: string | null,
+  isSuperAdmin: boolean,
 ): Promise<Membership[]> {
-  if (env.demoMode) return demo.listMembershipsForUser(uid, email)
+  if (env.demoMode) return demo.listMembershipsForUser(uid, isSuperAdmin)
 
-  if (isSuperAdminEmail(email)) {
+  if (isSuperAdmin) {
     const gyms = await listGyms()
     return gyms.map(
       (g) =>

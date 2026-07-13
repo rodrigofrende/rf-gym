@@ -6,11 +6,14 @@ import { KeyRound, LockKeyhole } from 'lucide-react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { Button, Card, FormField, Heading, PasswordInput, Text } from '@/components/ui'
 import { claimMembership, claimPendingMemberships, type ClaimedMembership } from '@/services/membershipsService'
 import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
+import { getOne } from '@/services/firestore'
+import { paths } from '@/services/paths'
 import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
 import { queryKeys } from '@/hooks/queryKeys'
@@ -40,11 +43,11 @@ export function SetPasswordPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { user, loginEmail, registerEmail, changePassword, isInitialized } = useAuth()
+  const { user, isSuperAdmin, loginEmail, registerEmail, changePassword, updateDisplayName, isInitialized } = useAuth()
   const { notify } = useToast()
   const email = (params.get('email') ?? user?.email ?? '').trim().toLowerCase()
   const mode = params.get('mode') === 'change' ? 'change' : 'create'
-  const { data: memberships = [], isLoading: membershipsLoading } = useMemberships(user)
+  const { data: memberships = [], isLoading: membershipsLoading } = useMemberships(user, isSuperAdmin)
 
   const {
     register,
@@ -85,12 +88,14 @@ export function SetPasswordPage() {
       }
 
       let activatedUser = user
-      let membershipsToActivate: ClaimedMembership[] = []
+      let membershipsToActivate: Pick<ClaimedMembership, 'gymId' | 'memberId'>[] = []
       if (mode === 'create') {
         let createdUser = user?.email?.toLowerCase() === email ? user : null
         if (!createdUser) {
           try {
-            createdUser = await registerEmail(login.memberName, email, values.password)
+            // El índice de login ya no trae el nombre (es world-readable): registramos
+            // con un placeholder y lo corregimos con el fullName del member doc abajo.
+            createdUser = await registerEmail(email.split('@')[0], email, values.password)
           } catch (err) {
             if (err && typeof err === 'object' && 'code' in err && err.code === 'auth/email-already-in-use') {
               try {
@@ -111,7 +116,16 @@ export function SetPasswordPage() {
         const directClaim = await claimMembership(createdUser, login.gymId, login.memberId)
         if (directClaim) unique.set(`${directClaim.gymId}:${directClaim.memberId}`, directClaim)
 
-        // 2) Claims adicionales por email (multi-tenant), BEST-EFFORT: si el índice
+        // 2) Nombre del perfil global: lo tomamos del member doc (ya reclamado y por
+        //    tanto legible), no del índice público de login. Best-effort.
+        try {
+          const member = await getOne<Member>(paths.member(login.gymId, login.memberId))
+          if (member?.fullName) await updateDisplayName(member.fullName)
+        } catch {
+          // El displayName se puede editar luego desde el perfil.
+        }
+
+        // 3) Claims adicionales por email (multi-tenant), BEST-EFFORT: si el índice
         //    compuesto no está desplegado, esto lanza failed-precondition; no debe
         //    abortar la activación del claim principal.
         try {
@@ -126,7 +140,7 @@ export function SetPasswordPage() {
         membershipsToActivate = [...unique.values()]
       } else {
         await changePassword(values.password)
-        membershipsToActivate = [{ gymId: login.gymId, memberId: login.memberId, role: login.role }]
+        membershipsToActivate = [{ gymId: login.gymId, memberId: login.memberId }]
       }
 
       await Promise.all(

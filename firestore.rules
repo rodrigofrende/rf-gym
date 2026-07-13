@@ -7,8 +7,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Super-admin de la plataforma: custom claim seteado vía Admin SDK
+    // (scripts/set-super-admin.mjs). El claim viaja firmado en el token, así que
+    // no hay identidad hardcodeada acá ni en el bundle del cliente.
     function isSuperAdmin() {
-      return isSignedIn() && request.auth.token.email in ['rodrigo.frende@gmail.com'];
+      return isSignedIn() && request.auth.token.superAdmin == true;
     }
 
     function gymDoc(gymId) {
@@ -69,11 +72,18 @@ service cloud.firestore {
 
       match /gymMemberships/{gymId} {
         allow read: if isSignedIn() && request.auth.uid == uid;
+        // El propio usuario solo puede escribir su índice de membresía si refleja
+        // fielmente un member doc que ya reclamó: mismo uid y MISMO role. El role
+        // lo controla exclusivamente un admin (las ramas self-edit del member no
+        // tocan `role`), así que esto impide auto-asignarse `role: 'admin'`.
         allow write: if isSuperAdmin()
           || isGymAdmin(gymId)
           || (isSignedIn()
               && request.auth.uid == uid
-              && request.resource.data.keys().hasOnly(['memberId', 'role']));
+              && request.resource.data.keys().hasOnly(['memberId', 'role'])
+              && exists(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId))
+              && get(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid
+              && get(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId)).data.role == request.resource.data.role);
       }
     }
 
@@ -83,12 +93,26 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // Índice de lookup por email para el login (legible sin auth para poder rutear
+    // el flujo antes de autenticar). Como es world-readable, la forma se valida en
+    // escritura para que NO contenga PII de más (nombre completo, rol): solo lo
+    // mínimo que el login necesita.
     match /memberLoginIndex/{emailKey} {
+      function validLoginIndex() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['email', 'gymId', 'gymName', 'memberId', 'authStatus'])
+          && (!('email' in d) || (d.email is string && d.email.size() <= 200))
+          && (!('gymId' in d) || (d.gymId is string && d.gymId.size() <= 200))
+          && (!('gymName' in d) || (d.gymName is string && d.gymName.size() <= 120))
+          && (!('memberId' in d) || (d.memberId is string && d.memberId.size() <= 200))
+          && (!('authStatus' in d) || (d.authStatus is string && d.authStatus.size() <= 40));
+      }
       allow get: if true;
       allow list: if false;
-      allow create, update: if isGymAdmin(request.resource.data.gymId)
-        || (isSignedIn()
-          && get(/databases/$(database)/documents/gyms/$(request.resource.data.gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid);
+      allow create, update: if validLoginIndex()
+        && (isGymAdmin(request.resource.data.gymId)
+          || (isSignedIn()
+            && get(/databases/$(database)/documents/gyms/$(request.resource.data.gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid));
       allow delete: if isGymAdmin(resource.data.gymId);
     }
 
@@ -115,10 +139,21 @@ service cloud.firestore {
           && (!('email' in d) || (d.email is string && d.email.size() <= 200))
           && (!('address' in d) || (d.address is string && d.address.size() <= 200))
           && (!('openingHours' in d) || (d.openingHours is string && d.openingHours.size() <= 200))
-          && (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 200000));
+          && (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 153600
+              && d.logoURL.matches('data:image/(png|jpeg|webp);base64,.*')));
+      }
+      // El logo del perfil público debe reflejar el de `gyms/{gymId}` (que ya está
+      // rate-limiteado). Así el mirror world-readable hereda el límite sin duplicar
+      // contadores, y no puede divergir del logo real.
+      function logoMirrorsGym() {
+        let d = request.resource.data;
+        return !('logoURL' in d)
+          || (resource != null && !d.diff(resource.data).affectedKeys().hasAny(['logoURL']))
+          || (exists(/databases/$(database)/documents/gyms/$(gymId))
+              && d.logoURL == gymDoc(gymId).data.get('logoURL', null));
       }
       allow read: if true;
-      allow create, update: if isGymAdmin(gymId) && validPresentation();
+      allow create, update: if isGymAdmin(gymId) && validPresentation() && logoMirrorsGym();
       allow delete: if isGymAdmin(gymId);
     }
 
@@ -130,7 +165,8 @@ service cloud.firestore {
         let d = request.resource.data;
         return !d.diff(resource.data).affectedKeys().hasAny(['logoURL'])
           || (
-            (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 200000))
+            (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 153600
+              && d.logoURL.matches('data:image/(png|jpeg|webp);base64,.*')))
             && (
               // Ventana nueva: primera vez o la anterior ya venció.
               (d.get('logoWindowStart', null) == request.time

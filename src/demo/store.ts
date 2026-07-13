@@ -19,7 +19,6 @@ import type {
   WorkoutLog,
 } from '@/types'
 import { buildSeed, DEMO_GYM_ID } from './seed'
-import { isSuperAdminEmail } from '@/config/superAdmins'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
 import { toDate } from '@/utils/format'
 import { localDayKey } from '@/utils/dates'
@@ -68,8 +67,6 @@ function loginIndexForMember(member: Member): MemberLoginIndex {
     gymId: DEMO_GYM_ID,
     gymName: data.gym.name,
     memberId: member.id,
-    memberName: member.fullName,
-    role: member.role,
     authStatus: memberAuthStatus(member),
   }
 }
@@ -592,9 +589,9 @@ export function recomputeStats(_gymId: string) {
 }
 
 // ---- Memberships ----
-export function listMembershipsForUser(uid: string, email?: string | null) {
+export function listMembershipsForUser(uid: string, isSuperAdmin?: boolean) {
   // Super-admin: admin en TODOS los gyms.
-  if (isSuperAdminEmail(email)) {
+  if (isSuperAdmin) {
     return ok(
       gyms.map(
         (g) =>

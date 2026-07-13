@@ -31,8 +31,6 @@ export async function syncMemberLoginIndex(
     gymId,
     gymName: gymData?.name ?? 'Gimnasio',
     memberId,
-    memberName: member.fullName,
-    role: member.role,
     authStatus: defaultAuthStatus(member),
   } satisfies Omit<MemberLoginIndex, 'id'>)
 }

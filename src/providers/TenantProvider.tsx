@@ -1,6 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import type { Membership, Role } from '@/types'
-import { isSuperAdminEmail } from '@/config/superAdmins'
 import { useAuth } from './AuthProvider'
 import { useMemberships } from '@/hooks/useMemberships'
 
@@ -20,10 +19,9 @@ const TenantContext = createContext<TenantContextValue | null>(null)
 const STORAGE_KEY = 'gym:activeGymId'
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
-  const { data: memberships = [], isLoading, error } = useMemberships(user)
+  const { user, isSuperAdmin } = useAuth()
+  const { data: memberships = [], isLoading, error } = useMemberships(user, isSuperAdmin)
   const [picked, setPicked] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY))
-  const isSuperAdmin = isSuperAdminEmail(user?.email)
 
   const value = useMemo<TenantContextValue>(() => {
     // El gym activo se DERIVA: la elección persistida si sigue siendo válida,
