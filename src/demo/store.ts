@@ -177,13 +177,11 @@ const publicProfiles: Record<string, GymPresentation> = {
     sponsors: [
       {
         name: 'Suplementos Titan',
-        tier: 'featured',
-        instagram: 'suplementostitan',
-        whatsapp: '+54 9 11 5555-1111',
-        youtubeURL: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        phone: '+54 9 11 5555-1111',
+        linkURL: 'https://www.instagram.com/suplementostitan/',
       },
-      { name: 'Indumentaria FitWear', tier: 'standard', instagram: 'fitwear' },
-      { name: 'Agua Vital', tier: 'standard', whatsapp: '+54 9 11 5555-2222' },
+      { name: 'Indumentaria FitWear', linkURL: 'https://www.instagram.com/fitwear/' },
+      { name: 'Agua Vital', phone: '+54 9 11 5555-2222' },
     ],
     whatsapp: '+54 9 11 1234-5678',
     email: 'hola@tigerfit.com',

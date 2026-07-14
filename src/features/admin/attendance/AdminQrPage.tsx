@@ -68,7 +68,7 @@ export function AdminQrPage() {
             Es un QR estático: podés imprimirlo una vez y dejarlo pegado. El registro se valida con la sesión del socio.
           </div>
 
-          {sponsors.some((s) => s.tier === 'featured') && (
+          {sponsors.length > 0 && (
             <div className="mt-5">
               <SponsorSpot sponsors={sponsors} variant="light" />
             </div>

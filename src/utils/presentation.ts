@@ -1,7 +1,6 @@
 import type { GymLink, GymPresentation, Sponsor } from '@/types'
-import { isSafeHttpUrl, safeHttpUrl } from './url'
-import { instagramHandle } from './contact'
-import { parseVideoUrl } from './video'
+import { isSafeHttpUrl, safeHttpUrl, safeImageSrc } from './url'
+import { instagramUrl } from './contact'
 
 export interface ResolvedPresentation {
   videos: string[]
@@ -32,23 +31,19 @@ export function resolvePresentation(data?: Partial<GymPresentation> | null): Res
     .filter((l) => l && l.label?.trim() && isSafeHttpUrl(l.url))
     .map((l) => ({ label: l.label.trim(), url: l.url.trim() }))
 
-  // No hay fuente legacy de sponsors, alcanza con `?? []`.
+  // Sponsors: shape nuevo (name/imageURL/phone/linkURL) con mapeo de los campos
+  // legacy (logoURL/whatsapp/instagram/youtubeURL) para docs previos al rediseño.
   const sponsors: Sponsor[] = (data.sponsors ?? [])
     .filter((s): s is Sponsor => !!s && !!s.name?.trim())
     .map((s) => {
-      const handle = instagramHandle(s.instagram)
-      const logo = safeHttpUrl(s.logoURL)
-      const youtube =
-        s.youtubeURL && isSafeHttpUrl(s.youtubeURL) && parseVideoUrl(s.youtubeURL)?.kind === 'youtube'
-          ? s.youtubeURL.trim()
-          : undefined
+      const image = safeImageSrc(s.imageURL) ?? safeImageSrc(s.logoURL)
+      const phone = (s.phone ?? s.whatsapp)?.trim()
+      const link = safeHttpUrl(s.linkURL) ?? instagramUrl(s.instagram) ?? safeHttpUrl(s.youtubeURL)
       return {
         name: s.name.trim(),
-        tier: s.tier === 'featured' ? 'featured' : 'standard',
-        ...(logo ? { logoURL: logo } : {}),
-        ...(handle ? { instagram: handle } : {}),
-        ...(s.whatsapp?.trim() ? { whatsapp: s.whatsapp.trim() } : {}),
-        ...(youtube ? { youtubeURL: youtube } : {}),
+        ...(image ? { imageURL: image } : {}),
+        ...(phone ? { phone } : {}),
+        ...(link ? { linkURL: link } : {}),
       }
     })
 

@@ -122,10 +122,46 @@ service cloud.firestore {
     // Como es de lectura pública, validamos forma y tamaños para que un admin no
     // pueda escribir campos arbitrarios ni payloads enormes en un doc world-readable.
     match /publicProfiles/{gymId} {
+      // Un sponsor válido: shape acotado (el doc es world-readable). Solo el
+      // nombre es obligatorio; la imagen es un data URL chico (mismo pipeline
+      // que el logo, tope espejado en utils/image.ts) o una URL http(s).
+      // Los campos legacy (tier/logoURL/instagram/whatsapp/youtubeURL) se
+      // aceptan acotados para no bloquear re-escrituras de docs viejos.
+      function validSponsor(s) {
+        return (s is map)
+          && s.keys().hasOnly([
+              'name', 'imageURL', 'phone', 'linkURL',
+              'tier', 'logoURL', 'instagram', 'whatsapp', 'youtubeURL'
+            ])
+          && ('name' in s && s.name is string && s.name.size() >= 1 && s.name.size() <= 80)
+          && (!('imageURL' in s) || (s.imageURL is string && s.imageURL.size() <= 102400
+              && (s.imageURL.matches('data:image/(png|jpeg|webp);base64,.*')
+                || s.imageURL.matches('https?://.*'))))
+          && (!('phone' in s) || (s.phone is string && s.phone.size() <= 40))
+          && (!('linkURL' in s) || (s.linkURL is string && s.linkURL.size() <= 300
+              && s.linkURL.matches('https?://.*')))
+          && (!('tier' in s) || (s.tier is string && s.tier.size() <= 20))
+          && (!('logoURL' in s) || (s.logoURL is string && s.logoURL.size() <= 500))
+          && (!('instagram' in s) || (s.instagram is string && s.instagram.size() <= 120))
+          && (!('whatsapp' in s) || (s.whatsapp is string && s.whatsapp.size() <= 40))
+          && (!('youtubeURL' in s) || (s.youtubeURL is string && s.youtubeURL.size() <= 300));
+      }
+      // Las rules no tienen loops: con tope 6 (los que entran en pantalla,
+      // espejado en SponsorsPage), se valida cada índice a mano.
+      function validSponsors(list) {
+        return list.size() <= 6
+          && (list.size() < 1 || validSponsor(list[0]))
+          && (list.size() < 2 || validSponsor(list[1]))
+          && (list.size() < 3 || validSponsor(list[2]))
+          && (list.size() < 4 || validSponsor(list[3]))
+          && (list.size() < 5 || validSponsor(list[4]))
+          && (list.size() < 6 || validSponsor(list[5]));
+      }
       function validPresentation() {
         let d = request.resource.data;
         return d.keys().hasOnly([
             'id', 'name', 'logoURL', 'theme', 'description', 'videos', 'links', 'tariffs', 'sponsors',
+            'sponsorsWindowStart', 'sponsorsChangeCount',
             'whatsapp', 'email', 'address', 'openingHours',
             'videoURL', 'instagramURL', 'facebookURL', 'updatedAt'
           ])
@@ -134,7 +170,9 @@ service cloud.firestore {
           && (!('videos' in d) || (d.videos is list && d.videos.size() <= 6))
           && (!('links' in d) || (d.links is list && d.links.size() <= 12))
           && (!('tariffs' in d) || (d.tariffs is list && d.tariffs.size() <= 20))
-          && (!('sponsors' in d) || (d.sponsors is list && d.sponsors.size() <= 24))
+          && (!('sponsors' in d) || (d.sponsors is list && validSponsors(d.sponsors)))
+          && (!('sponsorsChangeCount' in d) || d.sponsorsChangeCount is int)
+          && (!('sponsorsWindowStart' in d) || d.sponsorsWindowStart is timestamp)
           && (!('whatsapp' in d) || (d.whatsapp is string && d.whatsapp.size() <= 40))
           && (!('email' in d) || (d.email is string && d.email.size() <= 200))
           && (!('address' in d) || (d.address is string && d.address.size() <= 200))
@@ -152,8 +190,35 @@ service cloud.firestore {
           || (exists(/databases/$(database)/documents/gyms/$(gymId))
               && d.logoURL == gymDoc(gymId).data.get('logoURL', null));
       }
+      // Rate-limit de cambios de sponsors: máximo 5 por ventana fija de 24hs
+      // (mismo esquema que el logo en gyms/logoLimitOk, espejado en SponsorsPage).
+      // El cliente manda sponsorsWindowStart (serverTimestamp) + sponsorsChangeCount
+      // solo cuando la lista realmente cambió.
+      function sponsorsLimitOnCreate() {
+        let d = request.resource.data;
+        return !('sponsors' in d) || d.sponsors.size() == 0
+          || (d.get('sponsorsWindowStart', null) == request.time
+            && d.get('sponsorsChangeCount', 99) == 1);
+      }
+      function sponsorsLimitOnUpdate() {
+        let d = request.resource.data;
+        return !d.diff(resource.data).affectedKeys().hasAny(['sponsors'])
+          || (
+            // Ventana nueva: primera vez o la anterior ya venció.
+            (d.get('sponsorsWindowStart', null) == request.time
+              && d.get('sponsorsChangeCount', 99) == 1
+              && (!('sponsorsWindowStart' in resource.data)
+                || resource.data.sponsorsWindowStart + duration.value(24, 'h') < request.time))
+            ||
+            // Misma ventana: suma exactamente 1, hasta 5.
+            (d.get('sponsorsWindowStart', null) == resource.data.get('sponsorsWindowStart', null)
+              && d.get('sponsorsChangeCount', 99) == resource.data.get('sponsorsChangeCount', 0) + 1
+              && d.get('sponsorsChangeCount', 99) <= 5)
+          );
+      }
       allow read: if true;
-      allow create, update: if isGymAdmin(gymId) && validPresentation() && logoMirrorsGym();
+      allow create: if isGymAdmin(gymId) && validPresentation() && logoMirrorsGym() && sponsorsLimitOnCreate();
+      allow update: if isGymAdmin(gymId) && validPresentation() && logoMirrorsGym() && sponsorsLimitOnUpdate();
       allow delete: if isGymAdmin(gymId);
     }
 

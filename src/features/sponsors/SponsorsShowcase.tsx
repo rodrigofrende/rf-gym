@@ -1,9 +1,8 @@
 import { type ReactNode } from 'react'
-import { AtSign, MessageCircle, PlayCircle } from 'lucide-react'
+import { ExternalLink, MessageCircle } from 'lucide-react'
 import type { Sponsor } from '@/types'
-import { parseVideoUrl, youtubeThumbnailUrl } from '@/utils/video'
-import { instagramUrl, whatsappLink } from '@/utils/contact'
-import { safeHttpUrl } from '@/utils/url'
+import { whatsappLink } from '@/utils/contact'
+import { safeHttpUrl, safeImageSrc } from '@/utils/url'
 import { cn } from '@/utils/cn'
 
 type Variant = 'dark' | 'light'
@@ -21,7 +20,6 @@ const V: Record<Variant, {
   logoFallback: string
   pill: string
   pillPrimary: string
-  videoBg: string
   label: string
 }> = {
   dark: {
@@ -31,7 +29,6 @@ const V: Record<Variant, {
     logoFallback: 'bg-brand-500/15 text-brand-300',
     pill: 'border border-white/20 text-white hover:bg-white/10',
     pillPrimary: 'bg-brand-500 text-white hover:bg-brand-400',
-    videoBg: 'bg-black ring-1 ring-white/10',
     label: 'text-zinc-500',
   },
   light: {
@@ -41,30 +38,44 @@ const V: Record<Variant, {
     logoFallback: 'bg-brand-50 text-brand-600',
     pill: 'border border-zinc-200 text-zinc-700 hover:bg-zinc-50',
     pillPrimary: 'bg-brand-600 text-white hover:bg-brand-700',
-    videoBg: 'bg-zinc-100 ring-1 ring-zinc-200',
     label: 'text-zinc-500',
   },
 }
 
 const WA_MESSAGE = 'Hola! Los vi como auspiciante del gimnasio y quería consultar.'
 
-function SponsorLogo({ sponsor, variant, size }: { sponsor: Sponsor; variant: Variant; size: 'sm' | 'lg' }) {
-  const logo = safeHttpUrl(sponsor.logoURL)
-  const dim = size === 'lg' ? 'size-14' : 'size-11'
-  if (logo) {
-    return <img src={logo} alt={sponsor.name} className={cn(dim, 'shrink-0 rounded-xl object-cover')} />
+/** Rótulo corto para el pill del link: el dominio sin `www.` (o "Ver más" si no parsea). */
+function linkLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return 'Ver más'
+  }
+}
+
+function SponsorImage({ sponsor, variant }: { sponsor: Sponsor; variant: Variant }) {
+  const src = safeImageSrc(sponsor.imageURL)
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={sponsor.name}
+        referrerPolicy="no-referrer"
+        className="size-14 shrink-0 rounded-xl object-cover"
+      />
+    )
   }
   return (
-    <div className={cn(dim, 'flex shrink-0 items-center justify-center rounded-xl text-lg font-bold', V[variant].logoFallback)}>
+    <div className={cn('flex size-14 shrink-0 items-center justify-center rounded-xl text-lg font-bold', V[variant].logoFallback)}>
       {sponsor.name.charAt(0).toUpperCase()}
     </div>
   )
 }
 
 function SponsorLinks({ sponsor, variant }: { sponsor: Sponsor; variant: Variant }) {
-  const ig = instagramUrl(sponsor.instagram)
-  const wa = whatsappLink(sponsor.whatsapp, WA_MESSAGE)
-  if (!ig && !wa) return null
+  const wa = whatsappLink(sponsor.phone, WA_MESSAGE)
+  const link = safeHttpUrl(sponsor.linkURL)
+  if (!wa && !link) return null
   return (
     <div className="flex flex-wrap gap-2">
       {wa && (
@@ -72,9 +83,9 @@ function SponsorLinks({ sponsor, variant }: { sponsor: Sponsor; variant: Variant
           WhatsApp
         </SponsorPill>
       )}
-      {ig && (
-        <SponsorPill href={ig} variant={variant} icon={<AtSign className="size-4" />}>
-          Instagram
+      {link && (
+        <SponsorPill href={link} variant={variant} icon={<ExternalLink className="size-4" />}>
+          {linkLabel(link)}
         </SponsorPill>
       )}
     </div>
@@ -110,72 +121,12 @@ function SponsorPill({
   )
 }
 
-/** Video de YouTube: iframe embebido (landing) o thumbnail-link (ingreso, sin autoplay). */
-function SponsorVideo({ url, variant, mode }: { url: string; variant: Variant; mode: 'embed' | 'thumbnail' }) {
-  const video = parseVideoUrl(url)
-  if (!video || video.kind !== 'youtube') return null
-
-  if (mode === 'embed') {
-    return (
-      <div className={cn('aspect-video w-full overflow-hidden rounded-2xl', V[variant].videoBg)}>
-        <iframe
-          src={video.embedUrl}
-          title="Video del patrocinador"
-          className="size-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    )
-  }
-
-  return (
-    <a
-      href={`https://www.youtube.com/watch?v=${video.videoId}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn('group relative block aspect-video w-full overflow-hidden rounded-2xl', V[variant].videoBg)}
-    >
-      <img
-        src={youtubeThumbnailUrl(video.videoId)}
-        alt="Ver video del patrocinador"
-        className="size-full object-cover"
-        loading="lazy"
-      />
-      <span className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/40">
-        <PlayCircle className="size-12 text-white drop-shadow" />
-      </span>
-    </a>
-  )
-}
-
-export function SponsorFeaturedCard({
-  sponsor,
-  variant,
-  videoMode = 'embed',
-}: {
-  sponsor: Sponsor
-  variant: Variant
-  videoMode?: 'embed' | 'thumbnail'
-}) {
-  return (
-    <div className={cn('space-y-4 rounded-2xl border p-5', V[variant].card)}>
-      <div className="flex items-center gap-3">
-        <SponsorLogo sponsor={sponsor} variant={variant} size="lg" />
-        <p className={cn('min-w-0 flex-1 truncate text-lg font-bold', V[variant].name)}>{sponsor.name}</p>
-      </div>
-      {sponsor.youtubeURL && <SponsorVideo url={sponsor.youtubeURL} variant={variant} mode={videoMode} />}
-      <SponsorLinks sponsor={sponsor} variant={variant} />
-    </div>
-  )
-}
-
-export function SponsorStandardCard({ sponsor, variant }: { sponsor: Sponsor; variant: Variant }) {
+export function SponsorCard({ sponsor, variant }: { sponsor: Sponsor; variant: Variant }) {
   return (
     <div className={cn('flex h-full flex-col gap-3 rounded-2xl border p-4', V[variant].card)}>
       <div className="flex items-center gap-3">
-        <SponsorLogo sponsor={sponsor} variant={variant} size="sm" />
-        <p className={cn('min-w-0 flex-1 truncate text-sm font-semibold', V[variant].name)}>{sponsor.name}</p>
+        <SponsorImage sponsor={sponsor} variant={variant} />
+        <p className={cn('min-w-0 flex-1 truncate text-base font-bold', V[variant].name)}>{sponsor.name}</p>
       </div>
       <div className="mt-auto">
         <SponsorLinks sponsor={sponsor} variant={variant} />
@@ -184,23 +135,14 @@ export function SponsorStandardCard({ sponsor, variant }: { sponsor: Sponsor; va
   )
 }
 
-/** Grilla completa: destacados (grandes) + estándar (grilla). Para landing / Mi gimnasio. */
+/** Grilla completa de patrocinadores (2 columnas en pantallas medianas+). */
 export function SponsorsShowcase({ sponsors, variant }: { sponsors: Sponsor[]; variant: Variant }) {
   if (!sponsors.length) return null
-  const featured = sponsors.filter((s) => s.tier === 'featured')
-  const standard = sponsors.filter((s) => s.tier !== 'featured')
   return (
-    <div className="space-y-4">
-      {featured.map((s, i) => (
-        <SponsorFeaturedCard key={`f-${s.name}-${i}`} sponsor={s} variant={variant} videoMode="embed" />
+    <div className="grid gap-3 sm:grid-cols-2">
+      {sponsors.map((s, i) => (
+        <SponsorCard key={`${s.name}-${i}`} sponsor={s} variant={variant} />
       ))}
-      {standard.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {standard.map((s, i) => (
-            <SponsorStandardCard key={`s-${s.name}-${i}`} sponsor={s} variant={variant} />
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -234,9 +176,8 @@ export function SponsorPlaceholder({ whatsapp, variant }: { whatsapp?: string; v
 
 /**
  * Bloque compacto y no intrusivo para las superficies de ingreso (check-in, QR):
- * solo patrocinadores destacados, con rótulo "Patrocinado" y video como thumbnail
- * (nunca iframe/autoplay, para no frenar la carga del QR). Renderiza el primero
- * (o hasta `max`); `null` si no hay destacados.
+ * muestra los primeros patrocinadores (el orden lo maneja el admin arrastrando)
+ * con rótulo "Patrocinado". Renderiza hasta `max`; `null` si no hay ninguno.
  */
 export function SponsorSpot({
   sponsors,
@@ -247,15 +188,15 @@ export function SponsorSpot({
   variant: Variant
   max?: number
 }) {
-  const featured = sponsors.filter((s) => s.tier === 'featured').slice(0, max)
-  if (!featured.length) return null
+  const shown = sponsors.slice(0, max)
+  if (!shown.length) return null
   return (
     <div className="space-y-2">
       <p className={cn('text-center text-[11px] font-semibold uppercase tracking-[0.2em]', V[variant].label)}>
         Patrocinado
       </p>
-      {featured.map((s, i) => (
-        <SponsorFeaturedCard key={`spot-${s.name}-${i}`} sponsor={s} variant={variant} videoMode="thumbnail" />
+      {shown.map((s, i) => (
+        <SponsorCard key={`spot-${s.name}-${i}`} sponsor={s} variant={variant} />
       ))}
     </div>
   )

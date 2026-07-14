@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { GymPresentation } from '@/types'
 import {
   getGymPresentation,
   updateGymPresentation,
+  type GymPresentationUpdate,
 } from '@/services/gymPresentationService'
 import { queryKeys } from './queryKeys'
 
@@ -18,8 +18,7 @@ export function useGymPresentation(gymId: string) {
 export function useUpdateGymPresentation(gymId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Partial<Omit<GymPresentation, 'id'>>) =>
-      updateGymPresentation(gymId, data),
+    mutationFn: (data: GymPresentationUpdate) => updateGymPresentation(gymId, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.gymPresentation(gymId) }),
   })
 }

@@ -79,20 +79,26 @@ export interface GymLink {
   url: string
 }
 
-/** Nivel de un patrocinador: 'featured' se muestra grande y aparece en el ingreso. */
+/** Nivel legacy de un patrocinador (docs previos al rediseño). Ya no se edita. */
 export type SponsorTier = 'featured' | 'standard'
 
 /**
  * Patrocinador/auspiciante que el gym muestra en sus superficies públicas.
  * Vive dentro de `GymPresentation` (doc world-readable): sin datos sensibles.
+ * Solo el nombre es obligatorio; el resto suma si está.
  */
 export interface Sponsor {
   name: string
-  tier: SponsorTier
-  logoURL?: string // URL http(s) de imagen (safeHttpUrl)
-  instagram?: string // handle normalizado sin @ (la URL se arma al renderizar)
-  whatsapp?: string // número crudo; se normaliza a dígitos con whatsappLink()
-  youtubeURL?: string // URL de YouTube; solo se renderiza en tier 'featured'
+  imageURL?: string // data:image subida desde el form (mismo pipeline que el logo) o http(s)
+  phone?: string // número crudo; se normaliza a dígitos con whatsappLink()
+  linkURL?: string // URL http(s) (sitio, Instagram, lo que sea)
+  // Campos legacy: solo lectura para compatibilidad con docs viejos; se mapean
+  // a los campos nuevos en resolvePresentation y no se vuelven a escribir.
+  tier?: SponsorTier
+  logoURL?: string
+  instagram?: string
+  whatsapp?: string
+  youtubeURL?: string
 }
 
 /**
@@ -127,6 +133,9 @@ export interface GymPresentation {
   links?: GymLink[] // enlaces personalizados (incluye redes), en orden
   tariffs?: PublicTariff[] // tarifas que el admin elige mostrar (snapshot)
   sponsors?: Sponsor[] // patrocinadores/auspiciantes, en orden
+  // Ventana de rate-limit de cambios de sponsors (validado en firestore.rules)
+  sponsorsWindowStart?: DateValue
+  sponsorsChangeCount?: number
   // Contacto
   whatsapp?: string // número crudo; se normaliza a dígitos para wa.me
   email?: string
