@@ -214,7 +214,7 @@ export function MemberFormModal({
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <div className="flex min-w-0 flex-1 rounded-[var(--radius-control)] border border-zinc-200 bg-surface focus-within:ring-2 focus-within:ring-brand-500">
                   <input
-                    className="min-w-0 flex-1 rounded-l-[var(--radius-control)] bg-transparent px-3 py-2 text-sm outline-none disabled:text-zinc-500"
+                    className="min-w-0 flex-1 rounded-l-[var(--radius-control)] bg-transparent px-3 py-2 text-base outline-none disabled:text-zinc-500 sm:text-sm"
                     {...register('loginLocal')}
                     disabled={!!initial}
                   />
