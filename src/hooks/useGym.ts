@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Gym, GymPresentation } from '@/types'
+import type { Gym } from '@/types'
 import { getGym, updateGymBranding, type GymBrandingUpdate } from '@/services/gymsService'
 import { updateGymPresentation } from '@/services/gymPresentationService'
 import { queryKeys } from './queryKeys'
@@ -29,7 +29,8 @@ export function useUpdateGymBranding(gymId: string) {
       const gym = qc.getQueryData<Gym | null>(queryKeys.gym(gymId))
       // Espejo explícito del snapshot de marca: los campos de rate-limit del logo
       // no viajan a publicProfiles (la whitelist de las rules los rechazaría).
-      const mirror: Partial<Omit<GymPresentation, 'id'>> = { name: gym?.name }
+      // logoURL: null → deleteField en gyms y publicProfiles (evita `""`).
+      const mirror: Parameters<typeof updateGymPresentation>[1] = { name: gym?.name }
       if (variables.theme !== undefined) mirror.theme = variables.theme
       if (variables.logoURL !== undefined) mirror.logoURL = variables.logoURL
       await updateGymPresentation(gymId, mirror)

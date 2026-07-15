@@ -218,6 +218,7 @@ function SponsorsForm({
               (resetAt ? ` Podés volver a cambiarlos el ${formatResetTime(resetAt)}.` : ''),
           )
         }
+        const logoURL = gym.logoURL?.trim()
         await save.mutateAsync({
           sponsors: cleaned,
           // Los contadores viajan solo si la lista cambió: espejo de firestore.rules.
@@ -228,7 +229,8 @@ function SponsorsForm({
               }
             : {}),
           name: gym.name,
-          logoURL: gym.logoURL,
+          // Mirror de marca: data URL válido, o null (deleteField) para no dejar `""`.
+          logoURL: isSafeImageSrc(logoURL) ? logoURL : null,
           theme: gym.theme ?? PLATFORM_DEFAULT_THEME,
           updatedAt: new Date(),
         })

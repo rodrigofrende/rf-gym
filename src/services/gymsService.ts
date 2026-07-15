@@ -1,4 +1,4 @@
-import { arrayRemove, arrayUnion, serverTimestamp } from 'firebase/firestore'
+import { arrayRemove, arrayUnion, deleteField, serverTimestamp } from 'firebase/firestore'
 import type { Gym } from '@/types'
 import { env } from '@/config/env'
 import * as demo from '@/demo/store'
@@ -30,8 +30,9 @@ export function removeGym(gymId: string) {
   return removeOne(paths.gym(gymId))
 }
 
-export interface GymBrandingUpdate
-  extends Partial<Pick<Gym, 'theme' | 'logoURL' | 'logoChangeCount'>> {
+export interface GymBrandingUpdate extends Partial<Pick<Gym, 'theme' | 'logoChangeCount'>> {
+  /** Data URL del logo; `null` borra el campo (no dejar `""`, que rompe las rules). */
+  logoURL?: string | null
   /** true → estampa el inicio de una nueva ventana de 24hs de cambios de logo. */
   startLogoWindow?: boolean
 }
@@ -42,14 +43,22 @@ export interface GymBrandingUpdate
  * 24hs venció): firestore.rules valida el límite de 3 cambios por día.
  */
 export function updateGymBranding(gymId: string, data: GymBrandingUpdate) {
-  const { startLogoWindow, ...rest } = data
-  if (env.demoMode)
+  const { startLogoWindow, logoURL, ...rest } = data
+  if (env.demoMode) {
+    if (logoURL === null) demo.clearGymLogo(gymId)
     return demo.updateGym(gymId, {
       ...rest,
+      ...(logoURL !== undefined && logoURL !== null ? { logoURL } : {}),
       ...(startLogoWindow ? { logoWindowStart: new Date() } : {}),
     })
+  }
   return updateOne(paths.gym(gymId), {
     ...rest,
+    ...(logoURL === null
+      ? { logoURL: deleteField() }
+      : logoURL !== undefined
+        ? { logoURL }
+        : {}),
     ...(startLogoWindow ? { logoWindowStart: serverTimestamp() } : {}),
   })
 }

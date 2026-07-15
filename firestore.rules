@@ -43,6 +43,27 @@ service cloud.firestore {
       return isGymAdmin(gymId) || isGymMember(gymId);
     }
 
+    // Data URL de imagen: valida header + size sin regex sobre el payload base64
+    // (strings de 100–150KB con `.matches('...base64,.*')` pueden denegar la rule).
+    function isDataImageUrl(s, maxSize) {
+      return s is string
+        && s.size() > 0
+        && s.size() <= maxSize
+        && s.split(',').size() == 2
+        && s.split(',')[0] in [
+          'data:image/png;base64',
+          'data:image/jpeg;base64',
+          'data:image/webp;base64'
+        ];
+    }
+
+    function isHttpUrl(s, maxSize) {
+      return s is string
+        && s.size() > 0
+        && s.size() <= maxSize
+        && s.matches('https?://.*');
+    }
+
     function isClaimingMembership() {
       return isSignedIn()
         && resource.data.uid == ''
@@ -134,12 +155,9 @@ service cloud.firestore {
               'tier', 'logoURL', 'instagram', 'whatsapp', 'youtubeURL'
             ])
           && ('name' in s && s.name is string && s.name.size() >= 1 && s.name.size() <= 80)
-          && (!('imageURL' in s) || (s.imageURL is string && s.imageURL.size() <= 102400
-              && (s.imageURL.matches('data:image/(png|jpeg|webp);base64,.*')
-                || s.imageURL.matches('https?://.*'))))
+          && (!('imageURL' in s) || isDataImageUrl(s.imageURL, 102400) || isHttpUrl(s.imageURL, 102400))
           && (!('phone' in s) || (s.phone is string && s.phone.size() <= 40))
-          && (!('linkURL' in s) || (s.linkURL is string && s.linkURL.size() <= 300
-              && s.linkURL.matches('https?://.*')))
+          && (!('linkURL' in s) || isHttpUrl(s.linkURL, 300))
           && (!('tier' in s) || (s.tier is string && s.tier.size() <= 20))
           && (!('logoURL' in s) || (s.logoURL is string && s.logoURL.size() <= 500))
           && (!('instagram' in s) || (s.instagram is string && s.instagram.size() <= 120))
@@ -177,8 +195,7 @@ service cloud.firestore {
           && (!('email' in d) || (d.email is string && d.email.size() <= 200))
           && (!('address' in d) || (d.address is string && d.address.size() <= 200))
           && (!('openingHours' in d) || (d.openingHours is string && d.openingHours.size() <= 200))
-          && (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 153600
-              && d.logoURL.matches('data:image/(png|jpeg|webp);base64,.*')));
+          && (!('logoURL' in d) || isDataImageUrl(d.logoURL, 153600));
       }
       // El logo del perfil público debe reflejar el de `gyms/{gymId}` (que ya está
       // rate-limiteado). Así el mirror world-readable hereda el límite sin duplicar
@@ -230,8 +247,7 @@ service cloud.firestore {
         let d = request.resource.data;
         return !d.diff(resource.data).affectedKeys().hasAny(['logoURL'])
           || (
-            (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 153600
-              && d.logoURL.matches('data:image/(png|jpeg|webp);base64,.*')))
+            (!('logoURL' in d) || isDataImageUrl(d.logoURL, 153600))
             && (
               // Ventana nueva: primera vez o la anterior ya venció.
               (d.get('logoWindowStart', null) == request.time

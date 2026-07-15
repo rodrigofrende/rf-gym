@@ -27,7 +27,7 @@ import { useTariffs } from '@/hooks/useTariffs'
 import { useToastAction } from '@/hooks/useToastAction'
 import { buildThemeVars, PLATFORM_DEFAULT_THEME } from '@/utils/theme'
 import { resolvePresentation } from '@/utils/presentation'
-import { isSafeHttpUrl } from '@/utils/url'
+import { isSafeHttpUrl, isSafeImageSrc } from '@/utils/url'
 import { tariffIconMeta } from '@/utils/tariffIcons'
 import { frequencyLabel } from '@/utils/tariffs'
 import { formatCurrency } from '@/utils/format'
@@ -202,8 +202,9 @@ function MyGymForm({
 
   const onSubmit = (v: FormValues) =>
     run(
-      () =>
-        save.mutateAsync({
+      async () => {
+        const logoURL = gym.logoURL?.trim()
+        await save.mutateAsync({
           description: v.description,
           videos: v.videos.map((x) => x.url.trim()).filter(isSafeHttpUrl),
           links: v.links
@@ -215,10 +216,12 @@ function MyGymForm({
           address: v.address,
           openingHours: v.openingHours,
           name: gym.name,
-          logoURL: gym.logoURL,
+          // Mirror de marca: data URL válido, o null (deleteField) para no dejar `""`.
+          logoURL: isSafeImageSrc(logoURL) ? logoURL : null,
           theme: gym.theme ?? PLATFORM_DEFAULT_THEME,
           updatedAt: new Date(),
-        }),
+        })
+      },
       { success: 'Presentación actualizada', error: 'No se pudo guardar la presentación' },
     )
 

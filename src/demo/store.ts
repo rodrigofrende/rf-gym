@@ -141,6 +141,11 @@ export function updateGym(gymId: string, payload: Partial<Gym>) {
   if (g) Object.assign(g, payload)
   return ok(undefined)
 }
+export function clearGymLogo(gymId: string) {
+  const g = findGym(gymId)
+  if (g) delete g.logoURL
+  return ok(undefined)
+}
 export function addGymAdmin(gymId: string, uid: string) {
   const g = findGym(gymId)
   if (g && !g.adminUids.includes(uid)) g.adminUids.push(uid)
@@ -199,6 +204,11 @@ export function updateGymPresentation(gymId: string, payload: Partial<GymPresent
     ...payload,
     id: gymId,
   }
+  return ok(undefined)
+}
+export function clearGymPresentationLogo(gymId: string) {
+  const profile = publicProfiles[gymId]
+  if (profile) delete profile.logoURL
   return ok(undefined)
 }
 

@@ -110,9 +110,10 @@ export function BrandingPage() {
           )
         }
         // El logo viaja solo si cambió: los guardados de colores no consumen el límite.
+        // `null` borra el campo (deleteField); nunca escribir `""` (rompe firestore.rules).
         await save.mutateAsync({
           theme: current,
-          logoURL: currentLogo,
+          logoURL: currentLogo || null,
           logoChangeCount: usedNow + 1,
           ...(activeNow ? {} : { startLogoWindow: true }),
         })
