@@ -229,8 +229,8 @@ function SponsorsForm({
               }
             : {}),
           name: gym.name,
-          // Mirror de marca: data URL válido, o null (deleteField) para no dejar `""`.
-          logoURL: isSafeImageSrc(logoURL) ? logoURL : null,
+          // Mirror de marca: solo data URL (rules de publicProfiles); null → deleteField.
+          logoURL: logoURL && /^data:image\//i.test(logoURL) ? logoURL : null,
           theme: gym.theme ?? PLATFORM_DEFAULT_THEME,
           updatedAt: new Date(),
         })

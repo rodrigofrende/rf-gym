@@ -27,7 +27,7 @@ import { useTariffs } from '@/hooks/useTariffs'
 import { useToastAction } from '@/hooks/useToastAction'
 import { buildThemeVars, PLATFORM_DEFAULT_THEME } from '@/utils/theme'
 import { resolvePresentation } from '@/utils/presentation'
-import { isSafeHttpUrl, isSafeImageSrc } from '@/utils/url'
+import { isSafeHttpUrl } from '@/utils/url'
 import { tariffIconMeta } from '@/utils/tariffIcons'
 import { frequencyLabel } from '@/utils/tariffs'
 import { formatCurrency } from '@/utils/format'
@@ -216,8 +216,8 @@ function MyGymForm({
           address: v.address,
           openingHours: v.openingHours,
           name: gym.name,
-          // Mirror de marca: data URL válido, o null (deleteField) para no dejar `""`.
-          logoURL: isSafeImageSrc(logoURL) ? logoURL : null,
+          // Mirror de marca: solo data URL (rules de publicProfiles); null → deleteField.
+          logoURL: logoURL && /^data:image\//i.test(logoURL) ? logoURL : null,
           theme: gym.theme ?? PLATFORM_DEFAULT_THEME,
           updatedAt: new Date(),
         })
