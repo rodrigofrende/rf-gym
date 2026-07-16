@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus, Search, Shield, Users, Wallet } from 'lucide-react'
+import { ChevronRight, Plus, Search, Shield, Trash2, Users, Wallet } from 'lucide-react'
 import type { Member, MemberStatus, Role } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
-import { useCreateMember, useMembers } from '@/hooks/useMembers'
+import { useCreateMember, useMembers, useRemoveMember } from '@/hooks/useMembers'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
 import {
@@ -12,6 +12,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   FullPageSpinner,
   IconButton,
@@ -58,9 +59,24 @@ export function MembersListPage() {
   const run = useToastAction()
   const { data: members = [], isLoading } = useMembers(gymId)
   const createMember = useCreateMember(gymId)
+  const removeMember = useRemoveMember(gymId)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [payMember, setPayMember] = useState<Member | null>(null)
+  const [toDelete, setToDelete] = useState<Member | null>(null)
+
+  // No permitimos auto-eliminarse: un admin que borra su propia fila se
+  // quedaría sin acceso al gimnasio en el acto.
+  const isSelf = (member: Member) => !!user?.uid && member.uid === user.uid
+
+  const confirmDelete = async () => {
+    if (!toDelete) return
+    const ok = await run(() => removeMember.mutateAsync(toDelete.id), {
+      success: 'Socio eliminado',
+      error: 'No se pudo eliminar',
+    })
+    if (ok) setToDelete(null)
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -114,18 +130,35 @@ export function MembersListPage() {
       key: 'actions',
       header: '',
       className: 'w-px whitespace-nowrap',
-      render: (m) =>
-        canRegisterPayment(m) ? (
-          <Tooltip text={`Registrar pago de ${m.fullName}`}>
-            <IconButton
-              icon={<Wallet className="size-5" />}
-              tone="brand"
-              className="border border-brand-100"
-              onClick={(e) => openPay(m, e)}
-              label={`Registrar pago de ${m.fullName}`}
-            />
-          </Tooltip>
-        ) : null,
+      render: (m) => (
+        <div className="flex items-center justify-end gap-1">
+          {canRegisterPayment(m) && (
+            <Tooltip text={`Registrar pago de ${m.fullName}`}>
+              <IconButton
+                icon={<Wallet className="size-5" />}
+                tone="brand"
+                className="border border-brand-100"
+                onClick={(e) => openPay(m, e)}
+                label={`Registrar pago de ${m.fullName}`}
+              />
+            </Tooltip>
+          )}
+          {!isSelf(m) && (
+            <Tooltip text={`Eliminar a ${m.fullName}`}>
+              <IconButton
+                icon={<Trash2 className="size-4" />}
+                tone="danger"
+                className="border border-red-200 text-red-500"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setToDelete(m)
+                }}
+                label={`Eliminar a ${m.fullName}`}
+              />
+            </Tooltip>
+          )}
+        </div>
+      ),
     },
   ]
 
@@ -202,22 +235,33 @@ export function MembersListPage() {
                   </div>
                   <ChevronRight className="size-5 shrink-0 text-zinc-300" aria-hidden />
                 </button>
-                {canRegisterPayment(m) && (
-                <div className="border-t border-zinc-100 p-3">
-                  <div className="flex justify-end">
-                    <div className="flex items-center">
-                      <Tooltip text={`Registrar pago de ${m.fullName}`}>
-                      <IconButton
-                        icon={<Wallet className="size-5" />}
-                        tone="brand"
-                        className="border border-brand-100"
-                        onClick={() => openPay(m)}
-                        label={`Registrar pago de ${m.fullName}`}
-                      />
-                      </Tooltip>
+                {(canRegisterPayment(m) || !isSelf(m)) && (
+                  <div className="border-t border-zinc-100 p-3">
+                    <div className="flex items-center justify-end gap-1">
+                      {canRegisterPayment(m) && (
+                        <Tooltip text={`Registrar pago de ${m.fullName}`}>
+                          <IconButton
+                            icon={<Wallet className="size-5" />}
+                            tone="brand"
+                            className="border border-brand-100"
+                            onClick={() => openPay(m)}
+                            label={`Registrar pago de ${m.fullName}`}
+                          />
+                        </Tooltip>
+                      )}
+                      {!isSelf(m) && (
+                        <Tooltip text={`Eliminar a ${m.fullName}`}>
+                          <IconButton
+                            icon={<Trash2 className="size-4" />}
+                            tone="danger"
+                            className="border border-red-200 text-red-500"
+                            onClick={() => setToDelete(m)}
+                            label={`Eliminar a ${m.fullName}`}
+                          />
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
-                </div>
                 )}
               </Card>
             ))}
@@ -250,6 +294,15 @@ export function MembersListPage() {
           adminUid={user?.uid ?? ''}
         />
       )}
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar socio"
+        description={`¿Querés eliminar a ${toDelete?.fullName}? Se borrarán sus datos, pagos y registros. Esta acción no se puede deshacer.`}
+        loading={removeMember.isPending}
+      />
     </AppLayout>
   )
 }
