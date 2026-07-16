@@ -33,10 +33,12 @@ export function PrivateRoute({
  * NO requiere gym activo (el panel es global, cross-tenant).
  */
 export function SuperAdminRoute({ children }: { children: ReactNode }) {
-  const { user, isInitialized } = useAuth()
+  const { user, isInitialized, claimsResolved } = useAuth()
   const { isLoading, isSuperAdmin } = useTenant()
 
-  if (!isInitialized || isLoading) return <FullPageSpinner />
+  // claimsResolved: el claim de super-admin se resuelve async post-init; esperamos
+  // acá (solo /super/*) para no mostrar Unauthorized por un estado intermedio.
+  if (!isInitialized || isLoading || !claimsResolved) return <FullPageSpinner />
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />
   if (!isSuperAdmin) return <UnauthorizedPage />
   return <>{children}</>

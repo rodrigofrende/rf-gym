@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, KeyRound, Lock, Pencil, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, KeyRound, Pencil, Trash2, Wallet } from 'lucide-react'
 import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
@@ -33,9 +33,9 @@ import { PaymentsTab } from './tabs/PaymentsTab'
 import { ProgressTab } from './tabs/ProgressTab'
 
 type Tab = 'data' | 'notes' | 'payments' | 'routines' | 'progress'
-const TABS: { key: Tab; label: string; locked?: boolean; userOnly?: boolean }[] = [
+const TABS: { key: Tab; label: string; userOnly?: boolean }[] = [
   { key: 'data', label: 'Datos' },
-  { key: 'notes', label: 'Notas privadas', locked: true },
+  { key: 'notes', label: 'Notas' },
   { key: 'payments', label: 'Pagos', userOnly: true },
   { key: 'routines', label: 'Rutinas y cargas' },
   { key: 'progress', label: 'Progreso' },
@@ -165,22 +165,28 @@ export function MemberDetailPage() {
           </div>
         </div>
 
-        <div className="flex gap-1 overflow-x-auto border-t border-zinc-100 px-3">
-          {visibleTabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                'flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors',
-                tab === t.key
-                  ? 'border-brand-600 text-brand-700'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-700',
-              )}
-            >
-              {t.locked && <Lock className="size-3.5" />}
-              {t.label}
-            </button>
-          ))}
+        <div className="relative border-t border-zinc-100">
+          <div className="no-scrollbar flex gap-1 overflow-x-auto px-3">
+            {visibleTabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  'whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors',
+                  tab === t.key
+                    ? 'border-brand-600 text-brand-700'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-700',
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {/* Fade a la derecha: indica que hay más tabs scrolleables en mobile. */}
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-10 rounded-br-[var(--radius-card)] bg-gradient-to-l from-surface to-transparent sm:hidden"
+            aria-hidden
+          />
         </div>
       </Card>
 

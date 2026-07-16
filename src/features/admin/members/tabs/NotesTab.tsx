@@ -7,10 +7,18 @@ import { useToastAction } from '@/hooks/useToastAction'
 import { Badge, Button, Card, EmptyState, IconButton, Input, Select, Spinner, Text } from '@/components/ui'
 import { formatDate } from '@/utils/format'
 
-const TYPE_META: Record<NoteType, { label: string; tone: 'brand' | 'green' | 'neutral'; icon: typeof Target }> = {
-  objective: { label: 'Objetivo', tone: 'brand', icon: Target },
-  weight: { label: 'Peso', tone: 'green', icon: Weight },
-  observation: { label: 'Observación', tone: 'neutral', icon: NotebookPen },
+const TYPE_META: Record<
+  NoteType,
+  { label: string; tone: 'brand' | 'green' | 'neutral'; icon: typeof Target; placeholder: string }
+> = {
+  objective: { label: 'Objetivo', tone: 'brand', icon: Target, placeholder: 'Ej. bajar 4kg en 2 meses' },
+  weight: { label: 'Peso', tone: 'green', icon: Weight, placeholder: 'Ej. 82kg' },
+  observation: {
+    label: 'Observación',
+    tone: 'neutral',
+    icon: NotebookPen,
+    placeholder: 'Ej. mejorar técnica de dominadas',
+  },
 }
 
 /**
@@ -68,7 +76,7 @@ export function NotesTab({
           </div>
           <Input
             className="flex-1"
-            placeholder="Ej. Objetivo: bajar 4kg en 2 meses / Peso: 82kg"
+            placeholder={TYPE_META[type].placeholder}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && add()}

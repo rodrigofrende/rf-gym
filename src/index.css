@@ -36,6 +36,14 @@
   --font-display: 'Anton', 'Montserrat', ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Scroll horizontal sin scrollbar visible (tiras de tabs/chips en mobile). */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 html,
 body,
 #root {

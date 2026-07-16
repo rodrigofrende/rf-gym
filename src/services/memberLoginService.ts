@@ -21,7 +21,7 @@ export async function syncMemberLoginIndex(
   gymId: string,
   memberId: string,
   member: Omit<Member, 'id'> | Member,
-  gym?: Gym | null,
+  gym?: Pick<Gym, 'name'> | null,
 ) {
   if (env.demoMode) return demo.syncMemberLoginIndex(gymId, memberId, member)
   const gymData = gym ?? (await getGym(gymId))
@@ -45,10 +45,18 @@ export async function updateMemberAuthStatus(
   memberId: string,
   authStatus: MemberAuthStatus,
   extra: Partial<Pick<Member, 'passwordUpdatedAt' | 'passwordResetRequestedAt'>> = {},
+  // Datos ya leídos por el caller (ej. el claim del login): evita el getOne del
+  // member y el getGym del índice — 2 round-trips menos en el primer acceso.
+  preloaded: { member?: Member; gymName?: string } = {},
 ) {
   if (env.demoMode) return demo.updateMemberAuthStatus(gymId, memberId, authStatus, extra)
-  const member = await getOne<Member>(paths.member(gymId, memberId))
+  const member = preloaded.member ?? (await getOne<Member>(paths.member(gymId, memberId)))
   if (!member) throw new Error('member-not-found')
   await updateOne(paths.member(gymId, memberId), { authStatus, ...extra })
-  await syncMemberLoginIndex(gymId, memberId, { ...member, authStatus, ...extra })
+  await syncMemberLoginIndex(
+    gymId,
+    memberId,
+    { ...member, authStatus, ...extra },
+    preloaded.gymName ? { name: preloaded.gymName } : undefined,
+  )
 }

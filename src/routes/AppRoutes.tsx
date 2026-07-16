@@ -1,59 +1,56 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { FullPageSpinner } from '@/components/ui'
+// Eager: solo el camino crítico del primer acceso (QR → check-in → login →
+// crear contraseña). Todo lo demás es lazy para que un socio en mobile no
+// descargue el panel admin/super antes de ver el login.
 import { LoginPage } from '@/features/auth/LoginPage'
 import { SetPasswordPage } from '@/features/auth/SetPasswordPage'
 import { TenantSelectPage } from '@/features/tenant-select/TenantSelectPage'
-// Lazy: el panel admin trae recharts; lo separamos para no pesar el bundle inicial
-// (login y vista de socio mobile no lo descargan).
-const AdminDashboardPage = lazy(() =>
-  import('@/features/admin/dashboard/AdminDashboardPage').then((m) => ({
-    default: m.AdminDashboardPage,
-  })),
-)
-const ScanQrPage = lazy(() =>
-  import('@/features/member/attendance/ScanQrPage').then((m) => ({
-    default: m.ScanQrPage,
-  })),
-)
-// Lazy: la página pública la abren prospectos sin login; la separamos para no
-// arrastrar el resto del bundle a esa primera visita.
-const PublicGymPage = lazy(() =>
-  import('@/features/public/PublicGymPage').then((m) => ({
-    default: m.PublicGymPage,
-  })),
-)
-import { MembersListPage } from '@/features/admin/members/MembersListPage'
-import { MemberDetailPage } from '@/features/admin/members/MemberDetailPage'
-import { RoutinesListPage } from '@/features/admin/routines/RoutinesListPage'
-import { RoutineEditorPage } from '@/features/admin/routines/RoutineEditorPage'
-import { ExercisesListPage } from '@/features/admin/exercises/ExercisesListPage'
-import { TariffsListPage } from '@/features/admin/tariffs/TariffsListPage'
-import { BrandingPage } from '@/features/admin/branding/BrandingPage'
-import { MyGymPage } from '@/features/admin/my-gym/MyGymPage'
-import { SponsorsPage } from '@/features/admin/sponsors/SponsorsPage'
-import { MyGymMemberPage } from '@/features/member/my-gym/MyGymMemberPage'
-import { AdminQrPage } from '@/features/admin/attendance/AdminQrPage'
-import { TodayAttendancePage } from '@/features/admin/attendance/TodayAttendancePage'
 import { CheckInPage } from '@/features/member/attendance/CheckInPage'
-import { ProfilePage } from '@/features/member/profile/ProfilePage'
-import { MyRoutinesPage } from '@/features/member/routines/MyRoutinesPage'
-import { MyLogsPage } from '@/features/member/logs/MyLogsPage'
-import { MyAttendancePage } from '@/features/member/attendance/MyAttendancePage'
 import { SocioPaymentGate } from '@/features/payments/SocioPaymentGate'
-import { SuperGymsPage } from '@/features/super/SuperGymsPage'
-import { SuperDashboardPage } from '@/features/super/SuperDashboardPage'
-import { PlansListPage } from '@/features/super/PlansListPage'
 import { PrivateRoute, SuperAdminRoute } from './PrivateRoute'
 import { defaultHomeForRole, ROUTES } from './routePaths'
 
+/** Lazy para páginas con named export. */
+function lazyPage<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
+  return lazy(() => load().then((m) => ({ default: pick(m) })))
+}
+
+// Panel admin (el dashboard además trae recharts)
+const AdminDashboardPage = lazyPage(() => import('@/features/admin/dashboard/AdminDashboardPage'), (m) => m.AdminDashboardPage)
+const MembersListPage = lazyPage(() => import('@/features/admin/members/MembersListPage'), (m) => m.MembersListPage)
+const MemberDetailPage = lazyPage(() => import('@/features/admin/members/MemberDetailPage'), (m) => m.MemberDetailPage)
+const RoutinesListPage = lazyPage(() => import('@/features/admin/routines/RoutinesListPage'), (m) => m.RoutinesListPage)
+const RoutineEditorPage = lazyPage(() => import('@/features/admin/routines/RoutineEditorPage'), (m) => m.RoutineEditorPage)
+const ExercisesListPage = lazyPage(() => import('@/features/admin/exercises/ExercisesListPage'), (m) => m.ExercisesListPage)
+const TariffsListPage = lazyPage(() => import('@/features/admin/tariffs/TariffsListPage'), (m) => m.TariffsListPage)
+const BrandingPage = lazyPage(() => import('@/features/admin/branding/BrandingPage'), (m) => m.BrandingPage)
+const MyGymPage = lazyPage(() => import('@/features/admin/my-gym/MyGymPage'), (m) => m.MyGymPage)
+const SponsorsPage = lazyPage(() => import('@/features/admin/sponsors/SponsorsPage'), (m) => m.SponsorsPage)
+const AdminQrPage = lazyPage(() => import('@/features/admin/attendance/AdminQrPage'), (m) => m.AdminQrPage)
+const TodayAttendancePage = lazyPage(() => import('@/features/admin/attendance/TodayAttendancePage'), (m) => m.TodayAttendancePage)
+// Socio (ScanQrPage trae jsqr)
+const ScanQrPage = lazyPage(() => import('@/features/member/attendance/ScanQrPage'), (m) => m.ScanQrPage)
+const MyRoutinesPage = lazyPage(() => import('@/features/member/routines/MyRoutinesPage'), (m) => m.MyRoutinesPage)
+const MyLogsPage = lazyPage(() => import('@/features/member/logs/MyLogsPage'), (m) => m.MyLogsPage)
+const MyAttendancePage = lazyPage(() => import('@/features/member/attendance/MyAttendancePage'), (m) => m.MyAttendancePage)
+const ProfilePage = lazyPage(() => import('@/features/member/profile/ProfilePage'), (m) => m.ProfilePage)
+const MyGymMemberPage = lazyPage(() => import('@/features/member/my-gym/MyGymMemberPage'), (m) => m.MyGymMemberPage)
+// Pública y super-admin
+const PublicGymPage = lazyPage(() => import('@/features/public/PublicGymPage'), (m) => m.PublicGymPage)
+const SuperGymsPage = lazyPage(() => import('@/features/super/SuperGymsPage'), (m) => m.SuperGymsPage)
+const SuperDashboardPage = lazyPage(() => import('@/features/super/SuperDashboardPage'), (m) => m.SuperDashboardPage)
+const PlansListPage = lazyPage(() => import('@/features/super/PlansListPage'), (m) => m.PlansListPage)
+
 /** Decide la home según el estado de auth/rol para la ruta raíz. */
 function HomeRedirect() {
-  const { user, isInitialized } = useAuth()
+  const { user, isInitialized, claimsResolved } = useAuth()
   const { isLoading, role, isSuperAdmin } = useTenant()
-  if (!isInitialized || isLoading) return <FullPageSpinner />
+  // claimsResolved: necesario porque la decisión depende de isSuperAdmin.
+  if (!isInitialized || isLoading || !claimsResolved) return <FullPageSpinner />
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />
   if (isSuperAdmin) return <Navigate to={defaultHomeForRole(null, { isSuperAdmin: true })} replace />
   if (!role) return <Navigate to={ROUTES.SELECT_GYM} replace />

@@ -1,19 +1,17 @@
 import { useEffect } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { useQueryClient } from '@tanstack/react-query'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { KeyRound, LockKeyhole } from 'lucide-react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import type { Member } from '@/types'
+import type { MemberLoginIndex } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { Button, Card, FormField, Heading, PasswordInput, Text } from '@/components/ui'
-import { claimMembership, claimPendingMemberships, type ClaimedMembership } from '@/services/membershipsService'
+import { claimMembership, claimPendingMemberships } from '@/services/membershipsService'
 import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
-import { getOne } from '@/services/firestore'
-import { paths } from '@/services/paths'
 import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
 import { queryKeys } from '@/hooks/queryKeys'
@@ -41,6 +39,7 @@ function passwordHint(password: string, email: string) {
 
 export function SetPasswordPage() {
   const [params] = useSearchParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user, isSuperAdmin, loginEmail, registerEmail, changePassword, updateDisplayName, isInitialized } = useAuth()
@@ -81,14 +80,21 @@ export function SetPasswordPage() {
     }
 
     try {
-      const login = await getMemberLogin(email)
+      // LoginPage ya leyó el índice de login: lo reutilizamos vía location.state
+      // (con fallback a red para deep-links directos a /set-password).
+      const stateLogin = (location.state as { login?: MemberLoginIndex } | null)?.login
+      const login =
+        stateLogin?.email?.toLowerCase() === email ? stateLogin : await getMemberLogin(email)
       if (!login) {
         notify('No encontramos un socio con ese email', 'error')
         return
       }
 
+      const authExtra = {
+        passwordUpdatedAt: Timestamp.now(),
+        passwordResetRequestedAt: null,
+      }
       let activatedUser = user
-      let membershipsToActivate: Pick<ClaimedMembership, 'gymId' | 'memberId'>[] = []
       if (mode === 'create') {
         let createdUser = user?.email?.toLowerCase() === email ? user : null
         if (!createdUser) {
@@ -109,50 +115,59 @@ export function SetPasswordPage() {
           }
         }
         activatedUser = createdUser
-        const unique = new Map<string, ClaimedMembership>()
 
         // 1) Claim REQUERIDO: por path directo (getDoc + updateDoc). No usa
         //    collectionGroup ni requiere índice. Si falla, es error real → propaga.
         const directClaim = await claimMembership(createdUser, login.gymId, login.memberId)
-        if (directClaim) unique.set(`${directClaim.gymId}:${directClaim.memberId}`, directClaim)
 
-        // 2) Nombre del perfil global: lo tomamos del member doc (ya reclamado y por
-        //    tanto legible), no del índice público de login. Best-effort.
-        try {
-          const member = await getOne<Member>(paths.member(login.gymId, login.memberId))
-          if (member?.fullName) await updateDisplayName(member.fullName)
-        } catch {
-          // El displayName se puede editar luego desde el perfil.
+        // 2) En paralelo (el claim ya trae el member leído, sin re-lecturas):
+        //    activación del gym principal (requerida) + displayName (best-effort).
+        if (directClaim) {
+          await Promise.all([
+            updateMemberAuthStatus(login.gymId, login.memberId, 'active', authExtra, {
+              member: directClaim.member,
+              gymName: login.gymName,
+            }),
+            directClaim.member?.fullName
+              ? updateDisplayName(directClaim.member.fullName).catch(() => {
+                  // El displayName se puede editar luego desde el perfil.
+                })
+              : Promise.resolve(),
+          ])
         }
 
-        // 3) Claims adicionales por email (multi-tenant), BEST-EFFORT: si el índice
-        //    compuesto no está desplegado, esto lanza failed-precondition; no debe
-        //    abortar la activación del claim principal.
-        try {
-          const pendingClaims = await claimPendingMemberships(createdUser)
-          pendingClaims.forEach((membership) => {
-            unique.set(`${membership.gymId}:${membership.memberId}`, membership)
+        // 3) Claims adicionales por email (multi-tenant) en BACKGROUND, best-effort:
+        //    son el caso raro y no deben demorar el ingreso al gimnasio que escaneó.
+        void claimPendingMemberships(createdUser)
+          .then((pendingClaims) =>
+            Promise.allSettled(
+              pendingClaims
+                .filter((m) => !(m.gymId === login.gymId && m.memberId === login.memberId))
+                .map((m) =>
+                  updateMemberAuthStatus(m.gymId, m.memberId, 'active', authExtra, {
+                    member: m.member,
+                  }),
+                ),
+            ),
+          )
+          .then(() => {
+            if (createdUser?.uid) {
+              queryClient.invalidateQueries({ queryKey: queryKeys.memberships(createdUser.uid) })
+            }
           })
-        } catch {
-          // best-effort; el claim principal ya quedó hecho.
-        }
-
-        membershipsToActivate = [...unique.values()]
+          .catch(() => {
+            // best-effort; el claim principal ya quedó hecho.
+          })
       } else {
         await changePassword(values.password)
-        membershipsToActivate = [{ gymId: login.gymId, memberId: login.memberId }]
+        await updateMemberAuthStatus(login.gymId, login.memberId, 'active', authExtra, {
+          gymName: login.gymName,
+        })
       }
 
-      await Promise.all(
-        membershipsToActivate.map((membership) =>
-          updateMemberAuthStatus(membership.gymId, membership.memberId, 'active', {
-            passwordUpdatedAt: Timestamp.now(),
-            passwordResetRequestedAt: null,
-          }),
-        ),
-      )
       if (activatedUser?.uid) {
-        await queryClient.invalidateQueries({ queryKey: queryKeys.memberships(activatedUser.uid) })
+        // Sin await: la refetch corre mientras navegamos (HomeRedirect muestra spinner).
+        void queryClient.invalidateQueries({ queryKey: queryKeys.memberships(activatedUser.uid) })
       }
       notify(mode === 'create' ? 'Contraseña creada' : 'Contraseña actualizada', 'success')
       navigate('/')

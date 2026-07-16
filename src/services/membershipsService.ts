@@ -21,6 +21,8 @@ export interface ClaimedMembership {
   gymId: string
   memberId: string
   role: Role
+  /** Member ya leído durante el claim: evita re-leerlo en el flujo de login. */
+  member?: Member
 }
 
 /**
@@ -47,7 +49,7 @@ export async function claimPendingMemberships(user: User): Promise<ClaimedMember
         memberId: d.id,
         role: member.role,
       })
-      return { gymId, memberId: d.id, role: member.role } satisfies ClaimedMembership
+      return { gymId, memberId: d.id, role: member.role, member } satisfies ClaimedMembership
     }),
   )
   return claimed.filter((m) => m !== null) as ClaimedMembership[]
@@ -69,7 +71,7 @@ export async function claimMembership(user: User, gymId: string, memberId: strin
     memberId,
     role: member.role,
   })
-  return { gymId, memberId, role: member.role }
+  return { gymId, memberId, role: member.role, member }
 }
 
 /** Trae todas las membresías ya reclamadas del usuario, en todos los gyms. */

@@ -64,8 +64,11 @@ export function LoginPage() {
         const login = await getMemberLogin(email)
         // Alta por "invitación reclamable": si todavía no creó su contraseña,
         // lo mandamos directo a crearla en vez de pedirle una que no existe.
+        // Pasamos el índice ya leído por state para ahorrarle esa lectura.
         if (login?.authStatus === 'pending_password') {
-          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(email)}&mode=create`)
+          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(email)}&mode=create`, {
+            state: { login },
+          })
           return
         }
         // Socio con contraseña, super-admin o cuenta directa (Google/email) sin
@@ -86,7 +89,9 @@ export function LoginPage() {
         loggedUser = await loginEmail(resolvedEmail || email, values.password)
       } catch (err) {
         if (login?.authStatus === 'pending_password' && isFirstAccessAuthFailure(err)) {
-          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail || email)}&mode=create`)
+          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail || email)}&mode=create`, {
+            state: { login },
+          })
           return
         }
         throw err
@@ -115,18 +120,27 @@ export function LoginPage() {
 
       await Promise.all(
         [...claimed.values()].map(async (membership) => {
-          const member = await getOne<Member>(paths.member(membership.gymId, membership.memberId))
+          // El claim ya trae el member leído; solo re-leemos si faltara.
+          const member =
+            membership.member ??
+            (await getOne<Member>(paths.member(membership.gymId, membership.memberId)))
           if (!member || member.authStatus === 'active' || member.authStatus === 'password_change_required') return
-          await updateMemberAuthStatus(membership.gymId, membership.memberId, 'active', {
-            passwordUpdatedAt: Timestamp.now(),
-          })
+          await updateMemberAuthStatus(
+            membership.gymId,
+            membership.memberId,
+            'active',
+            { passwordUpdatedAt: Timestamp.now() },
+            { member, gymName: login?.gymId === membership.gymId ? login.gymName : undefined },
+          )
         }),
       )
 
-      await queryClient.invalidateQueries({ queryKey: queryKeys.memberships(loggedUser.uid) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.memberships(loggedUser.uid) })
       let shouldForcePasswordChange = false
       if (login?.gymId && login?.memberId) {
-        const member = await getOne<Member>(paths.member(login.gymId, login.memberId))
+        const member =
+          claimed.get(`${login.gymId}:${login.memberId}`)?.member ??
+          (await getOne<Member>(paths.member(login.gymId, login.memberId)))
         shouldForcePasswordChange = member?.authStatus === 'password_change_required'
       }
       if (shouldForcePasswordChange) {

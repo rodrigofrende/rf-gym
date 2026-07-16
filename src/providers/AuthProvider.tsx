@@ -29,6 +29,12 @@ interface AuthContextValue {
   isInitialized: boolean
   /** Capacidad global de super-admin, leída del custom claim `superAdmin` del token. */
   isSuperAdmin: boolean
+  /**
+   * true cuando el custom claim ya fue resuelto. Los claims se resuelven DESPUÉS
+   * de isInitialized para no bloquear el primer render (login/check-in) con el
+   * parse/refresh del token; solo los guards que dependen de isSuperAdmin esperan.
+   */
+  claimsResolved: boolean
   loginEmail: (email: string, password: string) => Promise<User>
   registerEmail: (name: string, email: string, password: string) => Promise<User>
   changePassword: (password: string) => Promise<void>
@@ -67,6 +73,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
       user: identity ? identityToUser(identity) : null,
       isInitialized: true,
       isSuperAdmin: identity === 'superadmin',
+      claimsResolved: true,
       loginEmail: async (email) => {
         const next = email.includes('tigerfit.com') ? 'socio' : 'admin'
         setIdentity(next)
@@ -93,23 +100,26 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [claimsResolved, setClaimsResolved] = useState(false)
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
-      // Resolvemos el claim ANTES de marcar inicializado para que los guards
-      // (SuperAdminRoute) y useMemberships no vean un estado intermedio incorrecto.
-      let superAdmin = false
-      if (u) {
-        try {
-          const token = await u.getIdTokenResult()
-          superAdmin = token.claims.superAdmin === true
-        } catch {
-          superAdmin = false
-        }
-      }
-      setIsSuperAdmin(superAdmin)
+    return onAuthStateChanged(auth, (u) => {
+      // Inicializamos YA para que login/check-in pinten sin esperar el token.
+      // El claim de super-admin se resuelve aparte; HomeRedirect y SuperAdminRoute
+      // esperan claimsResolved antes de decidir, así no ven un estado intermedio.
       setUser(u)
       setIsInitialized(true)
+      if (!u) {
+        setIsSuperAdmin(false)
+        setClaimsResolved(true)
+        return
+      }
+      setClaimsResolved(false)
+      void u
+        .getIdTokenResult()
+        .then((token) => setIsSuperAdmin(token.claims.superAdmin === true))
+        .catch(() => setIsSuperAdmin(false))
+        .finally(() => setClaimsResolved(true))
     })
   }, [])
 
@@ -118,6 +128,7 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
       user,
       isInitialized,
       isSuperAdmin,
+      claimsResolved,
       loginEmail: async (email, password) => {
         const cred = await signInWithEmailAndPassword(auth, email, password)
         return cred.user
@@ -145,7 +156,7 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
         await signOut(auth)
       },
     }),
-    [user, isInitialized, isSuperAdmin],
+    [user, isInitialized, isSuperAdmin, claimsResolved],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

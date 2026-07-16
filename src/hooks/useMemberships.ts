@@ -14,7 +14,9 @@ export function useMemberships(user: User | null | undefined, isSuperAdmin: bool
       return listMembershipsForUser((user as User).uid, isSuperAdmin)
     },
     enabled: !!user?.uid,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    // Las mutaciones que cambian membresías invalidan ['memberships'] explícitamente;
+    // sin staleTime, cada transición de ruta del login re-dispara el listado completo
+    // (1 + 2×N reads) y en mobile eso se siente como espera muerta.
+    staleTime: 60_000,
   })
 }
