@@ -85,6 +85,16 @@ export function formatExerciseVolume(exercise: Exercise): string {
   return `${exercise.sets}×${exercise.reps}`
 }
 
+/** 45 → "45s", 60 → "1m", 90 → "1m 30s". null si no hay descanso definido. */
+export function formatRest(seconds?: number): string | null {
+  if (!seconds || seconds <= 0) return null
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  if (m === 0) return `${s}s`
+  if (s === 0) return `${m}m`
+  return `${m}m ${s}s`
+}
+
 export function formatLogSet(set: LogSet, loadType?: StoredLoadType): string {
   const shape = loadTypeMeta(loadType).shape
   const { weight, reps, seconds } = set

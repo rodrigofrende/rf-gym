@@ -36,7 +36,7 @@ import {
   filterExercises,
   muscleGroupLabel,
 } from '@/utils/exercises'
-import { loadTypeMeta } from '@/utils/loadTypes'
+import { formatRest, loadTypeMeta } from '@/utils/loadTypes'
 import { canCreateExercise, usageLabel } from '@/utils/plans'
 import { ExerciseFormModal } from './ExerciseFormModal'
 
@@ -264,12 +264,6 @@ export function ExercisesListPage() {
   )
 }
 
-function formatRestMinutes(seconds?: number) {
-  if (!seconds) return '-'
-  const minutes = seconds / 60
-  return `${Number.isInteger(minutes) ? minutes : minutes.toFixed(1)} min`
-}
-
 function ExerciseCard({
   exercise,
   onEdit,
@@ -295,7 +289,7 @@ function ExerciseCard({
             <div className="mt-1 flex flex-wrap gap-1.5">
               <Badge tone="brand">{categoryLabel(exercise.category)}</Badge>
               <Badge tone="neutral">
-                <LoadIcon className="mr-1 size-3" />
+                <LoadIcon className="mr-1 size-3.5" />
                 {loadTypeMeta(exercise.loadType).shortLabel}
               </Badge>
             </div>
@@ -330,7 +324,7 @@ function ExerciseCard({
         <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3 text-center">
           <MiniMetric label="Series" value={exercise.defaultSets ?? '-'} />
           <MiniMetric label="Reps" value={exercise.defaultReps ?? '-'} />
-          <MiniMetric label="Descanso" value={formatRestMinutes(exercise.defaultRestSec)} />
+          <MiniMetric label="Descanso" value={formatRest(exercise.defaultRestSec) ?? '-'} />
         </div>
       )}
     </Card>

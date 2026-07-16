@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
-import { ChevronDown, ClipboardList, History, Lock } from 'lucide-react'
+import { ChevronDown, ClipboardList, History, Lock, Pencil, Plus } from 'lucide-react'
 import type { Exercise, LogSet, Routine, WorkoutLog } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -11,11 +11,13 @@ import { useMemberAssignments, useRoutines } from '@/hooks/useRoutines'
 import { useGym } from '@/hooks/useGym'
 import { usePlans } from '@/hooks/usePlans'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, EmptyState, FullPageSpinner, Text } from '@/components/ui'
+import { Badge, Card, EmptyState, FullPageSpinner, Text, Tooltip } from '@/components/ui'
+import { CoachNote } from '@/components/shared/CoachNote'
+import { ExercisePrescription } from '@/components/shared/ExercisePrescription'
 import { cn } from '@/utils/cn'
 import { formatDate } from '@/utils/format'
 import { parseDateInput, todayDateInput } from '@/utils/dates'
-import { formatLogSet, formatExerciseVolume, loadTypeMeta } from '@/utils/loadTypes'
+import { formatLogSet, loadTypeMeta } from '@/utils/loadTypes'
 import { routineIconMeta } from '@/utils/routineIcons'
 import { dailyLogId, exerciseLogKey } from '@/utils/logs'
 import { canMemberLog } from '@/utils/plans'
@@ -159,7 +161,7 @@ export function MyRoutinesPage() {
                     <Text variant="listItem" className="truncate">
                       {routine.name}
                     </Text>
-                    {routine.description && (
+                    {routine.description && !isOpen && (
                       <p className="truncate text-xs text-zinc-500">{routine.description}</p>
                     )}
                   </div>
@@ -174,63 +176,56 @@ export function MyRoutinesPage() {
 
                 {isOpen && (
                   <div className="space-y-2 border-t border-zinc-100 px-4 pb-4 pt-3 sm:px-5">
+                    {routine.description && <CoachNote>{routine.description}</CoachNote>}
+                    <div className="divide-y divide-zinc-200/70">
                     {routine.exercises.map((ex, i) => {
                       const last = lastByExercise.get(ex.name)
                       const exerciseKey = exerciseLogKey(ex.name, ex.exerciseId)
                       const todayLog = dailyLogById.get(dailyLogId(dayKey, routine.id, exerciseKey))
                       const meta = loadTypeMeta(ex.loadType)
                       const LoadIcon = meta.icon
+                      const logState: LogActionState =
+                        !hasCheckedInToday || (!logGate.allowed && !todayLog)
+                          ? 'locked'
+                          : todayLog
+                            ? 'edit'
+                            : 'register'
+                      const lockedReason = !hasCheckedInToday
+                        ? 'Escaneá el QR del gimnasio para habilitar la carga de hoy'
+                        : logGate.reason
                       return (
-                        <div
-                          key={`${ex.name}-${i}`}
-                          className="flex flex-col gap-2 rounded-lg border border-zinc-100 p-3 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div className="flex items-start gap-3">
+                        <div key={`${ex.name}-${i}`} className="py-3 first:pt-1 last:pb-0">
+                          <div className="flex items-center gap-3">
                             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
                               <LoadIcon className="size-4" aria-hidden />
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-zinc-900">{ex.name}</p>
-                              <p className="text-sm text-zinc-500">
-                                {formatExerciseVolume(ex)}
-                                {` · ${meta.label}`}
-                                {ex.intensity ? ` · ${ex.intensity}` : ''}
-                                {ex.weight ? ` · ${ex.weight}` : ''}
-                                {ex.restSec ? ` · ${ex.restSec}s descanso` : ''}
-                              </p>
-                              {last && (
-                                <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-zinc-400">
-                                  <History className="size-3.5" /> Último ({formatDate(last.date)}):
-                                  {last.sets.map((s, idx) => (
-                                    <span key={idx} className="font-medium text-zinc-600">
-                                      {formatLogSet(s, ex.loadType)}
-                                      {idx < last.sets.length - 1 ? ',' : ''}
-                                    </span>
-                                  ))}
-                                </p>
-                              )}
-                            </div>
+                            <p className="min-w-0 flex-1 font-medium text-zinc-900">{ex.name}</p>
+                            <LogActionButton
+                              state={logState}
+                              exerciseName={ex.name}
+                              reason={lockedReason}
+                              onClick={() => setActive({ routine, exercise: ex, existingLog: todayLog })}
+                            />
                           </div>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            fullWidth
-                            className="sm:w-auto"
-                            disabled={!hasCheckedInToday || (!logGate.allowed && !todayLog)}
-                            title={
-                              !hasCheckedInToday
-                                ? 'Escaneá el QR para habilitar la carga'
-                                : logGate.allowed || todayLog
-                                  ? undefined
-                                  : logGate.reason
-                            }
-                            onClick={() => setActive({ routine, exercise: ex, existingLog: todayLog })}
-                          >
-                            {todayLog ? 'Editar carga' : 'Registrar carga'}
-                          </Button>
+                          <div className="mt-2 space-y-1.5">
+                            <ExercisePrescription exercise={ex} />
+                            {ex.notes && <CoachNote>{ex.notes}</CoachNote>}
+                            {last && (
+                              <p className="flex flex-wrap items-center gap-1 text-xs text-zinc-400">
+                                <History className="size-3.5" /> Último ({formatDate(last.date)}):
+                                {last.sets.map((s, idx) => (
+                                  <span key={idx} className="font-medium text-zinc-600">
+                                    {formatLogSet(s, ex.loadType)}
+                                    {idx < last.sets.length - 1 ? ',' : ''}
+                                  </span>
+                                ))}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       )
                     })}
+                    </div>
                   </div>
                 )}
               </Card>
@@ -253,4 +248,47 @@ export function MyRoutinesPage() {
       )}
     </AppLayout>
   )
+}
+
+type LogActionState = 'register' | 'edit' | 'locked'
+
+// CTA principal de la página: compacto para no competir con la prescripción,
+// pero sólido en su estado activo para que se lea como "la" acción.
+function LogActionButton({
+  state,
+  exerciseName,
+  reason,
+  onClick,
+}: {
+  state: LogActionState
+  exerciseName: string
+  reason?: string
+  onClick: () => void
+}) {
+  const Icon = state === 'edit' ? Pencil : state === 'locked' ? Lock : Plus
+  const button = (
+    <button
+      type="button"
+      disabled={state === 'locked'}
+      onClick={onClick}
+      aria-label={
+        state === 'edit'
+          ? `Editar carga de ${exerciseName}`
+          : state === 'register'
+            ? `Registrar carga de ${exerciseName}`
+            : `Carga bloqueada${reason ? `: ${reason}` : ''}`
+      }
+      className={cn(
+        'inline-flex size-10 shrink-0 items-center justify-center rounded-full transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+        state === 'register' && 'bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-500',
+        state === 'edit' &&
+          'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 focus-visible:ring-emerald-400',
+        state === 'locked' && 'cursor-not-allowed border border-zinc-100 bg-zinc-50 text-zinc-400',
+      )}
+    >
+      <Icon className={state === 'register' ? 'size-5' : 'size-4'} aria-hidden />
+    </button>
+  )
+  return state === 'locked' && reason ? <Tooltip text={reason}>{button}</Tooltip> : button
 }

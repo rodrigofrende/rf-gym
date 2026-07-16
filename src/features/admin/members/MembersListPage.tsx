@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus, Search, Users, Wallet } from 'lucide-react'
-import type { Member, MemberStatus } from '@/types'
+import { ChevronRight, Plus, Search, Shield, Users, Wallet } from 'lucide-react'
+import type { Member, MemberStatus, Role } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { useCreateMember, useMembers } from '@/hooks/useMembers'
@@ -23,7 +23,7 @@ import {
   Tooltip,
   type Column,
 } from '@/components/ui'
-import { STATUS_LABEL } from '@/utils/roles'
+import { ROLE_LABEL, STATUS_LABEL } from '@/utils/roles'
 import { adminMemberDetail } from '@/routes/routePaths'
 import { MemberFormModal } from './MemberFormModal'
 import { MemberRegisterPaymentModal } from './MemberRegisterPaymentModal'
@@ -36,6 +36,18 @@ const STATUS_TONE: Record<MemberStatus, 'green' | 'amber' | 'red'> = {
 
 function canRegisterPayment(member: Member): boolean {
   return member.role === 'user'
+}
+
+function RoleBadge({ role }: { role: Role }) {
+  if (role === 'admin') {
+    return (
+      <Badge tone="violet">
+        <Shield className="mr-1 size-3.5" aria-hidden />
+        {ROLE_LABEL.admin}
+      </Badge>
+    )
+  }
+  return <Badge tone="neutral">{ROLE_LABEL.user}</Badge>
 }
 
 export function MembersListPage() {
@@ -72,7 +84,10 @@ export function MembersListPage() {
         <div className="flex items-center gap-3">
           <Avatar name={m.fullName} src={m.photoURL} size="sm" />
           <div>
-            <Text variant="listItem">{m.fullName}</Text>
+            <div className="flex flex-wrap items-center gap-2">
+              <Text variant="listItem">{m.fullName}</Text>
+              <RoleBadge role={m.role} />
+            </div>
             <Sensitive className="block text-xs text-zinc-500">{m.email}</Sensitive>
           </div>
         </div>
@@ -175,6 +190,7 @@ export function MembersListPage() {
                     </Text>
                     <Sensitive className="block truncate text-xs text-zinc-500">{m.email}</Sensitive>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <RoleBadge role={m.role} />
                       <Badge tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Badge>
                       {m.role === 'user' && m.monthlyCost != null ? (
                         <span className="text-xs text-zinc-500">

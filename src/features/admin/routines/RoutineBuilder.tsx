@@ -47,6 +47,7 @@ import type {
 import { useTenant } from '@/providers/TenantProvider'
 import { useExercises } from '@/hooks/useExercises'
 import { Badge, Button, Card, FormField, IconSelect, InfoTooltip, Input, Select } from '@/components/ui'
+import { ExercisePrescription } from '@/components/shared/ExercisePrescription'
 import { cn } from '@/utils/cn'
 import {
   EXERCISE_CATEGORY_OPTIONS,
@@ -56,12 +57,7 @@ import {
   filterExercises,
   muscleGroupLabel,
 } from '@/utils/exercises'
-import {
-  formatExerciseVolume,
-  LOAD_TYPE_OPTIONS,
-  loadTypeMeta,
-  normalizeLoadType,
-} from '@/utils/loadTypes'
+import { LOAD_TYPE_OPTIONS, loadTypeMeta, normalizeLoadType } from '@/utils/loadTypes'
 import { ROUTINE_ICON_OPTIONS } from '@/utils/routineIcons'
 
 const LOAD_TYPE_VALUES = ['weight', 'time', 'bodyweight'] as const satisfies readonly LoadType[]
@@ -469,7 +465,7 @@ function PoolExerciseCard({
             <p className="truncate text-sm font-semibold text-zinc-800">{exercise.name}</p>
             {addedCount > 0 ? (
               <Badge tone="green">
-                <Check className="mr-1 size-3" />
+                <Check className="mr-1 size-3.5" />
                 {addedCount} en rutina
               </Badge>
             ) : null}
@@ -477,7 +473,7 @@ function PoolExerciseCard({
           <div className="mt-1 flex flex-wrap gap-1.5">
             <Badge tone="brand">{categoryLabel(exercise.category)}</Badge>
             <Badge tone="neutral">
-              <LoadIcon className="mr-1 size-3" />
+              <LoadIcon className="mr-1 size-3.5" />
               {meta.shortLabel}
             </Badge>
           </div>
@@ -627,10 +623,10 @@ function SortableExerciseCard({
             {name || 'Sin nombre'}
           </span>
           {!isOpen && (
-            <span className="ml-auto hidden shrink-0 items-center gap-1.5 pl-2 sm:flex">
-              <Badge tone="neutral">{formatExerciseVolume(summaryExercise)}</Badge>
-              <Badge tone="brand">{meta.shortLabel}</Badge>
-            </span>
+            <ExercisePrescription
+              exercise={summaryExercise}
+              className="ml-auto hidden shrink-0 pl-2 sm:flex"
+            />
           )}
           {hasError && <span className="size-1.5 shrink-0 rounded-full bg-red-500" aria-hidden />}
         </button>

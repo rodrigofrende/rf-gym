@@ -17,7 +17,9 @@ import {
   IconButton,
   Text,
 } from '@/components/ui'
-import { formatExerciseVolume, loadTypeMeta } from '@/utils/loadTypes'
+import { CoachNote } from '@/components/shared/CoachNote'
+import { ExercisePrescription } from '@/components/shared/ExercisePrescription'
+import { loadTypeMeta } from '@/utils/loadTypes'
 import { routineIconMeta } from '@/utils/routineIcons'
 import { ROUTES } from '@/routes/routePaths'
 import { RoutineBuilder } from './RoutineBuilder'
@@ -219,16 +221,8 @@ function ExerciseSummary({ exercise, index }: { exercise: Exercise; index: numbe
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-zinc-400">Ejercicio {index + 1}</p>
           <p className="text-sm font-semibold text-zinc-900">{exercise.name}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <Badge tone="brand">{formatExerciseVolume(exercise)}</Badge>
-            <Badge tone="neutral">{meta.label}</Badge>
-            {exercise.restSec ? <Badge tone="neutral">{exercise.restSec}s descanso</Badge> : null}
-            {exercise.intensity ? <Badge tone="neutral">{exercise.intensity}</Badge> : null}
-            {exercise.weight ? <Badge tone="neutral">{exercise.weight}</Badge> : null}
-          </div>
-          {exercise.notes ? (
-            <p className="mt-2 text-sm text-zinc-500">{exercise.notes}</p>
-          ) : null}
+          <ExercisePrescription exercise={exercise} className="mt-2" />
+          {exercise.notes ? <CoachNote className="mt-2">{exercise.notes}</CoachNote> : null}
         </div>
       </div>
     </Card>
