@@ -12,6 +12,7 @@ import {
   ListChecks,
   QrCode,
   CalendarCheck,
+  CalendarClock,
   CalendarDays,
   Megaphone,
   Star,
@@ -31,6 +32,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: ROUTES.ADMIN_MEMBERS, label: 'Socios', icon: Users },
   { to: ROUTES.ADMIN_MY_QR, label: 'Mi QR', icon: QrCode },
   { to: ROUTES.ADMIN_TODAY, label: 'Hoy', icon: CalendarCheck },
+  { to: ROUTES.ADMIN_CLASSES, label: 'Clases', icon: CalendarClock },
   { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
   { to: ROUTES.ADMIN_EXERCISES, label: 'Ejercicios', icon: ListChecks },
   { to: ROUTES.ADMIN_TARIFFS, label: 'Tarifas', icon: Tags },
@@ -42,6 +44,7 @@ const ADMIN_NAV: NavItem[] = [
 
 const USER_NAV: NavItem[] = [
   { to: ROUTES.APP_ROUTINES, label: 'Mis rutinas', icon: ClipboardList },
+  { to: ROUTES.APP_CLASSES, label: 'Clases', icon: CalendarClock },
   { to: ROUTES.APP_SCAN_QR, label: 'Escanear QR', icon: QrCode },
   { to: ROUTES.APP_ATTENDANCE, label: 'Mi asistencia', icon: CalendarDays },
   { to: ROUTES.APP_LOGS, label: 'Mis registros', icon: History },

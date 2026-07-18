@@ -43,7 +43,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         )}
       >
         {/* Marca: logo grande + nombre del gym */}
-        <div className="flex items-center justify-between gap-2 px-4 py-5">
+        <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-5">
           <div className="flex min-w-0 items-center gap-3">
             <LogoImage src={logoURL} alt={brandName} className="size-11 shrink-0 rounded-xl" />
             <div className="min-w-0">
@@ -62,12 +62,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
 
         {showSwitcher && (
-          <div className="px-3 pb-1">
+          <div className="shrink-0 px-3 pb-1">
             <TenantSwitcher />
           </div>
         )}
 
-        <nav className="mt-2 flex-1 space-y-1 px-3">
+        <nav className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 pb-2">
           {items.map((item) => (
             <NavLink
               key={item.to}
@@ -90,7 +90,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </nav>
 
         {/* Usuario + acciones */}
-        <div className="border-t border-zinc-100 p-3">
+        <div className="shrink-0 border-t border-zinc-100 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="space-y-3">
             <div className="flex items-center gap-3 px-1">
               <Avatar

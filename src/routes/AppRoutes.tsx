@@ -32,6 +32,8 @@ const MyGymPage = lazyPage(() => import('@/features/admin/my-gym/MyGymPage'), (m
 const SponsorsPage = lazyPage(() => import('@/features/admin/sponsors/SponsorsPage'), (m) => m.SponsorsPage)
 const AdminQrPage = lazyPage(() => import('@/features/admin/attendance/AdminQrPage'), (m) => m.AdminQrPage)
 const TodayAttendancePage = lazyPage(() => import('@/features/admin/attendance/TodayAttendancePage'), (m) => m.TodayAttendancePage)
+// Compartida admin/socio: placeholder hasta construir la feature
+const ClassesComingSoonPage = lazyPage(() => import('@/features/classes/ClassesComingSoonPage'), (m) => m.ClassesComingSoonPage)
 // Socio (ScanQrPage trae jsqr)
 const ScanQrPage = lazyPage(() => import('@/features/member/attendance/ScanQrPage'), (m) => m.ScanQrPage)
 const MyRoutinesPage = lazyPage(() => import('@/features/member/routines/MyRoutinesPage'), (m) => m.MyRoutinesPage)
@@ -198,6 +200,14 @@ export function AppRoutes() {
           </PrivateRoute>
         }
       />
+      <Route
+        path={ROUTES.ADMIN_CLASSES}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <ClassesComingSoonPage />
+          </PrivateRoute>
+        }
+      />
 
       {/* Socio */}
       <Route
@@ -245,6 +255,15 @@ export function AppRoutes() {
             <SocioPaymentGate>
               <ProfilePage />
             </SocioPaymentGate>
+          </PrivateRoute>
+        }
+      />
+      {/* Sin SocioPaymentGate: es solo un placeholder de "próximamente". */}
+      <Route
+        path={ROUTES.APP_CLASSES}
+        element={
+          <PrivateRoute allowedRoles={['user']}>
+            <ClassesComingSoonPage />
           </PrivateRoute>
         }
       />
