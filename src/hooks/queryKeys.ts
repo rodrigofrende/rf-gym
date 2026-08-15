@@ -19,6 +19,7 @@ export const queryKeys = {
   routines: (gymId: string) => ['routines', gymId] as const,
   exercises: (gymId: string) => ['exercises', gymId] as const,
   tariffs: (gymId: string) => ['tariffs', gymId] as const,
+  products: (gymId: string) => ['products', gymId] as const,
   memberAssignments: (gymId: string, uid: string) => ['assignments', gymId, uid] as const,
   assignments: (gymId: string) => ['assignments', gymId] as const,
   stats: (gymId: string) => ['stats', gymId] as const,

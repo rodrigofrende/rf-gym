@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from '@/providers/AuthProvider'
+import { CartProvider } from '@/providers/CartProvider'
 import { TenantProvider } from '@/providers/TenantProvider'
 import { TenantThemeEffect } from '@/providers/TenantThemeEffect'
 import { ToastProvider } from '@/providers/ToastProvider'
@@ -31,8 +32,10 @@ export default function App() {
         <ToastProvider>
           <AuthProvider>
             <TenantProvider>
-              <TenantThemeEffect />
-              <AppRoutes />
+              <CartProvider>
+                <TenantThemeEffect />
+                <AppRoutes />
+              </CartProvider>
             </TenantProvider>
           </AuthProvider>
         </ToastProvider>

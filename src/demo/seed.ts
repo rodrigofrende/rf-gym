@@ -6,6 +6,7 @@ import type {
   Member,
   Note,
   Payment,
+  Product,
   Routine,
   SubscriptionPlan,
   Tariff,
@@ -47,9 +48,15 @@ export interface DemoData {
   logs: Record<string, WorkoutLog[]> // memberId -> logs
   payments: Record<string, Payment[]> // memberId -> pagos
   tariffs: Tariff[]
+  products: Product[] // productos que vende el gym (tienda)
   plans: SubscriptionPlan[] // planes de suscripción (plataforma)
   stats: AdminStats
 }
+
+// Placeholder de foto para los productos del seed: WebP 1×1 válido para pasar
+// el zod del form al editar (LogoImage cae a su icono si no llega a renderizar).
+const PLACEHOLDER_PRODUCT_PHOTO =
+  'data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAQAcJaQAA3AA/v3AgAA='
 
 /**
  * Genera logs semanales de un ejercicio con progresión: una sesión por fecha,
@@ -734,6 +741,64 @@ export function buildSeed(): DemoData {
     { id: 'tf-func-3', name: 'Funcional', icon: 'activity', weeklyFrequency: 3, price: 30000, description: 'Funcional, 3 días.', active: true },
   ]
 
+  // Productos que vende TigerFit en la tienda (suplementos, merch, accesorios).
+  const products: Product[] = [
+    {
+      id: 'prod-whey',
+      name: 'Proteína Whey 1kg',
+      description: 'Proteína de suero sabor vainilla. Ideal post-entreno.',
+      photoURL: PLACEHOLDER_PRODUCT_PHOTO,
+      price: 45000,
+      discountPct: 10,
+      available: true,
+    },
+    {
+      id: 'prod-creatina',
+      name: 'Creatina monohidrato 300g',
+      description: 'Creatina micronizada, 60 servicios.',
+      photoURL: PLACEHOLDER_PRODUCT_PHOTO,
+      price: 30000,
+      discountPct: 0,
+      available: true,
+    },
+    {
+      id: 'prod-shaker',
+      name: 'Shaker TigerFit 600ml',
+      description: 'Vaso mezclador con rosca y resorte, logo del gym.',
+      photoURL: PLACEHOLDER_PRODUCT_PHOTO,
+      price: 8000,
+      discountPct: 0,
+      available: true,
+    },
+    {
+      id: 'prod-remera',
+      name: 'Remera TigerFit',
+      description: 'Remera deportiva de secado rápido. Talles S a XXL.',
+      photoURL: PLACEHOLDER_PRODUCT_PHOTO,
+      price: 15000,
+      discountPct: 20,
+      available: true,
+    },
+    {
+      id: 'prod-toalla',
+      name: 'Toalla de entrenamiento',
+      description: 'Toalla de microfibra 40x80cm.',
+      photoURL: PLACEHOLDER_PRODUCT_PHOTO,
+      price: 6000,
+      discountPct: 0,
+      available: false, // sin stock: no aparece en la tienda del socio
+    },
+    {
+      id: 'prod-preentreno',
+      name: 'Pre-entreno 300g',
+      description: 'Energía y foco para entrenar. Sabor frutos rojos.',
+      photoURL: PLACEHOLDER_PRODUCT_PHOTO,
+      price: 38000,
+      discountPct: 0,
+      available: true,
+    },
+  ]
+
   // Planes de suscripción de la plataforma (lo que paga cada gym a RF Gym).
   const plans: SubscriptionPlan[] = [
     {
@@ -812,5 +877,5 @@ export function buildSeed(): DemoData {
     updatedAt: new Date('2026-06-08'),
   }
 
-  return { gym, members, exercises, routines, assignments, notes, logs, payments, tariffs, plans, stats }
+  return { gym, members, exercises, routines, assignments, notes, logs, payments, tariffs, products, plans, stats }
 }

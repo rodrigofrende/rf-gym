@@ -303,6 +303,24 @@ service cloud.firestore {
         allow write: if isGymAdmin(gymId);
       }
 
+      match /products/{productId} {
+        // El doc lleva la foto inline (~150KB, tope espejado en utils/image.ts),
+        // así que se valida forma y tamaño igual que el logo del gym.
+        function validProduct() {
+          let d = request.resource.data;
+          return d.keys().hasOnly(['name', 'description', 'photoURL', 'price', 'discountPct', 'available'])
+            && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
+            && d.description is string && d.description.size() >= 1 && d.description.size() <= 500
+            && isDataImageUrl(d.photoURL, 153600)
+            && d.price is int && d.price > 0
+            && d.discountPct is int && d.discountPct >= 0 && d.discountPct <= 100
+            && d.available is bool;
+        }
+        allow read: if canAccessGym(gymId);
+        allow create, update: if isGymAdmin(gymId) && validProduct();
+        allow delete: if isGymAdmin(gymId);
+      }
+
       match /routines/{routineId} {
         allow read: if canAccessGym(gymId);
         allow write: if isGymAdmin(gymId);

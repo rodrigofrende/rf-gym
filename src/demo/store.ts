@@ -13,6 +13,7 @@ import type {
   Membership,
   Note,
   Payment,
+  Product,
   Routine,
   SubscriptionPlan,
   Tariff,
@@ -247,6 +248,25 @@ export function updateTariff(_gymId: string, tariffId: string, payload: Partial<
 }
 export function removeTariff(_gymId: string, tariffId: string) {
   data.tariffs = data.tariffs.filter((t) => t.id !== tariffId)
+  return ok(undefined)
+}
+
+// ---- Productos (tienda) ----
+export function listProducts(_gymId: string) {
+  return ok([...data.products])
+}
+export function createProduct(_gymId: string, payload: Omit<Product, 'id'>) {
+  const id = nextId('prod')
+  data.products.push({ ...payload, id })
+  return ok(id)
+}
+export function updateProduct(_gymId: string, productId: string, payload: Partial<Product>) {
+  const p = data.products.find((x) => x.id === productId)
+  if (p) Object.assign(p, payload)
+  return ok(undefined)
+}
+export function removeProduct(_gymId: string, productId: string) {
+  data.products = data.products.filter((p) => p.id !== productId)
   return ok(undefined)
 }
 

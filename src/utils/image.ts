@@ -1,7 +1,7 @@
 /**
- * Procesamiento de imágenes en el navegador para logos y patrocinadores. Evita
- * depender de Firebase Storage: el archivo se recorta/comprime a un cuadrado
- * chico y se guarda como data URL en Firestore (docs `gyms` y `publicProfiles`).
+ * Procesamiento de imágenes en el navegador para logos, patrocinadores y
+ * productos. Evita depender de Firebase Storage: el archivo se recorta/comprime
+ * a un cuadrado chico y se guarda como data URL en Firestore.
  */
 
 const SQUARE_SIZE = 256
@@ -10,6 +10,11 @@ const MAX_LOGO_OUTPUT_BYTES = 150 * 1024 // tope del data URL guardado en Firest
 // Las imágenes de sponsors comparten el doc `publicProfiles` (tope 1MiB de
 // Firestore): con hasta 6 sponsors + el logo, 100KB c/u deja margen de sobra.
 const MAX_SPONSOR_OUTPUT_BYTES = 100 * 1024
+// Producto: doc propio (margen de sobra vs 1MiB) y card más protagonista → más
+// resolución. Entrada más generosa porque la foto suele venir del teléfono.
+const PRODUCT_SIZE = 512
+const MAX_PRODUCT_INPUT_BYTES = 10 * 1024 * 1024
+const MAX_PRODUCT_OUTPUT_BYTES = 150 * 1024 // espejado en firestore.rules (153600)
 const QUALITY_STEPS = [0.85, 0.7, 0.55, 0.4]
 
 export class LogoImageError extends Error {}
@@ -35,12 +40,19 @@ async function loadBitmap(file: File): Promise<ImageBitmap | HTMLImageElement> {
   }
 }
 
-async function fileToSquareDataUrl(file: File, maxOutputBytes: number): Promise<string> {
+async function fileToSquareDataUrl(
+  file: File,
+  maxOutputBytes: number,
+  size = SQUARE_SIZE,
+  maxInputBytes = MAX_INPUT_BYTES,
+): Promise<string> {
   if (!file.type.startsWith('image/')) {
     throw new LogoImageError('El archivo debe ser una imagen (JPG, PNG, WebP...).')
   }
-  if (file.size > MAX_INPUT_BYTES) {
-    throw new LogoImageError('La imagen es muy pesada (máximo 5MB).')
+  if (file.size > maxInputBytes) {
+    throw new LogoImageError(
+      `La imagen es muy pesada (máximo ${Math.round(maxInputBytes / (1024 * 1024))}MB).`,
+    )
   }
 
   const source = await loadBitmap(file)
@@ -51,8 +63,8 @@ async function fileToSquareDataUrl(file: File, maxOutputBytes: number): Promise<
   }
 
   const canvas = document.createElement('canvas')
-  canvas.width = SQUARE_SIZE
-  canvas.height = SQUARE_SIZE
+  canvas.width = size
+  canvas.height = size
   const ctx = canvas.getContext('2d')
   if (!ctx) {
     throw new LogoImageError('No se pudo procesar la imagen en este navegador.')
@@ -62,7 +74,7 @@ async function fileToSquareDataUrl(file: File, maxOutputBytes: number): Promise<
   const side = Math.min(width, height)
   const sx = (width - side) / 2
   const sy = (height - side) / 2
-  ctx.drawImage(source, sx, sy, side, side, 0, 0, SQUARE_SIZE, SQUARE_SIZE)
+  ctx.drawImage(source, sx, sy, side, side, 0, 0, size, size)
   if ('close' in source) source.close()
 
   for (const quality of QUALITY_STEPS) {
@@ -89,4 +101,12 @@ export function fileToLogoDataUrl(file: File): Promise<string> {
  */
 export function fileToSponsorImageDataUrl(file: File): Promise<string> {
   return fileToSquareDataUrl(file, MAX_SPONSOR_OUTPUT_BYTES)
+}
+
+/**
+ * Foto de producto: 512×512 recorte `cover`, WebP, tope 150KB (espejado en
+ * firestore.rules). Acepta originales de hasta 10MB (fotos de celular).
+ */
+export function fileToProductImageDataUrl(file: File): Promise<string> {
+  return fileToSquareDataUrl(file, MAX_PRODUCT_OUTPUT_BYTES, PRODUCT_SIZE, MAX_PRODUCT_INPUT_BYTES)
 }

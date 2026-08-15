@@ -28,6 +28,7 @@ export const ROUTES = {
   ADMIN_MY_QR: '/admin/my-qr',
   ADMIN_TODAY: '/admin/today',
   ADMIN_CLASSES: '/admin/classes',
+  ADMIN_PRODUCTS: '/admin/products',
 
   // Socio
   CHECK_IN: '/check-in/:gymId',
@@ -38,6 +39,7 @@ export const ROUTES = {
   APP_ATTENDANCE: '/app/attendance',
   APP_MY_GYM: '/app/my-gym',
   APP_CLASSES: '/app/classes',
+  APP_PRODUCTS: '/app/products',
 } as const
 
 export const adminMemberDetail = (uid: string) => `/admin/members/${uid}`

@@ -205,6 +205,18 @@ export interface Tariff {
   active: boolean
 }
 
+/** Producto que vende el gym: suplementos, merch, etc. (`gyms/{gymId}/products`). */
+export interface Product {
+  id: string
+  name: string
+  description: string
+  photoURL: string // data:image WebP 512×512 (pipeline utils/image.ts)
+  price: number // entero ARS
+  // % de promoción 0-100. Siempre número (0 = sin promo): updateDoc rechaza undefined.
+  discountPct: number
+  available: boolean // visible para los socios en la tienda
+}
+
 /** Pago registrado de un socio o de la suscripción de un gym. */
 export interface Payment {
   id: string

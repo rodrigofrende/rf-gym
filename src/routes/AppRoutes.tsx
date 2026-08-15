@@ -27,6 +27,7 @@ const RoutinesListPage = lazyPage(() => import('@/features/admin/routines/Routin
 const RoutineEditorPage = lazyPage(() => import('@/features/admin/routines/RoutineEditorPage'), (m) => m.RoutineEditorPage)
 const ExercisesListPage = lazyPage(() => import('@/features/admin/exercises/ExercisesListPage'), (m) => m.ExercisesListPage)
 const TariffsListPage = lazyPage(() => import('@/features/admin/tariffs/TariffsListPage'), (m) => m.TariffsListPage)
+const ProductsListPage = lazyPage(() => import('@/features/admin/products/ProductsListPage'), (m) => m.ProductsListPage)
 const BrandingPage = lazyPage(() => import('@/features/admin/branding/BrandingPage'), (m) => m.BrandingPage)
 const MyGymPage = lazyPage(() => import('@/features/admin/my-gym/MyGymPage'), (m) => m.MyGymPage)
 const SponsorsPage = lazyPage(() => import('@/features/admin/sponsors/SponsorsPage'), (m) => m.SponsorsPage)
@@ -41,6 +42,7 @@ const MyLogsPage = lazyPage(() => import('@/features/member/logs/MyLogsPage'), (
 const MyAttendancePage = lazyPage(() => import('@/features/member/attendance/MyAttendancePage'), (m) => m.MyAttendancePage)
 const ProfilePage = lazyPage(() => import('@/features/member/profile/ProfilePage'), (m) => m.ProfilePage)
 const MyGymMemberPage = lazyPage(() => import('@/features/member/my-gym/MyGymMemberPage'), (m) => m.MyGymMemberPage)
+const ShopPage = lazyPage(() => import('@/features/member/shop/ShopPage'), (m) => m.ShopPage)
 // Pública y super-admin
 const PublicGymPage = lazyPage(() => import('@/features/public/PublicGymPage'), (m) => m.PublicGymPage)
 const SuperGymsPage = lazyPage(() => import('@/features/super/SuperGymsPage'), (m) => m.SuperGymsPage)
@@ -208,6 +210,14 @@ export function AppRoutes() {
           </PrivateRoute>
         }
       />
+      <Route
+        path={ROUTES.ADMIN_PRODUCTS}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <ProductsListPage />
+          </PrivateRoute>
+        }
+      />
 
       {/* Socio */}
       <Route
@@ -273,6 +283,15 @@ export function AppRoutes() {
         element={
           <PrivateRoute allowedRoles={['user']}>
             <MyGymMemberPage />
+          </PrivateRoute>
+        }
+      />
+      {/* Sin SocioPaymentGate: comprar productos no depende de la cuota al día. */}
+      <Route
+        path={ROUTES.APP_PRODUCTS}
+        element={
+          <PrivateRoute allowedRoles={['user']}>
+            <ShopPage />
           </PrivateRoute>
         }
       />

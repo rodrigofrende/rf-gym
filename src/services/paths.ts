@@ -49,6 +49,9 @@ export const paths = {
   tariffs: (gymId: string) => `gyms/${gymId}/tariffs`,
   tariff: (gymId: string, tariffId: string) => `gyms/${gymId}/tariffs/${tariffId}`,
 
+  products: (gymId: string) => `gyms/${gymId}/products`,
+  product: (gymId: string, productId: string) => `gyms/${gymId}/products/${productId}`,
+
   assignments: (gymId: string) => `gyms/${gymId}/assignments`,
   assignment: (gymId: string, id: string) => `gyms/${gymId}/assignments/${id}`,
 

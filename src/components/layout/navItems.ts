@@ -15,7 +15,9 @@ import {
   CalendarClock,
   CalendarDays,
   Megaphone,
+  ShoppingBag,
   Star,
+  Store,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
@@ -36,6 +38,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
   { to: ROUTES.ADMIN_EXERCISES, label: 'Ejercicios', icon: ListChecks },
   { to: ROUTES.ADMIN_TARIFFS, label: 'Tarifas', icon: Tags },
+  { to: ROUTES.ADMIN_PRODUCTS, label: 'Productos', icon: ShoppingBag },
   { to: ROUTES.ADMIN_MY_GYM, label: 'Mi gimnasio', icon: Megaphone },
   { to: ROUTES.ADMIN_SPONSORS, label: 'Patrocinadores', icon: Star },
   { to: ROUTES.ADMIN_BRANDING, label: 'Marca', icon: Palette },
@@ -49,6 +52,7 @@ const USER_NAV: NavItem[] = [
   { to: ROUTES.APP_ATTENDANCE, label: 'Mi asistencia', icon: CalendarDays },
   { to: ROUTES.APP_LOGS, label: 'Mis registros', icon: History },
   { to: ROUTES.APP_MY_GYM, label: 'Mi gimnasio', icon: Building2 },
+  { to: ROUTES.APP_PRODUCTS, label: 'Tienda', icon: Store },
   { to: ROUTES.APP_PROFILE, label: 'Mi perfil', icon: User },
 ]
 
