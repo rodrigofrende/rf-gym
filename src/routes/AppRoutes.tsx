@@ -47,6 +47,7 @@ const MyGymMemberPage = lazyPage(() => import('@/features/member/my-gym/MyGymMem
 const ShopPage = lazyPage(() => import('@/features/member/shop/ShopPage'), (m) => m.ShopPage)
 // Pública y super-admin
 const PublicGymPage = lazyPage(() => import('@/features/public/PublicGymPage'), (m) => m.PublicGymPage)
+const LandingPage = lazyPage(() => import('@/features/landing/LandingPage'), (m) => m.LandingPage)
 const SuperGymsPage = lazyPage(() => import('@/features/super/SuperGymsPage'), (m) => m.SuperGymsPage)
 const SuperDashboardPage = lazyPage(() => import('@/features/super/SuperDashboardPage'), (m) => m.SuperDashboardPage)
 const PlansListPage = lazyPage(() => import('@/features/super/PlansListPage'), (m) => m.PlansListPage)
@@ -55,9 +56,12 @@ const PlansListPage = lazyPage(() => import('@/features/super/PlansListPage'), (
 function HomeRedirect() {
   const { user, isInitialized, claimsResolved } = useAuth()
   const { isLoading, role, isSuperAdmin } = useTenant()
+  if (!isInitialized) return <FullPageSpinner />
+  // Visitante sin sesión: landing de marketing de la plataforma, sin esperar
+  // claims ni tenant (que un prospecto no pague spinners de auth).
+  if (!user) return <LandingPage />
   // claimsResolved: necesario porque la decisión depende de isSuperAdmin.
-  if (!isInitialized || isLoading || !claimsResolved) return <FullPageSpinner />
-  if (!user) return <Navigate to={ROUTES.LOGIN} replace />
+  if (isLoading || !claimsResolved) return <FullPageSpinner />
   if (isSuperAdmin) return <Navigate to={defaultHomeForRole(null, { isSuperAdmin: true })} replace />
   if (!role) return <Navigate to={ROUTES.SELECT_GYM} replace />
   return <Navigate to={defaultHomeForRole(role)} replace />

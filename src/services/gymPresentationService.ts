@@ -1,13 +1,24 @@
-import { deleteField, serverTimestamp } from 'firebase/firestore'
+import { deleteField, limit, serverTimestamp } from 'firebase/firestore'
 import type { GymPresentation } from '@/types'
 import { env } from '@/config/env'
 import * as demo from '@/demo/store'
-import { getOne, setOne } from './firestore'
+import { getMany, getOne, setOne } from './firestore'
 import { paths } from './paths'
 
 export function getGymPresentation(gymId: string) {
   if (env.demoMode) return demo.getGymPresentation(gymId)
   return getOne<GymPresentation>(paths.publicProfile(gymId))
+}
+
+/**
+ * Perfiles públicos para la sección "Nuestros clientes" de la landing.
+ * `publicProfiles` es world-readable, así que no requiere rules nuevas.
+ * OJO: los docs traen imágenes inline (logo + sponsors) → se limita la cantidad;
+ * si la plataforma escala a muchos gyms, migrar a un doc directorio liviano.
+ */
+export function listGymPresentations(max = 8) {
+  if (env.demoMode) return demo.listGymPresentations()
+  return getMany<GymPresentation>(paths.publicProfiles(), limit(max))
 }
 
 export interface GymPresentationUpdate extends Partial<Omit<GymPresentation, 'id' | 'logoURL'>> {

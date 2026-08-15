@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Layers, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Check, Layers, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import type { SubscriptionPlan } from '@/types'
 import { useCreatePlan, usePlans, useRemovePlan, useUpdatePlan } from '@/hooks/usePlans'
 import { useToastAction } from '@/hooks/useToastAction'
@@ -9,6 +9,86 @@ import { cn } from '@/utils/cn'
 import { formatCurrency } from '@/utils/format'
 import { limitLabel, logsCapabilityLabel, whiteLabelLabel } from '@/utils/plans'
 import { PlanFormModal } from './PlanFormModal'
+
+/**
+ * Plantilla del plan pay-as-you-go ("A medida") para crearlo en un click.
+ * El precio no se publica (customPricing) — solo ordena las cards de la landing.
+ */
+const CUSTOM_PLAN_TEMPLATE: Omit<SubscriptionPlan, 'id'> = {
+  name: 'Alto Rendimiento',
+  price: 60001, // apenas arriba del plan más caro para quedar último en la landing
+  maxAdmins: 0,
+  maxMembers: 0,
+  maxRoutines: 0,
+  maxExercises: 0,
+  maxSponsors: 6, // tope real de la vidriera pública
+  logsEnabled: true,
+  maxLogsPerMember: 0,
+  whiteLabel: 'full',
+  features: [
+    'Socios, admins y rutinas sin límite',
+    'Todo lo de los otros planes, sin topes',
+    'White-label completo con tu marca',
+    'Dashboard y reportes completos',
+    '6 espacios de patrocinadores destacados',
+    'Soporte prioritario y onboarding asistido',
+    'Precio que acompaña el tamaño de tu gimnasio',
+  ],
+  active: true,
+  customPricing: true,
+  highlighted: false,
+}
+
+/**
+ * Plantillas sugeridas para completar los dos primeros tiers (se conservan los
+ * nombres del owner; se pisan límites, beneficios, flags y el precio del medio).
+ * Los textos de features están alineados con los límites — mantener en sync.
+ */
+const ENTRY_TEMPLATE: Partial<SubscriptionPlan> = {
+  maxAdmins: 1,
+  maxMembers: 30,
+  maxRoutines: 10,
+  maxExercises: 30,
+  maxSponsors: 1,
+  logsEnabled: false,
+  maxLogsPerMember: 0,
+  whiteLabel: 'none',
+  features: [
+    'Hasta 30 socios activos',
+    'Gestión de socios, pagos y vencimientos',
+    '10 rutinas y 30 ejercicios propios',
+    'Check-in con QR y asistencia del día',
+    'Página pública de tu gimnasio',
+    '1 espacio para patrocinador',
+  ],
+  customPricing: false,
+  highlighted: false,
+}
+
+const MEDIUM_TEMPLATE: Partial<SubscriptionPlan> = {
+  price: 35000, // ~3.5× el tier de entrada — ratio Good-Better-Best estándar
+  maxAdmins: 3,
+  maxMembers: 150,
+  maxRoutines: 50,
+  maxExercises: 150,
+  maxSponsors: 5,
+  logsEnabled: true,
+  maxLogsPerMember: 100,
+  whiteLabel: 'basic',
+  features: [
+    'Hasta 150 socios y 3 administradores',
+    'Todo lo del plan anterior',
+    'Registro de cargas y progreso para tus socios',
+    '50 rutinas y 150 ejercicios propios',
+    'Tu logo y tus colores en la app',
+    'Dashboard con métricas e ingresos',
+    'Tienda con pedidos por WhatsApp',
+    'Ranking mensual con imagen para compartir',
+    'Hasta 5 patrocinadores',
+  ],
+  customPricing: false,
+  highlighted: true,
+}
 
 export function PlansListPage() {
   const run = useToastAction()
@@ -20,6 +100,31 @@ export function PlansListPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<SubscriptionPlan | null>(null)
   const [toDelete, setToDelete] = useState<SubscriptionPlan | null>(null)
+  const [templateConfirm, setTemplateConfirm] = useState(false)
+
+  // Los dos primeros tiers con precio publicado (para completarlos con plantilla).
+  const priced = plans
+    .filter((p) => p.active && !p.customPricing)
+    .sort((a, b) => a.price - b.price)
+  const entryPlan = priced[0]
+  const mediumPlan = priced[1]
+  const needsTemplates =
+    !!entryPlan && !!mediumPlan && (!entryPlan.features?.length || !mediumPlan.features?.length)
+
+  const applyTemplates = async () => {
+    if (!entryPlan || !mediumPlan) return
+    const ok = await run(
+      async () => {
+        await update.mutateAsync({ planId: entryPlan.id, data: ENTRY_TEMPLATE })
+        await update.mutateAsync({ planId: mediumPlan.id, data: MEDIUM_TEMPLATE })
+      },
+      {
+        success: 'Planes completados. La landing ya muestra los beneficios.',
+        error: 'No se pudieron completar los planes',
+      },
+    )
+    if (ok) setTemplateConfirm(false)
+  }
 
   const openNew = () => {
     setEditing(null)
@@ -61,9 +166,38 @@ export function PlansListPage() {
         </span>
       }
       actions={
-        <Button leftIcon={<Plus className="size-4" />} onClick={openNew}>
-          Nuevo plan
-        </Button>
+        <>
+          {/* Un click completa límites/beneficios/precio sugerido de los 2 primeros
+              tiers; desaparece cuando ya tienen features cargadas. */}
+          {needsTemplates && (
+            <Button
+              variant="secondary"
+              leftIcon={<Sparkles className="size-4" />}
+              onClick={() => setTemplateConfirm(true)}
+            >
+              Completar planes sugeridos
+            </Button>
+          )}
+          {/* Un click crea el plan pay-as-you-go sugerido; desaparece cuando ya existe. */}
+          {!plans.some((p) => p.customPricing && p.active) && (
+            <Button
+              variant="secondary"
+              leftIcon={<Sparkles className="size-4" />}
+              loading={create.isPending}
+              onClick={() =>
+                run(() => create.mutateAsync(CUSTOM_PLAN_TEMPLATE), {
+                  success: 'Plan "A medida" creado. Ya aparece en la landing.',
+                  error: 'No se pudo crear el plan',
+                })
+              }
+            >
+              Crear plan a medida
+            </Button>
+          )}
+          <Button leftIcon={<Plus className="size-4" />} onClick={openNew}>
+            Nuevo plan
+          </Button>
+        </>
       }
     >
       {isLoading ? (
@@ -80,13 +214,20 @@ export function PlansListPage() {
             <Card key={p.id} className={cn('flex flex-col p-5', !p.active && 'opacity-60')}>
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Heading variant="card">{p.name}</Heading>
+                    {p.highlighted && <Badge tone="brand">Recomendado</Badge>}
                     {!p.active && <Badge tone="amber">Inactivo</Badge>}
                   </div>
                   <Text variant="metric" className="mt-1">
-                    {formatCurrency(p.price)}
-                    <span className="text-sm font-normal text-zinc-400"> /mes</span>
+                    {p.customPricing ? (
+                      'A convenir'
+                    ) : (
+                      <>
+                        {formatCurrency(p.price)}
+                        <span className="text-sm font-normal text-zinc-400"> /mes</span>
+                      </>
+                    )}
                   </Text>
                 </div>
                 <div className="flex gap-1">
@@ -146,6 +287,17 @@ export function PlansListPage() {
         title="Eliminar plan"
         description={`¿Querés eliminar el plan "${toDelete?.name}"? Esta acción no se puede deshacer.`}
         loading={remove.isPending}
+      />
+
+      <ConfirmDialog
+        open={templateConfirm}
+        onClose={() => setTemplateConfirm(false)}
+        onConfirm={applyTemplates}
+        title="Completar planes sugeridos"
+        description={`Se completan límites, beneficios y flags de "${entryPlan?.name}" y "${mediumPlan?.name}" (que pasa a $35.000/mes y queda como Recomendado). Los nombres se conservan y podés retocar todo después.`}
+        confirmLabel="Completar"
+        tone="primary"
+        loading={update.isPending}
       />
     </AppLayout>
   )

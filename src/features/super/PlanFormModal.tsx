@@ -18,6 +18,8 @@ const schema = z.object({
   whiteLabel: z.enum(['none', 'basic', 'full']),
   features: z.string().optional(),
   active: z.boolean(),
+  customPricing: z.boolean(),
+  highlighted: z.boolean(),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -34,6 +36,8 @@ const DEFAULT_VALUES: FormValues = {
   whiteLabel: 'none',
   features: '',
   active: true,
+  customPricing: false,
+  highlighted: false,
 }
 
 function valuesFromPlan(plan?: SubscriptionPlan | null): FormValues {
@@ -51,6 +55,8 @@ function valuesFromPlan(plan?: SubscriptionPlan | null): FormValues {
     whiteLabel: plan.whiteLabel,
     features: (plan.features ?? []).join('\n'),
     active: plan.active,
+    customPricing: plan.customPricing ?? false,
+    highlighted: plan.highlighted ?? false,
   }
 }
 
@@ -104,6 +110,8 @@ export function PlanFormModal({
         .map((s) => s.trim())
         .filter(Boolean),
       active: v.active,
+      customPricing: v.customPricing,
+      highlighted: v.highlighted,
     })
   }
 
@@ -184,6 +192,33 @@ export function PlanFormModal({
             placeholder={'Hasta 3 admins\n150 socios\nPanel de analíticas'}
           />
         </FormField>
+
+        <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
+          <Controller
+            control={control}
+            name="highlighted"
+            render={({ field }) => (
+              <Toggle
+                checked={field.value}
+                onChange={field.onChange}
+                label="Recomendado (destacado en la landing)"
+                tooltip="La landing pública resalta este plan con un borde y el badge RECOMENDADO. Conviene marcarlo solo en uno."
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="customPricing"
+            render={({ field }) => (
+              <Toggle
+                checked={field.value}
+                onChange={field.onChange}
+                label="Precio a convenir (la landing muestra 'A medida')"
+                tooltip="El precio no se publica: la landing muestra 'A medida' y el CTA invita a conversar. El precio interno se usa solo para ordenar los planes."
+              />
+            )}
+          />
+        </div>
 
         <Controller
           control={control}

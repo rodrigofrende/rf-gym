@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Activity, Building2, Dumbbell, LogIn, Plus, ShieldCheck, Users, Wallet } from 'lucide-react'
 import { useTenant } from '@/providers/TenantProvider'
 import { useGyms } from '@/hooks/useGyms'
+import { useGymAdminCounts } from '@/hooks/useGymAdminCounts'
 import { usePlatformStats } from '@/hooks/useDashboard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ROUTES, defaultHomeForRole } from '@/routes/routePaths'
@@ -13,8 +14,9 @@ export function SuperDashboardPage() {
   const { selectGym } = useTenant()
   const { data: gyms = [], isLoading } = useGyms()
   const { data: platform } = usePlatformStats()
-
-  const totalAdmins = gyms.reduce((sum, g) => sum + (g.adminUids?.length ?? 0), 0)
+  // Admins reales por gym desde `members` (adminUids queda desactualizado
+  // mientras el admin invitado no reclama su cuenta).
+  const adminCounts = useGymAdminCounts(gyms)
   const withDebt = gyms.filter(
     (g) => getPaymentStatus(g.subscription?.dueDate).state !== 'al_dia',
   ).length
@@ -36,7 +38,12 @@ export function SuperDashboardPage() {
           <>
             <div className="grid gap-4 sm:grid-cols-3">
               <StatCard icon={Building2} label="Gimnasios" value={gyms.length} tone="brand" />
-              <StatCard icon={ShieldCheck} label="Administradores" value={totalAdmins} tone="green" />
+              <StatCard
+                icon={ShieldCheck}
+                label="Administradores"
+                value={adminCounts.isLoading ? '…' : adminCounts.total}
+                tone="green"
+              />
               <StatCard icon={Wallet} label="Gimnasios con deuda" value={withDebt} tone="amber" />
             </div>
 
@@ -85,9 +92,7 @@ export function SuperDashboardPage() {
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-zinc-900">{g.name}</p>
-                        <Badge tone={g.adminUids?.length ? 'neutral' : 'amber'}>
-                          {g.adminUids?.length ?? 0} admin{(g.adminUids?.length ?? 0) === 1 ? '' : 's'}
-                        </Badge>
+                        <AdminCountBadge count={adminCounts.byGym.get(g.id)} />
                       </div>
                       <Button
                         size="sm"
@@ -106,5 +111,15 @@ export function SuperDashboardPage() {
         )}
       </div>
     </AppLayout>
+  )
+}
+
+/** Cuenta de admins del gym; '—' mientras carga la query de members. */
+function AdminCountBadge({ count }: { count?: number }) {
+  if (count == null) return <Badge tone="neutral">— admins</Badge>
+  return (
+    <Badge tone={count > 0 ? 'neutral' : 'amber'}>
+      {count} admin{count === 1 ? '' : 's'}
+    </Badge>
   )
 }

@@ -47,6 +47,8 @@ export interface SubscriptionPlan {
   whiteLabel: WhiteLabelLevel
   features?: string[]
   active: boolean
+  customPricing?: boolean // precio a convenir: la landing muestra "A medida" en vez del precio
+  highlighted?: boolean // plan destacado ("Recomendado") en la landing pública
 }
 
 /** Suscripción del gym a la plataforma RF Gym (lo gestiona el super-admin). */

@@ -234,6 +234,9 @@ const publicProfiles: Record<string, GymPresentation> = {
 export function getGymPresentation(gymId: string) {
   return ok((publicProfiles[gymId] ?? null) as GymPresentation | null)
 }
+export function listGymPresentations() {
+  return ok(Object.values(publicProfiles).map((p) => ({ ...p })))
+}
 export function updateGymPresentation(gymId: string, payload: Partial<GymPresentation>) {
   publicProfiles[gymId] = {
     ...(publicProfiles[gymId] ?? ({ id: gymId, name: data.gym.name } as GymPresentation)),

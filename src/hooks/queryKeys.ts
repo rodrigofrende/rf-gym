@@ -4,6 +4,7 @@ export const queryKeys = {
   gyms: () => ['gyms'] as const,
   gym: (gymId: string) => ['gym', gymId] as const,
   gymPresentation: (gymId: string) => ['gymPresentation', gymId] as const,
+  gymPresentations: () => ['gymPresentations'] as const,
   plans: () => ['plans'] as const,
   members: (gymId: string) => ['members', gymId] as const,
   member: (gymId: string, uid: string) => ['member', gymId, uid] as const,

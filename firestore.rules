@@ -109,8 +109,10 @@ service cloud.firestore {
     }
 
     // ---- Planes de suscripción (catálogo de la plataforma) ----
+    // Lectura pública: la landing de marketing muestra los precios en vivo.
+    // Catálogo comercial sin PII; escribe solo el super-admin.
     match /plans/{planId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSuperAdmin();
     }
 

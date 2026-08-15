@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getGymPresentation,
+  listGymPresentations,
   updateGymPresentation,
   type GymPresentationUpdate,
 } from '@/services/gymPresentationService'
@@ -12,6 +13,15 @@ export function useGymPresentation(gymId: string) {
     queryFn: () => getGymPresentation(gymId),
     enabled: !!gymId,
     staleTime: 60_000,
+  })
+}
+
+/** Perfiles públicos de los gyms de la plataforma (sección clientes de la landing). */
+export function useGymPresentations() {
+  return useQuery({
+    queryKey: queryKeys.gymPresentations(),
+    queryFn: () => listGymPresentations(),
+    staleTime: 5 * 60_000,
   })
 }
 
