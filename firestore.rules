@@ -265,10 +265,20 @@ service cloud.firestore {
           );
       }
 
+      // Un admin NO puede tocar la facturación ni la propiedad del gym: el plan,
+      // la cuota y el estado de suscripción (subscription) y el dueño (ownerUid)
+      // los gestiona SOLO el super-admin. Sin esto, un admin podría auto-asignarse
+      // el plan premium o marcar su suscripción como paga.
+      function adminSafeGymUpdate() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['subscription', 'ownerUid']);
+      }
+
       allow read: if canAccessGym(gymId) || isSuperAdmin();
       allow create: if isSuperAdmin();
-      allow update: if (isGymAdmin(gymId) && logoLimitOk()) || isSuperAdmin();
-      allow delete: if isGymAdmin(gymId) || isSuperAdmin();
+      allow update: if isSuperAdmin()
+        || (isGymAdmin(gymId) && logoLimitOk() && adminSafeGymUpdate());
+      allow delete: if isSuperAdmin();
 
       // ---- Socios / membresías ----
       match /members/{memberId} {
@@ -366,7 +376,10 @@ service cloud.firestore {
             && d.memberId is string && d.memberId.size() <= 200
             && d.memberUid is string && d.memberUid.size() <= 128
             && d.displayName is string && d.displayName.size() >= 1 && d.displayName.size() <= 40
-            && d.days is int && d.days >= 1;
+            // Tope 31 = máximo de días de un mes. Acota el inflado del ranking vía
+            // API directa (el incremento de a 1 no se puede limitar a 1/día sin
+            // backend, pero nadie puede mostrar más días que los que tiene el mes).
+            && d.days is int && d.days >= 1 && d.days <= 31;
         }
         // Identidad como en attendance: el doc referencia un member reclamado por este uid.
         function isOwnMonthly() {

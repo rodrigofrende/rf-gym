@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Artefactos de tests (Playwright)
+/playwright-report
+/test-results
+/blob-report
+/.playwright
+
 # Service account keys del Admin SDK (scripts/set-super-admin.mjs). NUNCA commitear.
 serviceAccount*.json
 *service-account*.json

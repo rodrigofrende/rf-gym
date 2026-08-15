@@ -138,8 +138,10 @@ export function buildSeed(): DemoData {
       tariffId: 'tf-musc-3',
       weeklyFrequency: 3,
       startDate: new Date('2024-09-01'),
-      paymentDate: new Date('2026-07-05'), // al día
-      lastPaymentDate: new Date('2026-06-05'),
+      // Relativas a hoy → Rodrigo siempre "al día" (si no, el gate de pago lo
+      // bloquea cuando el reloj real avanza y el demo queda inusable).
+      paymentDate: new Date(Date.now() + 15 * 86_400_000),
+      lastPaymentDate: new Date(Date.now() - 15 * 86_400_000),
       monthlyCost: 30000,
       status: 'active',
     },
