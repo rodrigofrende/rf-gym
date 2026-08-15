@@ -33,6 +33,9 @@ export const paths = {
   attendanceRecord: (gymId: string, attendanceId: string) =>
     `gyms/${gymId}/attendance/${attendanceId}`,
 
+  attendanceMonthly: (gymId: string) => `gyms/${gymId}/attendanceMonthly`,
+  attendanceMonthlyRecord: (gymId: string, id: string) => `gyms/${gymId}/attendanceMonthly/${id}`,
+
   payments: (gymId: string, memberId: string) => `gyms/${gymId}/members/${memberId}/payments`,
   payment: (gymId: string, memberId: string, paymentId: string) =>
     `gyms/${gymId}/members/${memberId}/payments/${paymentId}`,

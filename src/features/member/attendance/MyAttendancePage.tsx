@@ -211,11 +211,16 @@ export function MyAttendancePage() {
             <p className="font-medium">¿Cómo se llena este calendario?</p>
             <p className="flex items-start gap-1.5 text-brand-800">
               <QrCode className="mt-0.5 size-4 shrink-0" />
-              Los días se marcan cuando <strong>escaneás el QR</strong> del gimnasio al entrar.
+              <span>
+                Los días se marcan cuando <strong>escaneás el QR</strong> del gimnasio al entrar.
+              </span>
             </p>
             <p className="flex items-start gap-1.5 text-brand-800">
               <Dumbbell className="mt-0.5 size-4 shrink-0" />
-              La rutina de cada día aparece si <strong>registrás tus ejercicios</strong> ese día en "Mis rutinas".
+              <span>
+                La rutina de cada día aparece si <strong>registrás tus ejercicios</strong> ese día en
+                "Mis rutinas".
+              </span>
             </p>
           </div>
         </div>

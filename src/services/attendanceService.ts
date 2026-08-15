@@ -21,6 +21,7 @@ import * as demo from '@/demo/store'
 import { getMany } from './firestore'
 import { getMember } from './membersService'
 import { paths } from './paths'
+import { bumpMonthlyAttendance } from './rankingService'
 
 export function attendanceId(dayKey: string, memberId: string): string {
   return `${dayKey}_${memberId}`.replace(/[^a-zA-Z0-9_-]/g, '-')
@@ -54,7 +55,15 @@ export async function checkInMember(gymId: string, memberId: string): Promise<At
     await updateDoc(ref, { ...base, scanCount: increment(1) })
   } catch (err) {
     if (!isNotFoundError(err)) throw err
+    // Primer check-in del día → crea la asistencia y suma 1 al ranking mensual.
     await setDoc(ref, { ...base, checkedInAt: now, scanCount: 1 })
+    try {
+      await bumpMonthlyAttendance(gymId, member, dayKey)
+    } catch (rankErr) {
+      // Best-effort: el check-in del socio nunca debe fallar por el ranking.
+      // Un undercount se repara con "Actualizar" (recompute) del admin.
+      console.warn('ranking-bump-failed', rankErr)
+    }
   }
 
   const saved = await getDoc(ref)

@@ -363,6 +363,20 @@ export interface Attendance {
   memberStatus: MemberStatus
 }
 
+/**
+ * Contador mensual de asistencia para el ranking
+ * (`gyms/{gymId}/attendanceMonthly/{monthKey_memberId}`). Legible por TODOS los
+ * socios del gym → solo datos no sensibles (nombre enmascarado, sin email/pagos).
+ */
+export interface MonthlyAttendance {
+  id: string
+  monthKey: string // 'YYYY-MM'
+  memberId: string
+  memberUid: string
+  displayName: string // "Rodrigo F." — enmascarado al escribir
+  days: number // días distintos con check-in en el mes
+}
+
 /** Registro de carga del propio user (`.../members/{uid}/logs`). */
 export interface WorkoutLog {
   id: string

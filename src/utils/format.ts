@@ -51,3 +51,12 @@ export function initials(name: string): string {
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('')
 }
+
+/** "Rodrigo Frende" → "Rodrigo F." (no sensible, para superficies visibles por todo el gym). */
+export function displayNameShort(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/)
+  const first = (parts[0] ?? '').slice(0, 30)
+  if (!first) return 'Socio'
+  const lastInitial = parts.length > 1 ? (parts[parts.length - 1][0]?.toUpperCase() ?? '') : ''
+  return lastInitial ? `${first} ${lastInitial}.` : first
+}

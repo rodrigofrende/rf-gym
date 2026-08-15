@@ -20,6 +20,7 @@ export function useCheckIn(gymId: string, memberId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.attendanceToday(gymId, dayKey) })
       qc.invalidateQueries({ queryKey: queryKeys.memberAttendance(gymId, memberId, dayKey) })
+      qc.invalidateQueries({ queryKey: queryKeys.monthlyLeaderboard(gymId, dayKey.slice(0, 7)) })
     },
   })
 }

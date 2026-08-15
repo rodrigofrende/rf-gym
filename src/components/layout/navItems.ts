@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Star,
   Store,
+  Trophy,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
@@ -34,6 +35,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: ROUTES.ADMIN_MEMBERS, label: 'Socios', icon: Users },
   { to: ROUTES.ADMIN_MY_QR, label: 'Mi QR', icon: QrCode },
   { to: ROUTES.ADMIN_TODAY, label: 'Hoy', icon: CalendarCheck },
+  { to: ROUTES.ADMIN_RANKING, label: 'Ranking', icon: Trophy },
   { to: ROUTES.ADMIN_CLASSES, label: 'Clases', icon: CalendarClock },
   { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
   { to: ROUTES.ADMIN_EXERCISES, label: 'Ejercicios', icon: ListChecks },
@@ -50,6 +52,7 @@ const USER_NAV: NavItem[] = [
   { to: ROUTES.APP_CLASSES, label: 'Clases', icon: CalendarClock },
   { to: ROUTES.APP_SCAN_QR, label: 'Escanear QR', icon: QrCode },
   { to: ROUTES.APP_ATTENDANCE, label: 'Mi asistencia', icon: CalendarDays },
+  { to: ROUTES.APP_RANKING, label: 'Ranking', icon: Trophy },
   { to: ROUTES.APP_LOGS, label: 'Mis registros', icon: History },
   { to: ROUTES.APP_MY_GYM, label: 'Mi gimnasio', icon: Building2 },
   { to: ROUTES.APP_PRODUCTS, label: 'Tienda', icon: Store },

@@ -35,6 +35,8 @@ const AdminQrPage = lazyPage(() => import('@/features/admin/attendance/AdminQrPa
 const TodayAttendancePage = lazyPage(() => import('@/features/admin/attendance/TodayAttendancePage'), (m) => m.TodayAttendancePage)
 // Compartida admin/socio: placeholder hasta construir la feature
 const ClassesComingSoonPage = lazyPage(() => import('@/features/classes/ClassesComingSoonPage'), (m) => m.ClassesComingSoonPage)
+// Compartida admin/socio: ranking mensual de asistencia
+const RankingPage = lazyPage(() => import('@/features/ranking/RankingPage'), (m) => m.RankingPage)
 // Socio (ScanQrPage trae jsqr)
 const ScanQrPage = lazyPage(() => import('@/features/member/attendance/ScanQrPage'), (m) => m.ScanQrPage)
 const MyRoutinesPage = lazyPage(() => import('@/features/member/routines/MyRoutinesPage'), (m) => m.MyRoutinesPage)
@@ -218,6 +220,14 @@ export function AppRoutes() {
           </PrivateRoute>
         }
       />
+      <Route
+        path={ROUTES.ADMIN_RANKING}
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <RankingPage />
+          </PrivateRoute>
+        }
+      />
 
       {/* Socio */}
       <Route
@@ -292,6 +302,15 @@ export function AppRoutes() {
         element={
           <PrivateRoute allowedRoles={['user']}>
             <ShopPage />
+          </PrivateRoute>
+        }
+      />
+      {/* Sin SocioPaymentGate: es marketing/motivación, siempre visible. */}
+      <Route
+        path={ROUTES.APP_RANKING}
+        element={
+          <PrivateRoute allowedRoles={['user']}>
+            <RankingPage />
           </PrivateRoute>
         }
       />

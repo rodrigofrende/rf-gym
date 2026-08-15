@@ -29,6 +29,7 @@ export const ROUTES = {
   ADMIN_TODAY: '/admin/today',
   ADMIN_CLASSES: '/admin/classes',
   ADMIN_PRODUCTS: '/admin/products',
+  ADMIN_RANKING: '/admin/ranking',
 
   // Socio
   CHECK_IN: '/check-in/:gymId',
@@ -40,6 +41,7 @@ export const ROUTES = {
   APP_MY_GYM: '/app/my-gym',
   APP_CLASSES: '/app/classes',
   APP_PRODUCTS: '/app/products',
+  APP_RANKING: '/app/ranking',
 } as const
 
 export const adminMemberDetail = (uid: string) => `/admin/members/${uid}`

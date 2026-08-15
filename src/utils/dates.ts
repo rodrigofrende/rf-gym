@@ -37,6 +37,14 @@ export function monthKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}`
 }
 
+/**
+ * Clave de mes 'YYYY-MM' (1-based, con cero) para keys de Firestore.
+ * NO confundir con `monthKey()` (0-based sin pad, buckets del dashboard).
+ */
+export function isoMonthKey(year: number, monthIndex: number): string {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+}
+
 /** Últimos `n` meses (incluido el actual), del más viejo al más nuevo. */
 export function lastNMonths(n: number, from = new Date()): { key: string; label: string }[] {
   const out: { key: string; label: string }[] = []

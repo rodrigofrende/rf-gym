@@ -11,6 +11,7 @@ import type {
   MemberAuthStatus,
   MemberLoginIndex,
   Membership,
+  MonthlyAttendance,
   Note,
   Payment,
   Product,
@@ -21,8 +22,8 @@ import type {
 } from '@/types'
 import { buildSeed, DEMO_GYM_ID } from './seed'
 import { addMonths, getPaymentStatus } from '@/utils/payments'
-import { toDate } from '@/utils/format'
-import { localDayKey } from '@/utils/dates'
+import { displayNameShort, toDate } from '@/utils/format'
+import { isoMonthKey, localDayKey } from '@/utils/dates'
 import { buildDashboard } from '@/utils/dashboard'
 import { dailyLogId } from '@/utils/logs'
 import { normalizeEmailKey } from '@/utils/loginEmail'
@@ -49,6 +50,7 @@ const gyms: DemoGym[] = [data.gym]
 const memberPayments: Record<string, Payment[]> = { ...data.payments }
 const gymPayments: Record<string, Payment[]> = {}
 const attendance: Record<string, Attendance[]> = buildDemoAttendance()
+const monthlyLeaderboard: Record<string, MonthlyAttendance[]> = buildDemoMonthly()
 const memberLoginIndex: Record<string, MemberLoginIndex> = buildMemberLoginIndex()
 
 let counter = 0
@@ -78,6 +80,39 @@ function buildMemberLoginIndex(): Record<string, MemberLoginIndex> {
 
 function demoAttendanceId(dayKey: string, memberId: string) {
   return `${dayKey}_${memberId}`
+}
+
+/**
+ * Ranking mensual demo: filas ficticias que cubren podio, empates (puestos
+ * compartidos) y a Rodrigo fuera del top 10 (demo de la fila propia pinneada).
+ */
+function buildDemoMonthly(): Record<string, MonthlyAttendance[]> {
+  const now = new Date()
+  const mk = isoMonthKey(now.getFullYear(), now.getMonth())
+  const row = (memberId: string, displayName: string, days: number): MonthlyAttendance => ({
+    id: `${mk}_${memberId}`,
+    monthKey: mk,
+    memberId,
+    memberUid: memberId,
+    displayName,
+    days,
+  })
+  return {
+    [mk]: [
+      row('demo-socio-1', 'Juan P.', 18),
+      row('demo-socio-2', 'Mariana L.', 16),
+      row('demo-fake-1', 'Sofía G.', 15),
+      row('demo-fake-2', 'Lucas M.', 14),
+      row('demo-fake-3', 'Valentina R.', 13),
+      row('demo-fake-4', 'Martín A.', 13), // empate → puesto compartido
+      row('demo-fake-5', 'Camila T.', 12),
+      row('demo-fake-6', 'Nicolás B.', 11),
+      row('demo-fake-7', 'Julieta S.', 11), // empate
+      row('demo-fake-8', 'Pedro C.', 10),
+      row('demo-fake-9', 'Agustina V.', 10),
+      row('demo-socio-rodrigo', 'Rodrigo F.', 9), // fuera del top 10 → fila propia pinneada
+    ],
+  }
 }
 
 function buildDemoAttendance(): Record<string, Attendance[]> {
@@ -494,7 +529,37 @@ export function checkInMember(_gymId: string, memberId: string) {
     memberStatus: member.status,
   }
   attendance[dayKey] = [created, ...list]
+  // Primer check-in del día → suma 1 al ranking mensual (misma semántica que prod).
+  bumpDemoMonthly(member, dayKey)
   return ok({ ...created })
+}
+
+function bumpDemoMonthly(member: Member, dayKey: string) {
+  const mk = dayKey.slice(0, 7)
+  const rows = (monthlyLeaderboard[mk] ??= [])
+  const existing = rows.find((r) => r.memberId === member.id)
+  if (existing) {
+    existing.days += 1
+  } else {
+    rows.push({
+      id: `${mk}_${member.id}`,
+      monthKey: mk,
+      memberId: member.id,
+      memberUid: member.uid,
+      displayName: displayNameShort(member.fullName),
+      days: 1,
+    })
+  }
+}
+
+// ---- Ranking mensual ----
+export function listMonthlyLeaderboard(_gymId: string, monthKey: string) {
+  return ok((monthlyLeaderboard[monthKey] ?? []).map((r) => ({ ...r })))
+}
+export function recomputeMonthlyLeaderboard(_gymId: string, _monthKey: string) {
+  // No-op en demo: la asistencia demo solo tiene el día de hoy; recomputar de
+  // verdad borraría las filas sembradas del ranking.
+  return ok(undefined)
 }
 
 export function listTodayAttendance(_gymId: string, dayKey: string) {
