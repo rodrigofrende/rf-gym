@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, FlaskConical, Info, QrCode, RefreshCw, Share2, Trophy } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Info, QrCode, RefreshCw, Share2, Trophy } from 'lucide-react'
 import type { MonthlyAttendance } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useToast } from '@/providers/ToastProvider'
-import { seedTestLeaderboard } from '@/services/rankingService'
 import { useMonthlyLeaderboard, useRecomputeLeaderboard } from '@/hooks/useRanking'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -34,20 +32,6 @@ export function RankingPage() {
   const { data: rows = [], isLoading } = useMonthlyLeaderboard(gymId, monthKey)
   const recompute = useRecomputeLeaderboard(gymId)
   const [sharing, setSharing] = useState(false)
-
-  // TEMP — SOLO PRUEBAS (eliminar junto con seedTestLeaderboard): siembra
-  // contadores fake del mes actual y el anterior para ver el ranking lleno.
-  const qc = useQueryClient()
-  const [seeding, setSeeding] = useState(false)
-  const handleSeedTest = async () => {
-    setSeeding(true)
-    await run(() => seedTestLeaderboard(gymId), {
-      success: 'Datos de prueba sembrados (mes actual y anterior).',
-      error: 'No pudimos sembrar los datos de prueba.',
-    })
-    await qc.invalidateQueries({ queryKey: ['monthlyLeaderboard', gymId] })
-    setSeeding(false)
-  }
 
   // Competition ranking (1, 2, 2, 4): empatados comparten puesto.
   const ranked = useMemo<RankedRow[]>(() => {
@@ -132,17 +116,6 @@ export function RankingPage() {
       subtitle="Los socios que más días entrenaron este mes."
       actions={
         <>
-          {/* TEMP — SOLO PRUEBAS: eliminar este botón junto con seedTestLeaderboard. */}
-          {role === 'admin' && (
-            <Button
-              variant="ghost"
-              leftIcon={<FlaskConical className="size-4" />}
-              loading={seeding}
-              onClick={handleSeedTest}
-            >
-              Sembrar prueba
-            </Button>
-          )}
           {role === 'admin' && (
             <Button
               variant="secondary"

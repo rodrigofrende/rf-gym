@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { Menu } from 'lucide-react'
+import { Menu, MessageSquarePlus } from 'lucide-react'
+import { useTenant } from '@/providers/TenantProvider'
 import { cn } from '@/utils/cn'
+import { ContactMenu } from '@/components/ui'
+import { APP_NAME, PLATFORM_EMAIL } from '@/config/app'
 import { Sidebar } from './Sidebar'
 
 export function AppLayout({
@@ -17,7 +20,33 @@ export function AppLayout({
   children: ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const hasHeaderContent = Boolean(subtitle || actions)
+  const { role, activeMembership, isSuperAdmin } = useTenant()
+
+  // Contacto con RF FIT: solo para admins de gym (el super-admin es RF, no se
+  // escribe a sí mismo). Vive en la barra superior —accesible desde cualquier
+  // pantalla— en vez de amontonarse en el sidebar. Menú: copiar / Gmail / mailto.
+  const supportSubject =
+    role === 'admin' && !isSuperAdmin && PLATFORM_EMAIL
+      ? `Sugerencia o reporte — ${activeMembership?.gymName ?? APP_NAME}`
+      : null
+  const support = supportSubject ? (
+    <ContactMenu email={PLATFORM_EMAIL} subject={supportSubject} align="end">
+      {({ toggle }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          title="Sugerí mejoras o reportá un problema a RF FIT"
+          aria-label="Sugerencias y soporte"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+        >
+          <MessageSquarePlus className="size-5" aria-hidden />
+          <span className="hidden sm:inline">Soporte</span>
+        </button>
+      )}
+    </ContactMenu>
+  ) : null
+
+  const hasHeaderContent = Boolean(subtitle || actions || support)
 
   return (
     <div className="flex h-full">
@@ -34,13 +63,15 @@ export function AppLayout({
           >
             <Menu className="size-5" />
           </button>
-          <h1 className="text-base font-semibold text-zinc-900">{title}</h1>
+          <h1 className="truncate text-base font-semibold text-zinc-900">{title}</h1>
+          {support && <div className="ml-auto shrink-0">{support}</div>}
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">
           <div className="mx-auto max-w-6xl">
             {/* Header de página unificado: h1 en desktop + subtítulo + acciones.
-                En mobile el h1 vive en la barra superior (de ahí `hidden lg:block`). */}
+                En mobile el h1 vive en la barra superior (de ahí `hidden lg:block`).
+                El botón de soporte se muestra solo en desktop (en mobile vive arriba). */}
             <div
               className={cn(
                 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:mb-5',
@@ -51,7 +82,12 @@ export function AppLayout({
                 <h1 className="hidden text-xl font-bold text-zinc-900 lg:block">{title}</h1>
                 {subtitle && <p className="text-sm text-zinc-500 lg:mt-1">{subtitle}</p>}
               </div>
-              {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+              {(actions || support) && (
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {actions}
+                  {support && <div className="hidden lg:block">{support}</div>}
+                </div>
+              )}
             </div>
 
             {children}

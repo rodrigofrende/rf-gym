@@ -2,11 +2,9 @@ import { doc, increment, setDoc, where } from 'firebase/firestore'
 import type { Attendance, Member, MonthlyAttendance } from '@/types'
 import { env } from '@/config/env'
 import { db } from '@/lib/firebase'
-import { isoMonthKey } from '@/utils/dates'
 import { displayNameShort } from '@/utils/format'
 import * as demo from '@/demo/store'
 import { createBatch, getMany } from './firestore'
-import { listMembers } from './membersService'
 import { paths } from './paths'
 
 /** Mismo saneo que attendanceId() para ids determinísticos. */
@@ -95,42 +93,3 @@ export async function recomputeMonthlyLeaderboard(gymId: string, monthKey: strin
   await batch.commit()
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEMP — SOLO PRUEBAS, ELIMINAR DESPUÉS DE PROBAR EL RANKING EN TEST 2.
-// Siembra contadores fake (mes actual + anterior) con los socios reales del
-// gym. Las rules ya permiten al admin escribir cualquier valor, sin cambios.
-// NO crea asistencias diarias: "Actualizar" (recompute) de cada mes borra
-// estos datos fake y vuelve a la realidad.
-// ─────────────────────────────────────────────────────────────────────────────
-export async function seedTestLeaderboard(gymId: string): Promise<void> {
-  if (env.demoMode) return // el demo ya trae su propio seed
-  const members = (await listMembers(gymId)).filter((m) => m.role === 'user')
-  if (members.length === 0) throw new Error('El gimnasio no tiene socios para sembrar.')
-
-  const now = new Date()
-  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const targets = [
-    { monthKey: isoMonthKey(now.getFullYear(), now.getMonth()), maxDays: now.getDate() },
-    { monthKey: isoMonthKey(prev.getFullYear(), prev.getMonth()), maxDays: 26 },
-  ]
-  // Días objetivo variados (con empates a propósito), pensados para un mes
-  // completo (~26 días útiles); se cicla si hay más socios.
-  const pattern = [24, 20, 17, 17, 14, 11, 8, 8, 5, 3]
-
-  const batch = createBatch()
-  for (const { monthKey, maxDays } of targets) {
-    members.forEach((m, i) => {
-      // Se ESCALA al tramo transcurrido del mes (clampear aplastaría todos los
-      // valores altos en el mismo número → empates masivos irreales).
-      const days = Math.max(1, Math.round((pattern[i % pattern.length] * maxDays) / 26))
-      batch.set(doc(db, paths.attendanceMonthlyRecord(gymId, monthlyAttendanceId(monthKey, m.id))), {
-        monthKey,
-        memberId: m.id,
-        memberUid: m.uid,
-        displayName: displayNameShort(m.fullName),
-        days,
-      })
-    })
-  }
-  await batch.commit()
-}

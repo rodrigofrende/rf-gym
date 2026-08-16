@@ -126,7 +126,7 @@ export const STEPS: LandingStep[] = [
   {
     icon: Rocket,
     title: 'Activamos tu gimnasio',
-    body: 'Creamos tu gimnasio y tu usuario admin. El resto —marca, tarifas y socios— lo cargás vos en minutos, con una app simple e intuitiva.',
+    body: 'Creamos tu gimnasio y tu usuario admin. El resto —marca, tarifas y socios— lo cargás vos en minutos, con una app clara y fácil de usar.',
   },
   {
     icon: QrCode,
@@ -171,7 +171,7 @@ export const FAQS: LandingFaq[] = [
   },
   {
     q: '¿La app puede llevar mi marca?',
-    a: 'Sí. Con white-label la app usa tu logo y tu paleta de colores, y tenés tu propia página pública para compartir con prospectos.',
+    a: 'Sí. Con white-label la app usa tu logo y tu paleta de colores, y tenés tu propia página pública para compartir con futuros socios.',
   },
 ]
 

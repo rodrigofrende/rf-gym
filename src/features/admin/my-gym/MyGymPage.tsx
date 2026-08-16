@@ -112,7 +112,7 @@ export function MyGymPage() {
   return (
     <AppLayout
       title="Mi gimnasio"
-      subtitle="Presentación y contacto que ven tus socios y prospectos."
+      subtitle="Presentación y contacto que ven tus socios y futuros socios."
       actions={
         <Button
           variant="secondary"
@@ -373,7 +373,7 @@ function MyGymForm({
         <Card>
           <CardHeader
             title="Tarifas"
-            subtitle="Elegí qué planes mostrar en la página pública para atraer prospectos (opcional)."
+            subtitle="Elegí qué planes mostrar en la página pública para atraer nuevos socios (opcional)."
           />
           <CardBody className="space-y-2">
             {tariffsLoading ? (
