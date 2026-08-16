@@ -72,11 +72,23 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid']);
     }
 
+    // photoURL editable por el socio: solo si no cambia, o si el nuevo valor es
+    // un data URL de imagen acotado o una URL http(s) corta. Evita que por API
+    // directa se meta un payload gigante (DoS de doc) o un esquema peligroso.
+    function selfPhotoUrlOk() {
+      let d = request.resource.data;
+      return !d.diff(resource.data).affectedKeys().hasAny(['photoURL'])
+        || !('photoURL' in d)
+        || isDataImageUrl(d.photoURL, 153600)
+        || isHttpUrl(d.photoURL, 500);
+    }
+
     function isSelfProfileEdit() {
       return isSignedIn()
         && resource.data.uid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['fullName', 'phone', 'birthDate', 'photoURL']);
+          .hasOnly(['fullName', 'phone', 'birthDate', 'photoURL'])
+        && selfPhotoUrlOk();
     }
 
     function isSelfAuthStatusUpdate() {
@@ -298,9 +310,27 @@ service cloud.firestore {
         }
 
         match /logs/{logId} {
-          allow read: if isGymAdmin(gymId)
-            || get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data.uid == request.auth.uid;
-          allow create, update, delete: if get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data.uid == request.auth.uid;
+          // Registro de carga del socio. Doc world-readable solo para admin +
+          // dueño, pero como lo escribe el propio socio validamos forma y tamaño
+          // para que por API directa no se puedan inyectar payloads enormes.
+          function validLog() {
+            let d = request.resource.data;
+            return d.keys().hasOnly([
+                'routineId', 'exerciseKey', 'exerciseName', 'dayKey',
+                'trainingDate', 'date', 'sets'
+              ])
+              && d.routineId is string && d.routineId.size() <= 200
+              && d.exerciseName is string && d.exerciseName.size() >= 1 && d.exerciseName.size() <= 160
+              && (!('exerciseKey' in d) || (d.exerciseKey is string && d.exerciseKey.size() <= 200))
+              && (!('dayKey' in d) || (d.dayKey is string && d.dayKey.size() <= 40))
+              && d.sets is list && d.sets.size() <= 60;
+          }
+          function isLogOwner() {
+            return get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data.uid == request.auth.uid;
+          }
+          allow read: if isGymAdmin(gymId) || isLogOwner();
+          allow create, update: if isLogOwner() && validLog();
+          allow delete: if isLogOwner();
         }
 
         match /payments/{paymentId} {

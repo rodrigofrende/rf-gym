@@ -330,6 +330,72 @@ describe('products — validación de forma', () => {
   })
 })
 
+describe('logs — el socio solo escribe registros con forma válida', () => {
+  const logPath = `gyms/${GYM}/members/${SOCIO_MEMBER}/logs/2026-08-15_r1_press`
+  const validLog = {
+    routineId: 'r1',
+    exerciseKey: 'press',
+    exerciseName: 'Press banca',
+    dayKey: '2026-08-15',
+    sets: [{ weight: 40, reps: 10 }],
+  }
+
+  it('el dueño puede crear un log válido', async () => {
+    const db = asSocio()
+    await assertSucceeds(setDoc(doc(db, logPath), validLog))
+  })
+
+  it('rechaza claves fuera del esquema (payload arbitrario)', async () => {
+    const db = asSocio()
+    await assertFails(setDoc(doc(db, logPath), { ...validLog, junk: 'x'.repeat(1000) }))
+  })
+
+  it('rechaza exerciseName gigante (DoS de doc)', async () => {
+    const db = asSocio()
+    await assertFails(setDoc(doc(db, logPath), { ...validLog, exerciseName: 'x'.repeat(500) }))
+  })
+
+  it('rechaza demasiados sets', async () => {
+    const db = asSocio()
+    const sets = Array.from({ length: 61 }, () => ({ weight: 1, reps: 1 }))
+    await assertFails(setDoc(doc(db, logPath), { ...validLog, sets }))
+  })
+
+  it('un socio ajeno NO puede escribir logs de otro', async () => {
+    const db = asOutsider()
+    await assertFails(setDoc(doc(db, logPath), validLog))
+  })
+})
+
+describe('members — photoURL del self-edit está acotado', () => {
+  it('el socio puede setear una foto data URL válida', async () => {
+    const db = asSocio()
+    await assertSucceeds(
+      updateDoc(doc(db, `gyms/${GYM}/members/${SOCIO_MEMBER}`), {
+        photoURL: 'data:image/webp;base64,AAAA',
+      }),
+    )
+  })
+
+  it('el socio NO puede setear un esquema peligroso en photoURL', async () => {
+    const db = asSocio()
+    await assertFails(
+      updateDoc(doc(db, `gyms/${GYM}/members/${SOCIO_MEMBER}`), {
+        photoURL: 'javascript:alert(1)',
+      }),
+    )
+  })
+
+  it('el socio NO puede meter un payload gigante en photoURL', async () => {
+    const db = asSocio()
+    await assertFails(
+      updateDoc(doc(db, `gyms/${GYM}/members/${SOCIO_MEMBER}`), {
+        photoURL: 'data:image/png;base64,' + 'A'.repeat(200000),
+      }),
+    )
+  })
+})
+
 // Sanity: el módulo importó bien (falla temprano si el emulador no está arriba).
 it('el entorno de test se inicializó', () => {
   assert.ok(testEnv)

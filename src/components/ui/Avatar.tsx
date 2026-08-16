@@ -1,4 +1,5 @@
 import { initials } from '@/utils/format'
+import { safeImageSrc } from '@/utils/url'
 import { cn } from '@/utils/cn'
 
 export function Avatar({
@@ -11,8 +12,16 @@ export function Avatar({
   size?: 'sm' | 'md' | 'lg'
 }) {
   const sizes = { sm: 'size-8 text-xs', md: 'size-10 text-sm', lg: 'size-14 text-lg' }
-  if (src) {
-    return <img src={src} alt={name} className={cn('rounded-[var(--radius-pill)] object-cover', sizes[size])} />
+  const safe = safeImageSrc(src)
+  if (safe) {
+    return (
+      <img
+        src={safe}
+        alt={name}
+        referrerPolicy="no-referrer"
+        className={cn('rounded-[var(--radius-pill)] object-cover', sizes[size])}
+      />
+    )
   }
   return (
     <div

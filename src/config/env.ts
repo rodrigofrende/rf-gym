@@ -1,7 +1,8 @@
 const apiKey = import.meta.env.VITE_FIREBASE_API_KEY as string | undefined
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined
 
-function hasFirebaseConfig(): boolean {
+/** Hay credenciales Firebase mínimas para inicializar la app real. */
+export function hasFirebaseConfig(): boolean {
   return Boolean(apiKey?.trim() && projectId?.trim())
 }
 
@@ -17,6 +18,14 @@ export const env = {
   },
   useEmulator: import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true',
   googleLoginEnabled: import.meta.env.VITE_ENABLE_GOOGLE_LOGIN === 'true',
-  // Demo en memoria: activo si se fuerza con VITE_DEMO_MODE o si no hay credenciales.
-  demoMode: import.meta.env.VITE_DEMO_MODE === 'true' || !hasFirebaseConfig(),
+  // App Check (reCAPTCHA v3): atestación de que las requests vienen de la app
+  // real y no de scripts que reusan la apiKey pública del bundle.
+  appCheckSiteKey: (import.meta.env.VITE_RECAPTCHA_V3_SITE_KEY as string | undefined)?.trim() || '',
+  // Token de debug para desarrollo/CI (consola → App Check → Debug tokens).
+  // "true" genera uno nuevo en consola; un string usa ese token fijo.
+  appCheckDebugToken: (import.meta.env.VITE_APPCHECK_DEBUG_TOKEN as string | undefined)?.trim() || '',
+  // Modo demo (datos en memoria, sin Firebase). Explícito: no se activa solo por
+  // falta de credenciales, para que un deploy mal configurado falle ruidosamente
+  // en vez de servir la app demo con bypass de auth.
+  demoMode: import.meta.env.VITE_DEMO_MODE === 'true',
 }
