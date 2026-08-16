@@ -4,6 +4,7 @@ import {
   createMember,
   getMember,
   listMembers,
+  reissueMemberAccess,
   removeMember,
   updateMember,
   updateMemberProfile,
@@ -48,6 +49,18 @@ export function useUpdateMember(gymId: string) {
       qc.invalidateQueries({ queryKey: queryKeys.members(gymId) })
       qc.invalidateQueries({ queryKey: queryKeys.member(gymId, memberId) })
       qc.invalidateQueries({ queryKey: queryKeys.stats(gymId) })
+    },
+  })
+}
+
+export function useReissueMemberAccess(gymId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ memberId, newLoginEmail }: { memberId: string; newLoginEmail: string }) =>
+      reissueMemberAccess(gymId, memberId, newLoginEmail),
+    onSuccess: (_r, { memberId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.members(gymId) })
+      qc.invalidateQueries({ queryKey: queryKeys.member(gymId, memberId) })
     },
   })
 }

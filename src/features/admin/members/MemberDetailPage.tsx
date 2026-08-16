@@ -1,11 +1,19 @@
 import { useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, KeyRound, Pencil, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, KeyRound, Mail, Pencil, RefreshCw, Trash2, Wallet } from 'lucide-react'
 import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
-import { useMember, useRemoveMember, useUpdateMember } from '@/hooks/useMembers'
+import { useToast } from '@/providers/ToastProvider'
+import {
+  useMember,
+  useMembers,
+  useReissueMemberAccess,
+  useRemoveMember,
+  useUpdateMember,
+} from '@/hooks/useMembers'
+import { useGym } from '@/hooks/useGym'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
 import {
@@ -18,11 +26,14 @@ import {
   ConfirmDialog,
   FullPageSpinner,
   IconButton,
+  Input,
+  Modal,
   Sensitive,
 } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
 import { formatDate } from '@/utils/format'
-import { ROLE_LABEL } from '@/utils/roles'
+import { suggestLoginEmail } from '@/utils/loginEmail'
+import { memberAccessState, ROLE_LABEL } from '@/utils/roles'
 import { ROUTES } from '@/routes/routePaths'
 import { cn } from '@/utils/cn'
 import { MemberFormModal } from './MemberFormModal'
@@ -41,22 +52,31 @@ const TABS: { key: Tab; label: string; userOnly?: boolean }[] = [
   { key: 'progress', label: 'Progreso' },
 ]
 
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
 export function MemberDetailPage() {
   const { uid: memberId = '' } = useParams()
-  const { user } = useAuth()
+  const { user, sendPasswordReset } = useAuth()
   const { activeGymId } = useTenant()
   const gymId = activeGymId as string
   const navigate = useNavigate()
   const run = useToastAction()
+  const { notify } = useToast()
 
   const { data: member, isLoading } = useMember(gymId, memberId)
+  const { data: members = [] } = useMembers(gymId)
+  const { data: gym } = useGym(gymId)
   const updateMember = useUpdateMember(gymId)
   const removeMember = useRemoveMember(gymId)
+  const reissue = useReissueMemberAccess(gymId)
   const [tab, setTab] = useState<Tab>('data')
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
+  const [sendingReset, setSendingReset] = useState(false)
+  const [reissueEmail, setReissueEmail] = useState('')
+  const [reissuing, setReissuing] = useState(false)
 
   if (isLoading) {
     return (
@@ -115,6 +135,42 @@ export function MemberDetailPage() {
     if (ok) setPasswordOpen(false)
   }
 
+  const accessEmail = member.loginEmail || member.email
+  const access = memberAccessState(member)
+  const existingEmails = members.filter((m) => m.id !== memberId).map((m) => m.loginEmail || m.email)
+
+  const handleSendReset = async () => {
+    setSendingReset(true)
+    const ok = await run(() => sendPasswordReset(accessEmail), {
+      success: `Le enviamos un email a ${accessEmail} para crear una nueva contraseña.`,
+      error: 'No pudimos enviar el email de restablecimiento.',
+    })
+    setSendingReset(false)
+    if (ok) setPasswordOpen(false)
+  }
+
+  const suggestInternal = () =>
+    setReissueEmail(suggestLoginEmail(member.fullName, gym?.name ?? '', existingEmails))
+
+  const handleReissue = async () => {
+    const email = reissueEmail.trim().toLowerCase()
+    if (!EMAIL_RE.test(email)) return notify('Ingresá un email válido', 'error')
+    if (email === accessEmail.toLowerCase())
+      return notify('El acceso nuevo tiene que ser distinto del actual', 'error')
+    if (existingEmails.some((e) => e.toLowerCase() === email))
+      return notify('Ya hay otro socio con ese email de acceso', 'error')
+    setReissuing(true)
+    const ok = await run(() => reissue.mutateAsync({ memberId, newLoginEmail: email }), {
+      success: `Listo. El socio entra con ${email} y crea su contraseña en el primer ingreso.`,
+      error: 'No se pudo re-emitir el acceso',
+    })
+    setReissuing(false)
+    if (ok) {
+      setReissueEmail('')
+      setPasswordOpen(false)
+    }
+  }
+
   return (
     <AppLayout title={member.fullName}>
       <button
@@ -130,9 +186,9 @@ export function MemberDetailPage() {
             <Avatar name={member.fullName} src={member.photoURL} size="lg" />
             <div>
               <Sensitive className="block text-sm text-zinc-500">{member.email}</Sensitive>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge tone="brand">{ROLE_LABEL[member.role]}</Badge>
-                {!member.uid && <Badge tone="amber">Primer acceso pendiente</Badge>}
+                <Badge tone={access.tone}>{access.label}</Badge>
               </div>
             </div>
           </div>
@@ -147,7 +203,7 @@ export function MemberDetailPage() {
               leftIcon={<KeyRound className="size-4" />}
               onClick={() => setPasswordOpen(true)}
             >
-              Requerir cambio
+              Restablecer acceso
             </Button>
             <IconButton
               icon={<Pencil className="size-4" />}
@@ -189,6 +245,23 @@ export function MemberDetailPage() {
           />
         </div>
       </Card>
+
+      {access.needsAttention && (
+        <div className="mb-5 flex items-start gap-3 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <KeyRound className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
+          <div className="min-w-0">
+            <p className="font-medium">{access.label}</p>
+            <p className="mt-0.5 text-amber-800">{access.action}</p>
+            <button
+              type="button"
+              onClick={() => setPasswordOpen(true)}
+              className="mt-2 font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
+            >
+              Gestionar acceso
+            </button>
+          </div>
+        </div>
+      )}
 
       {tab === 'data' && (
         <Card>
@@ -252,14 +325,88 @@ export function MemberDetailPage() {
         description={`¿Querés eliminar a ${member.fullName}? Se borrarán sus datos, pagos y registros. Esta acción no se puede deshacer.`}
         loading={removeMember.isPending}
       />
-      <ConfirmDialog
-        open={passwordOpen}
-        onClose={() => setPasswordOpen(false)}
-        onConfirm={requirePasswordChange}
-        title="Requerir cambio de contraseña"
-        description="En modo client-only no podemos borrar una contraseña olvidada de Firebase Auth. Esta acción marca al socio para cambiarla después de iniciar sesión; si nunca creó contraseña, seguirá el flujo de primer acceso."
-        loading={updateMember.isPending}
-      />
+      <Modal open={passwordOpen} onClose={() => setPasswordOpen(false)} title="Acceso del socio">
+        <div className="space-y-4">
+          {/* Estado actual del acceso */}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-zinc-900">{accessEmail}</p>
+              <p className="text-xs text-zinc-500">{access.label}</p>
+            </div>
+            <Badge tone={access.tone}>{access.needsAttention ? 'Requiere acción' : 'OK'}</Badge>
+          </div>
+
+          {/* Blanqueo por re-emisión: anda aunque haya olvidado la contraseña */}
+          <div className="space-y-2 rounded-xl border border-brand-100 bg-brand-50/60 p-3">
+            <p className="text-sm font-medium text-brand-900">Se olvidó la contraseña</p>
+            <p className="text-xs text-brand-800">
+              Le damos un acceso nuevo y crea su contraseña en el primer ingreso, sin saber la
+              anterior. Conserva todos sus datos; lo único que cambia es su email de acceso.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                type="email"
+                placeholder="socio@gmail.com"
+                value={reissueEmail}
+                onChange={(e) => setReissueEmail(e.target.value)}
+              />
+              <Button type="button" variant="secondary" className="shrink-0" onClick={suggestInternal}>
+                Usuario del gym
+              </Button>
+            </div>
+            <p className="text-[11px] text-brand-700">
+              Ideal: su email real (así recupera la contraseña solo a futuro). O un usuario nuevo del
+              gimnasio.
+            </p>
+            <Button
+              fullWidth
+              leftIcon={<RefreshCw className="size-4" />}
+              loading={reissuing}
+              disabled={!reissueEmail.trim()}
+              onClick={handleReissue}
+            >
+              Re-emitir acceso
+            </Button>
+          </div>
+
+          {/* Opciones para cuando el socio SÍ puede entrar */}
+          {member.uid && (
+            <div className="space-y-4 border-t border-zinc-100 pt-4">
+              <div>
+                <p className="text-sm font-medium text-zinc-700">Su email es real</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Mandale el link de restablecimiento de Firebase (solo llega si el email existe de verdad).
+                </p>
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  className="mt-2"
+                  leftIcon={<Mail className="size-4" />}
+                  loading={sendingReset}
+                  onClick={handleSendReset}
+                >
+                  Enviar email de restablecimiento
+                </Button>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-zinc-700">Todavía recuerda su contraseña</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Forzá el cambio en su próximo ingreso, sin tocar el email.
+                </p>
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  className="mt-2"
+                  loading={updateMember.isPending}
+                  onClick={requirePasswordChange}
+                >
+                  Requerir cambio en el próximo ingreso
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </AppLayout>
   )
 }

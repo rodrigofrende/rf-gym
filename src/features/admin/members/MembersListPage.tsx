@@ -24,7 +24,7 @@ import {
   Tooltip,
   type Column,
 } from '@/components/ui'
-import { ROLE_LABEL, STATUS_LABEL } from '@/utils/roles'
+import { memberAccessState, ROLE_LABEL, STATUS_LABEL } from '@/utils/roles'
 import { adminMemberDetail } from '@/routes/routePaths'
 import { MemberFormModal } from './MemberFormModal'
 import { MemberRegisterPaymentModal } from './MemberRegisterPaymentModal'
@@ -121,10 +121,18 @@ export function MembersListPage() {
       render: (m) => <Badge tone={STATUS_TONE[m.status]}>{STATUS_LABEL[m.status]}</Badge>,
     },
     {
-      key: 'linked',
-      header: '',
-      render: (m) =>
-        m.uid ? null : <Badge tone="amber">Primer acceso pendiente</Badge>,
+      key: 'access',
+      header: 'Acceso',
+      render: (m) => {
+        const s = memberAccessState(m)
+        return s.needsAttention ? (
+          <Tooltip text={s.action ?? ''}>
+            <Badge tone={s.tone}>{s.label}</Badge>
+          </Tooltip>
+        ) : (
+          <span className="text-xs text-zinc-400">Activo</span>
+        )
+      },
     },
     {
       key: 'actions',
@@ -230,7 +238,9 @@ export function MembersListPage() {
                           <Money value={m.monthlyCost} /> /mes
                         </span>
                       ) : null}
-                      {!m.uid ? <Badge tone="amber">Primer acceso pendiente</Badge> : null}
+                      {memberAccessState(m).needsAttention ? (
+                        <Badge tone={memberAccessState(m).tone}>{memberAccessState(m).label}</Badge>
+                      ) : null}
                     </div>
                   </div>
                   <ChevronRight className="size-5 shrink-0 text-zinc-300" aria-hidden />

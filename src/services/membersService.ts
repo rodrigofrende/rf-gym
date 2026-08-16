@@ -74,7 +74,13 @@ export async function createMember(gymId: string, data: Omit<Member, 'id' | 'uid
 export async function updateMember(gymId: string, memberId: string, data: Partial<Member>) {
   if (env.demoMode) return demo.updateMember(gymId, memberId, data)
   const prev = await getMember(gymId, memberId)
-  await assertCanSaveAdmin(gymId, data.role ?? prev?.role ?? 'user', memberId)
+  // Solo validar el cupo de admins cuando REALMENTE se promueve a admin. Un
+  // update que no toca el rol (ej. resetear la contraseña de un admin existente)
+  // no debe re-chequear el cupo: si el gym quedó sobre el límite tras bajar de
+  // plan, igual se lo debe poder editar sin quedar trabado.
+  if (data.role === 'admin' && prev?.role !== 'admin') {
+    await assertCanSaveAdmin(gymId, 'admin', memberId)
+  }
   const nextEmail = data.loginEmail ?? data.email
   if (prev && nextEmail && normalizeEmailKey(nextEmail) !== normalizeEmailKey(prev.loginEmail || prev.email)) {
     await assertUniqueLoginEmail(gymId, nextEmail, memberId)
@@ -90,6 +96,55 @@ export async function updateMember(gymId: string, memberId: string, data: Partia
     await syncGymMembershipIndex(uid, gymId, { memberId, role: nextRole })
     await syncAdminUid(gymId, uid, nextRole, prev?.role)
   }
+}
+
+/**
+ * Re-emite el acceso de un socio con un email NUEVO y lo deja en "primer acceso"
+ * (pending_password, sin uid), conservando todos sus datos. Es el blanqueo sin
+ * backend: como Firebase no deja resetear la contraseña de una cuenta existente
+ * client-only, se emite un login nuevo (que no tiene cuenta) y el socio crea su
+ * contraseña en el primer ingreso, sin saber la anterior. La cuenta vieja queda
+ * huérfana e inutilizada.
+ */
+export async function reissueMemberAccess(gymId: string, memberId: string, newLoginEmail: string) {
+  const email = newLoginEmail.trim()
+  if (env.demoMode) {
+    return demo.updateMember(gymId, memberId, {
+      loginEmail: email,
+      email,
+      authStatus: 'pending_password',
+      uid: '',
+    })
+  }
+  const prev = await getMember(gymId, memberId)
+  if (!prev) throw new Error('No encontramos al socio')
+  if (normalizeEmailKey(email) === normalizeEmailKey(prev.loginEmail || prev.email)) {
+    throw new Error('El acceso nuevo tiene que ser distinto del actual: Firebase no permite reusar la cuenta anterior.')
+  }
+  await assertUniqueLoginEmail(gymId, email, memberId)
+
+  // Limpiar la identidad vieja: índice de membresía y, si era admin, adminUids.
+  // La cuenta de Firebase vieja queda huérfana (nadie la usa).
+  if (prev.uid) {
+    await removeGymMembershipIndex(prev.uid, gymId)
+    if (prev.role === 'admin') await removeGymAdmin(gymId, prev.uid)
+  }
+  // Reset del member: email nuevo + primer acceso (uid vacío hasta reclamar).
+  await updateOne(paths.member(gymId, memberId), {
+    loginEmail: email,
+    email,
+    authStatus: 'pending_password',
+    uid: '',
+  })
+  // Reapuntar el índice de login: sacar el viejo, crear el nuevo (pending).
+  await removeMemberLoginIndex(prev.loginEmail || prev.email)
+  await syncMemberLoginIndex(gymId, memberId, {
+    ...prev,
+    loginEmail: email,
+    email,
+    authStatus: 'pending_password',
+    uid: '',
+  })
 }
 
 /** Edición acotada de datos personales (usada por el propio socio). */

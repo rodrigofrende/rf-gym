@@ -80,7 +80,7 @@ export const FEATURE_GROUPS: LandingFeatureGroup[] = [
       {
         icon: Trophy,
         title: 'Ranking que motiva',
-        body: 'Ranking mensual de asistencia con imagen brandeada lista para compartir en historias.',
+        body: 'Ranking mensual de asistencia con imagen personalizada lista para compartir en historias.',
       },
     ],
   },

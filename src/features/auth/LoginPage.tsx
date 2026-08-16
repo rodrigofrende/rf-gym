@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Timestamp } from 'firebase/firestore'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Crown, ShieldCheck, User } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -184,7 +184,9 @@ export function LoginPage() {
     <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-zinc-100 p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center">
-          <BrandLockup variant="onLight" size="lg" />
+          <Link to="/" aria-label="Ir a la web de RF FIT" className="transition-opacity hover:opacity-80">
+            <BrandLockup variant="onLight" size="lg" />
+          </Link>
           <Text variant="caption" className="mt-6">
             Ingresá con tu email de acceso
           </Text>
@@ -257,6 +259,16 @@ export function LoginPage() {
             </>
           )}
         </Card>
+
+        <div className="mt-6 text-center">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-800"
+          >
+            <ArrowLeft className="size-4" />
+            Conocé RF FIT
+          </Link>
+        </div>
       </div>
     </div>
   )

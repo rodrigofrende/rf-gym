@@ -1,10 +1,10 @@
-import { deleteDoc, doc } from 'firebase/firestore'
+import { deleteDoc, doc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { env } from '@/config/env'
 import type { Gym, Member, MemberAuthStatus, MemberLoginIndex } from '@/types'
 import { normalizeEmailKey } from '@/utils/loginEmail'
 import * as demo from '@/demo/store'
-import { getOne, setOne, updateOne } from './firestore'
+import { getOne, updateOne } from './firestore'
 import { getGym } from './gymsService'
 import { paths } from './paths'
 
@@ -26,7 +26,11 @@ export async function syncMemberLoginIndex(
   if (env.demoMode) return demo.syncMemberLoginIndex(gymId, memberId, member)
   const gymData = gym ?? (await getGym(gymId))
   const email = member.loginEmail || member.email
-  await setOne(paths.memberLoginIndex(normalizeEmailKey(email)), {
+  // OVERWRITE (sin merge): el índice de login es world-readable y las rules lo
+  // validan con hasOnly([5 claves]). Un merge conservaría claves legacy de docs
+  // viejos y rompería esa validación → "permiso denegado". Sobrescribir garantiza
+  // que el doc quede exactamente con las 5 claves permitidas.
+  await setDoc(doc(db, paths.memberLoginIndex(normalizeEmailKey(email))), {
     email,
     gymId,
     gymName: gymData?.name ?? 'Gimnasio',

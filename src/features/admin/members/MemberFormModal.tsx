@@ -14,22 +14,39 @@ import { dateInputToTimestamp, parseDateInput, todayDateInput } from '@/utils/da
 import { emailLocalPart, normalizeEmailKey, suggestLoginEmail, tenantEmailDomain } from '@/utils/loginEmail'
 import { canCreateAdmin, usageLabel } from '@/utils/plans'
 import { frequencyLabel, tariffLabel } from '@/utils/tariffs'
+import { cn } from '@/utils/cn'
 
-const schema = z.object({
-  fullName: z.string().min(2, 'Ingresá el nombre'),
-  loginLocal: z
-    .string()
-    .min(2, 'Ingresá el usuario')
-    .regex(/^[a-z0-9._-]+$/, 'Usá solo minúsculas, números, puntos o guiones'),
-  phone: z.string().optional(),
-  birthDate: z.string().optional(),
-  role: z.enum(['user', 'admin']),
-  tariffId: z.string().optional(),
-  monthlyCost: z.number().min(0),
-  startDate: z.string().optional(),
-  paymentDate: z.string().optional(),
-  status: z.enum(['active', 'paused', 'overdue']),
-})
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
+const schema = z
+  .object({
+    fullName: z.string().min(2, 'Ingresá el nombre'),
+    // 'real' → el acceso es un email de verdad (permite recuperar contraseña).
+    // 'internal' → usuario sin email: se arma un login sintético `local@gym.com`.
+    accessMode: z.enum(['real', 'internal']),
+    realEmail: z.string().optional(),
+    loginLocal: z
+      .string()
+      .regex(/^[a-z0-9._-]*$/, 'Usá solo minúsculas, números, puntos o guiones')
+      .optional(),
+    phone: z.string().optional(),
+    birthDate: z.string().optional(),
+    role: z.enum(['user', 'admin']),
+    tariffId: z.string().optional(),
+    monthlyCost: z.number().min(0),
+    startDate: z.string().optional(),
+    paymentDate: z.string().optional(),
+    status: z.enum(['active', 'paused', 'overdue']),
+  })
+  .superRefine((v, ctx) => {
+    if (v.accessMode === 'real') {
+      if (!v.realEmail || !EMAIL_RE.test(v.realEmail.trim())) {
+        ctx.addIssue({ path: ['realEmail'], code: z.ZodIssueCode.custom, message: 'Ingresá un email válido' })
+      }
+    } else if (!v.loginLocal || v.loginLocal.trim().length < 2) {
+      ctx.addIssue({ path: ['loginLocal'], code: z.ZodIssueCode.custom, message: 'Ingresá el usuario (mín. 2)' })
+    }
+  })
 type FormValues = z.infer<typeof schema>
 
 const toTs = (value?: string) => dateInputToTimestamp(value)
@@ -71,6 +88,7 @@ export function MemberFormModal({
     control,
     setValue,
     setError,
+    clearErrors,
     handleSubmit,
     reset,
     formState: { errors },
@@ -78,6 +96,8 @@ export function MemberFormModal({
     resolver: zodResolver(schema),
     defaultValues: {
       fullName: '',
+      accessMode: 'real',
+      realEmail: '',
       loginLocal: '',
       phone: '',
       birthDate: '',
@@ -94,6 +114,7 @@ export function MemberFormModal({
   const selectable = tariffs.filter((t) => t.active || t.id === initial?.tariffId)
   const fullName = useWatch({ control, name: 'fullName' })
   const role = useWatch({ control, name: 'role' })
+  const accessMode = useWatch({ control, name: 'accessMode' })
   const tariffId = useWatch({ control, name: 'tariffId' })
   const selectedTariff = tariffs.find((t) => t.id === tariffId)
   const plan = plans.find((p) => p.id === gym?.subscription?.planId)
@@ -110,9 +131,15 @@ export function MemberFormModal({
       ? `Administradores del plan: ${usageLabel(adminCount + (initial?.role === 'admin' ? 1 : 0), plan.maxAdmins)}`
       : undefined
 
-  const formValues = (): FormValues => ({
+  const formValues = (): FormValues => {
+    const existingLogin = initial?.loginEmail || initial?.email || ''
+    // ¿El login existente es sintético (@dominio-del-gym) o un email real?
+    const existingIsSynthetic = existingLogin.endsWith(`@${domain}`)
+    return {
     fullName: initial?.fullName ?? '',
-    loginLocal: emailLocalPart(initial?.loginEmail || initial?.email || ''),
+    accessMode: existingLogin && !existingIsSynthetic ? 'real' : existingLogin ? 'internal' : 'real',
+    realEmail: existingLogin && !existingIsSynthetic ? existingLogin : '',
+    loginLocal: emailLocalPart(existingLogin),
     phone: initial?.phone ?? '',
     birthDate: toDateInput(initial?.birthDate),
     role: initial?.role ?? 'user',
@@ -121,7 +148,8 @@ export function MemberFormModal({
     startDate: initial ? toDateInput(initial.startDate) : today,
     paymentDate: initial ? toDateInput(initial.paymentDate) : plusOneMonth(today),
     status: initial?.status ?? 'active',
-  })
+    }
+  }
 
   useEffect(() => {
     if (open) reset(formValues())
@@ -146,11 +174,19 @@ export function MemberFormModal({
 
   const submit = (v: FormValues) => {
     if (v.role === 'admin' && !adminGate.allowed) return
-    const loginEmail = `${v.loginLocal}@${domain}`
+    // Con email real, ese es el acceso (cuenta Firebase real → reset por email).
+    // Sin email, se arma el login sintético `local@dominio-del-gym`.
+    const loginEmail =
+      v.accessMode === 'real'
+        ? v.realEmail!.trim().toLowerCase()
+        : `${v.loginLocal!.trim()}@${domain}`
     // El login se indexa por email: no puede haber dos socios con el mismo en el gym.
     const emailTaken = existingEmails.some((e) => normalizeEmailKey(e) === normalizeEmailKey(loginEmail))
     if (emailTaken) {
-      setError('loginLocal', { type: 'manual', message: 'Ya existe un socio con ese email de acceso' })
+      setError(v.accessMode === 'real' ? 'realEmail' : 'loginLocal', {
+        type: 'manual',
+        message: 'Ya existe un socio con ese email de acceso',
+      })
       return
     }
     const tariff = tariffs.find((t) => t.id === v.tariffId)
@@ -205,36 +241,77 @@ export function MemberFormModal({
             <FormField label="Nombre completo" error={errors.fullName?.message} required>
               <Input {...register('fullName')} invalid={!!errors.fullName} />
             </FormField>
-            <FormField
-              label="Email de acceso"
-              error={errors.loginLocal?.message}
-              tooltip="El socio inicia sesión con este email. El dominio depende del gimnasio."
-              required
-            >
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <div className="flex min-w-0 flex-1 rounded-[var(--radius-control)] border border-zinc-200 bg-surface focus-within:ring-2 focus-within:ring-brand-500">
-                  <input
-                    className="min-w-0 flex-1 rounded-l-[var(--radius-control)] bg-transparent px-3 py-2 text-base outline-none disabled:text-zinc-500 sm:text-sm"
-                    {...register('loginLocal')}
-                    disabled={!!initial}
-                  />
-                  <span className="flex shrink-0 items-center rounded-r-[var(--radius-control)] border-l border-zinc-200 bg-surface-muted px-3 text-sm text-zinc-500">
-                    @{domain}
-                  </span>
+            {isEditing ? (
+              <FormField label="Email de acceso" tooltip="El email de acceso no se edita desde acá.">
+                <Input value={initial?.loginEmail || initial?.email || ''} disabled />
+              </FormField>
+            ) : (
+              <FormField
+                label="Cómo ingresa el socio"
+                error={errors.realEmail?.message || errors.loginLocal?.message}
+                tooltip="Con email real el socio puede recuperar su contraseña solo si la olvida. Con alias del gym, la recuperación la hacés vos re-emitiendo el acceso."
+                required
+              >
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-1 rounded-[var(--radius-control)] bg-surface-muted p-1">
+                    {(['real', 'internal'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => {
+                          setValue('accessMode', mode)
+                          clearErrors(['realEmail', 'loginLocal'])
+                        }}
+                        className={cn(
+                          'rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5 text-sm font-medium transition-colors',
+                          accessMode === mode
+                            ? 'bg-surface text-zinc-900 shadow-sm'
+                            : 'text-zinc-500 hover:text-zinc-700',
+                        )}
+                      >
+                        {mode === 'real' ? 'Email real ✓' : 'Alias del gym'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {accessMode === 'real' ? (
+                    <Input
+                      type="email"
+                      placeholder="socio@gmail.com"
+                      invalid={!!errors.realEmail}
+                      {...register('realEmail')}
+                    />
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                      <div className="flex min-w-0 flex-1 rounded-[var(--radius-control)] border border-zinc-200 bg-surface focus-within:ring-2 focus-within:ring-brand-500">
+                        <input
+                          className="min-w-0 flex-1 rounded-l-[var(--radius-control)] bg-transparent px-3 py-2 text-base outline-none sm:text-sm"
+                          {...register('loginLocal')}
+                        />
+                        <span className="flex shrink-0 items-center rounded-r-[var(--radius-control)] border-l border-zinc-200 bg-surface-muted px-3 text-sm text-zinc-500">
+                          @{domain}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-10 shrink-0"
+                        onClick={applySuggestedEmail}
+                      >
+                        Usar sugerido
+                      </Button>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-zinc-400">
+                    {accessMode === 'real'
+                      ? 'Recomendado: si olvida la contraseña, la recupera solo con un email de restablecimiento.'
+                      : `Se crea un usuario interno (usuario@${domain}). Rápido y sin pedir email, pero si la olvida el blanqueo lo hacés vos.`}
+                  </p>
                 </div>
-                {!initial && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="h-10 shrink-0"
-                    onClick={applySuggestedEmail}
-                  >
-                    Usar sugerido
-                  </Button>
-                )}
-              </div>
-            </FormField>
+              </FormField>
+            )}
             <FormField label="Teléfono">
               <Input {...register('phone')} />
             </FormField>

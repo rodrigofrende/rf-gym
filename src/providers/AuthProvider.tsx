@@ -10,6 +10,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithPopup,
   signOut,
   updateProfile,
@@ -38,6 +39,13 @@ interface AuthContextValue {
   loginEmail: (email: string, password: string) => Promise<User>
   registerEmail: (name: string, email: string, password: string) => Promise<User>
   changePassword: (password: string) => Promise<void>
+  /**
+   * Envía el email de restablecimiento de contraseña de Firebase Auth. Es la
+   * forma client-only de resetear una contraseña olvidada: la nueva la define
+   * el propio socio desde el link. Funciona para cualquier admin/super-admin
+   * (es una operación de Auth, no depende de las rules de Firestore).
+   */
+  sendPasswordReset: (email: string) => Promise<void>
   /** Actualiza el displayName del usuario y lo persiste en su perfil global. */
   updateDisplayName: (name: string) => Promise<void>
   loginGoogle: () => Promise<void>
@@ -84,6 +92,7 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
         return identityToUser('socio')
       },
       changePassword: async () => undefined,
+      sendPasswordReset: async () => undefined,
       updateDisplayName: async () => undefined,
       loginGoogle: async () => setIdentity('admin'),
       logout: async () => setIdentity(null),
@@ -142,6 +151,9 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
       changePassword: async (password) => {
         if (!auth.currentUser) throw new Error('auth/no-current-user')
         await updatePassword(auth.currentUser, password)
+      },
+      sendPasswordReset: async (email) => {
+        await sendPasswordResetEmail(auth, email)
       },
       updateDisplayName: async (name) => {
         if (!auth.currentUser) throw new Error('auth/no-current-user')
