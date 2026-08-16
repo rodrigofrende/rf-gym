@@ -58,3 +58,48 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* ─── Animaciones de la landing pública (sutiles, CSS puro) ─────────────────
+   Entrada escalonada del hero + glow que "respira". Se anulan con
+   prefers-reduced-motion para accesibilidad. */
+@keyframes rf-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rf-glow {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Aplicar a elementos del hero; escalonar con inline style animation-delay. */
+.rf-fade-up {
+  opacity: 0;
+  animation: rf-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* El glow del hero late lento (solo opacidad, para no pelear con el translate). */
+.rf-glow {
+  animation: rf-glow 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-fade-up {
+    opacity: 1;
+    animation: none;
+  }
+  .rf-glow {
+    animation: none;
+  }
+}

@@ -1,11 +1,11 @@
-import { Check, MessageCircle, Sparkles } from 'lucide-react'
+import { Check, Mail, Sparkles } from 'lucide-react'
 import type { SubscriptionPlan } from '@/types'
-import { PLATFORM_WHATSAPP } from '@/config/app'
+import { PLATFORM_EMAIL } from '@/config/app'
 import { usePlans } from '@/hooks/usePlans'
-import { whatsappLink } from '@/utils/contact'
+import { ContactMenu } from '@/components/ui'
 import { formatCurrency } from '@/utils/format'
 import { cn } from '@/utils/cn'
-import { planCtaLabel, resolveLandingPlans, waPlanMessage } from './landingContent'
+import { emailPlanSubject, planCtaLabel, resolveLandingPlans } from './landingContent'
 import { CtaButton, LandingSection } from './landingUi'
 
 /** Sección de planes: precios vivos desde `plans` con fallback estático. */
@@ -14,7 +14,6 @@ export function LandingPricing() {
   const plans = resolveLandingPlans(data, isError)
   // Fallback visual: si ningún plan viene marcado, destacar el del medio.
   const highlightedId = plans.find((p) => p.highlighted)?.id ?? plans[1]?.id
-  const waGeneral = whatsappLink(PLATFORM_WHATSAPP, 'Hola! No sé qué plan de RF FIT va con mi gimnasio, ¿lo vemos juntos?')
 
   return (
     <LandingSection
@@ -38,18 +37,22 @@ export function LandingPricing() {
 
       <div className="space-y-1 text-sm text-zinc-500">
         <p>Precios en pesos argentinos, por mes, por gimnasio. Tus socios no pagan nada por usar la app.</p>
-        {waGeneral && (
-          <p>
+        {PLATFORM_EMAIL && (
+          // <div> (no <p>): el ContactMenu monta un <div> y no puede anidarse en <p>.
+          <div>
             ¿No sabés cuál va con tu gimnasio?{' '}
-            <a
-              href={waGeneral}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-brand-400 hover:text-brand-300"
-            >
-              Escribinos y lo vemos juntos.
-            </a>
-          </p>
+            <ContactMenu email={PLATFORM_EMAIL} subject="No sé qué plan de RF FIT va con mi gimnasio">
+              {({ toggle }) => (
+                <button
+                  type="button"
+                  onClick={toggle}
+                  className="font-semibold text-brand-400 hover:text-brand-300"
+                >
+                  Escribinos y lo vemos juntos.
+                </button>
+              )}
+            </ContactMenu>
+          </div>
         )}
       </div>
     </LandingSection>
@@ -57,11 +60,10 @@ export function LandingPricing() {
 }
 
 function PricingCard({ plan, featured }: { plan: SubscriptionPlan; featured: boolean }) {
-  const wa = whatsappLink(PLATFORM_WHATSAPP, waPlanMessage(plan))
   return (
     <div
       className={cn(
-        'relative flex h-full flex-col gap-4 rounded-2xl border p-6',
+        'relative flex h-full flex-col gap-4 rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand-500/10',
         featured
           ? 'border-brand-500 bg-zinc-900 shadow-lg shadow-brand-500/20'
           : plan.customPricing
@@ -98,10 +100,14 @@ function PricingCard({ plan, featured }: { plan: SubscriptionPlan; featured: boo
           </li>
         ))}
       </ul>
-      {wa && (
-        <CtaButton href={wa} primary={featured} icon={<MessageCircle className="size-4" />}>
-          {planCtaLabel(plan)}
-        </CtaButton>
+      {PLATFORM_EMAIL && (
+        <ContactMenu email={PLATFORM_EMAIL} subject={emailPlanSubject(plan)} direction="up">
+          {({ toggle }) => (
+            <CtaButton onClick={toggle} primary={featured} icon={<Mail className="size-4" />}>
+              {planCtaLabel(plan)}
+            </CtaButton>
+          )}
+        </ContactMenu>
       )}
     </div>
   )

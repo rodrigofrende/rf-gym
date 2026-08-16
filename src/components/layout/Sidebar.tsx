@@ -1,13 +1,13 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { LogOut, X } from 'lucide-react'
+import { LogOut, MessageSquarePlus, X } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
 import { usePrivacy } from '@/providers/PrivacyProvider'
 import { ROLE_LABEL } from '@/utils/roles'
 import { cn } from '@/utils/cn'
 import { emailLocalPart } from '@/utils/loginEmail'
-import { Avatar, LogoImage, Text, Toggle } from '@/components/ui'
-import { APP_NAME, APP_VERSION } from '@/config/app'
+import { Avatar, ContactMenu, LogoImage, Text, Toggle } from '@/components/ui'
+import { APP_NAME, APP_VERSION, PLATFORM_EMAIL } from '@/config/app'
 import { TenantSwitcher } from './TenantSwitcher'
 import { navForRole, PLATFORM_NAV, SUPER_NAV_ITEM } from './navItems'
 
@@ -28,6 +28,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const showSwitcher = !isPlatform && memberships.length > 1
   // Modo discreto: por ahora solo para el admin del gym.
   const showDiscreto = role === 'admin' && !isPlatform
+  // Contacto con RF FIT: solo para admins de gym (el super-admin es RF, no se
+  // escribe a sí mismo). El menú ofrece copiar / Gmail / cliente de correo.
+  const supportSubject =
+    role === 'admin' && !isPlatform && !isSuperAdmin
+      ? `Sugerencia o reporte — ${activeMembership?.gymName ?? APP_NAME}`
+      : null
   const userEmail = user?.email ?? ''
   const userLabel = user?.displayName || emailLocalPart(userEmail) || 'Usuario'
   const roleLabel = isSuperAdmin ? 'Super administrador' : role ? ROLE_LABEL[role] : ''
@@ -109,6 +115,21 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             </div>
 
             <div className="space-y-0.5">
+              {supportSubject && PLATFORM_EMAIL && (
+                <ContactMenu email={PLATFORM_EMAIL} subject={supportSubject} direction="up" block>
+                  {({ toggle }) => (
+                    <button
+                      type="button"
+                      onClick={toggle}
+                      className="flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                      title="Sugerí mejoras o reportá un problema a RF FIT"
+                    >
+                      <MessageSquarePlus className="size-5 shrink-0" aria-hidden />
+                      Sugerencias y soporte
+                    </button>
+                  )}
+                </ContactMenu>
+              )}
               {showDiscreto && (
                 <div
                   className="rounded-[var(--radius-control)] px-3 py-2.5"

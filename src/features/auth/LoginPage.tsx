@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Timestamp } from 'firebase/firestore'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Crown, Dumbbell, ShieldCheck, User } from 'lucide-react'
+import { ArrowLeft, Crown, ShieldCheck, User } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,7 +10,6 @@ import type { Member } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
-import { APP_NAME } from '@/config/app'
 import { queryKeys } from '@/hooks/queryKeys'
 import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
 import { getOne } from '@/services/firestore'
@@ -19,7 +18,7 @@ import type { ClaimedMembership } from '@/services/membershipsService'
 import { claimMembership, claimPendingMemberships } from '@/services/membershipsService'
 import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
-import { Button, Card, FormField, Heading, Input, PasswordInput, Text } from '@/components/ui'
+import { BrandLockup, Button, Card, FormField, Input, PasswordInput, Text } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
 
 const schema = z.object({
@@ -185,31 +184,24 @@ export function LoginPage() {
     <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-zinc-100 p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
-            <Dumbbell className="size-7" />
-          </div>
-          <Heading variant="display" className="mt-4">
-            {APP_NAME}
-          </Heading>
-          <Text variant="caption">Ingresá con tu email de acceso</Text>
+          <BrandLockup variant="onLight" size="lg" />
+          <Text variant="caption" className="mt-6">
+            Ingresá con tu email de acceso
+          </Text>
         </div>
 
         <Card className="p-5">
-          <div className="flex items-center gap-2">
-            {step === 'password' && (
-              <button
-                type="button"
-                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
-                onClick={resetStep}
-                aria-label="Volver al email"
-              >
-                <ArrowLeft className="size-4" />
-              </button>
-            )}
-            <Text variant="label" as="h2">
-              {step === 'email' ? 'Email de acceso' : 'Contraseña'}
-            </Text>
-          </div>
+          {step === 'password' && (
+            <button
+              type="button"
+              className="mb-3 inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-sm text-zinc-500 hover:text-zinc-800"
+              onClick={resetStep}
+              aria-label="Volver al email"
+            >
+              <ArrowLeft className="size-4" />
+              Cambiar email
+            </button>
+          )}
 
           {env.demoMode && setDemoIdentity && (
             <div className="mt-4 rounded-xl border border-brand-100 bg-brand-50/60 p-3">

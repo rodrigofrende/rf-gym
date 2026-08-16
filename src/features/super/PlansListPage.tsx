@@ -13,6 +13,9 @@ import { PlanFormModal } from './PlanFormModal'
 /**
  * Plantilla del plan pay-as-you-go ("A medida") para crearlo en un click.
  * El precio no se publica (customPricing) — solo ordena las cards de la landing.
+ * Fórmula de venta interna (no gameable por subcarga de datos): base $30.000 +
+ * $350 por socio. Ej: 100 socios → $65.000, 150 → $82.500. El base es el piso;
+ * cruzar con check-ins por QR para validar los socios declarados.
  */
 const CUSTOM_PLAN_TEMPLATE: Omit<SubscriptionPlan, 'id'> = {
   name: 'Alto Rendimiento',
@@ -45,18 +48,19 @@ const CUSTOM_PLAN_TEMPLATE: Omit<SubscriptionPlan, 'id'> = {
  * Los textos de features están alineados con los límites — mantener en sync.
  */
 const ENTRY_TEMPLATE: Partial<SubscriptionPlan> = {
+  price: 19999,
   maxAdmins: 1,
-  maxMembers: 30,
-  maxRoutines: 10,
-  maxExercises: 30,
+  maxMembers: 25,
+  maxRoutines: 15,
+  maxExercises: 40,
   maxSponsors: 1,
   logsEnabled: false,
   maxLogsPerMember: 0,
   whiteLabel: 'none',
   features: [
-    'Hasta 30 socios activos',
+    'Hasta 25 socios activos',
     'Gestión de socios, pagos y vencimientos',
-    '10 rutinas y 30 ejercicios propios',
+    '15 rutinas y 40 ejercicios propios',
     'Check-in con QR y asistencia del día',
     'Página pública de tu gimnasio',
     '1 espacio para patrocinador',
@@ -66,9 +70,9 @@ const ENTRY_TEMPLATE: Partial<SubscriptionPlan> = {
 }
 
 const MEDIUM_TEMPLATE: Partial<SubscriptionPlan> = {
-  price: 35000, // ~3.5× el tier de entrada — ratio Good-Better-Best estándar
+  price: 49999, // ~2.5× el tier de entrada — ratio Good-Better-Best estándar
   maxAdmins: 3,
-  maxMembers: 150,
+  maxMembers: 100,
   maxRoutines: 50,
   maxExercises: 150,
   maxSponsors: 5,
@@ -76,7 +80,7 @@ const MEDIUM_TEMPLATE: Partial<SubscriptionPlan> = {
   maxLogsPerMember: 100,
   whiteLabel: 'basic',
   features: [
-    'Hasta 150 socios y 3 administradores',
+    'Hasta 100 socios y 3 administradores',
     'Todo lo del plan anterior',
     'Registro de cargas y progreso para tus socios',
     '50 rutinas y 150 ejercicios propios',
@@ -108,8 +112,9 @@ export function PlansListPage() {
     .sort((a, b) => a.price - b.price)
   const entryPlan = priced[0]
   const mediumPlan = priced[1]
-  const needsTemplates =
-    !!entryPlan && !!mediumPlan && (!entryPlan.features?.length || !mediumPlan.features?.length)
+  // Disponible siempre que existan los 2 tiers con precio: permite (re)aplicar
+  // los valores sugeridos —límites, beneficios, precio y flags— de un click.
+  const canApplyTemplates = !!entryPlan && !!mediumPlan
 
   const applyTemplates = async () => {
     if (!entryPlan || !mediumPlan) return
@@ -167,15 +172,15 @@ export function PlansListPage() {
       }
       actions={
         <>
-          {/* Un click completa límites/beneficios/precio sugerido de los 2 primeros
-              tiers; desaparece cuando ya tienen features cargadas. */}
-          {needsTemplates && (
+          {/* (Re)aplica de un click los valores sugeridos (límites, beneficios,
+              precio y flags) a los 2 primeros tiers. Preserva sus nombres. */}
+          {canApplyTemplates && (
             <Button
               variant="secondary"
               leftIcon={<Sparkles className="size-4" />}
               onClick={() => setTemplateConfirm(true)}
             >
-              Completar planes sugeridos
+              Aplicar valores sugeridos
             </Button>
           )}
           {/* Un click crea el plan pay-as-you-go sugerido; desaparece cuando ya existe. */}
@@ -293,9 +298,9 @@ export function PlansListPage() {
         open={templateConfirm}
         onClose={() => setTemplateConfirm(false)}
         onConfirm={applyTemplates}
-        title="Completar planes sugeridos"
-        description={`Se completan límites, beneficios y flags de "${entryPlan?.name}" y "${mediumPlan?.name}" (que pasa a $35.000/mes y queda como Recomendado). Los nombres se conservan y podés retocar todo después.`}
-        confirmLabel="Completar"
+        title="Aplicar valores sugeridos"
+        description={`Se (re)aplican límites, beneficios, precios ($19.999 y $49.999/mes) y flags a "${entryPlan?.name}" y "${mediumPlan?.name}". Los nombres se conservan; sobrescribe lo que hayas editado a mano.`}
+        confirmLabel="Aplicar"
         tone="primary"
         loading={update.isPending}
       />

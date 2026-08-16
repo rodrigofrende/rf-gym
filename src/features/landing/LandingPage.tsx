@@ -1,27 +1,30 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Banknote, ChevronDown, LogIn, MessageCircle, MonitorSmartphone } from 'lucide-react'
-import { APP_NAME, PLATFORM_TAGLINE, PLATFORM_WHATSAPP } from '@/config/app'
+import { ArrowRight, Banknote, ChevronDown, LogIn, Mail, MonitorSmartphone } from 'lucide-react'
+import { APP_NAME, PLATFORM_EMAIL, PLATFORM_TAGLINE } from '@/config/app'
 import { usePlans } from '@/hooks/usePlans'
 import { useGymPresentations } from '@/hooks/useGymPresentation'
-import { LogoImage } from '@/components/ui'
+import { BrandLockup, ContactMenu, LogoImage } from '@/components/ui'
 import { publicGymRoute } from '@/routes/routePaths'
-import { whatsappLink } from '@/utils/contact'
 import { formatCurrency } from '@/utils/format'
 import { buildThemeVars, PLATFORM_DEFAULT_THEME } from '@/utils/theme'
 import { cn } from '@/utils/cn'
 import {
+  EMAIL_GENERAL_SUBJECT,
   FAQS,
   FEATURE_GROUPS,
   STEPS,
   TRUTHS,
-  WA_GENERAL_MESSAGE,
   resolveLandingPlans,
   type LandingFeature,
   type LandingStep,
 } from './landingContent'
 import { LandingPricing } from './LandingPricing'
 import { CtaButton, LandingSection, scrollToId } from './landingUi'
+
+/** Lift sutil en hover para las cards (features, pasos). */
+const CARD_HOVER =
+  'transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-500/10'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -45,7 +48,6 @@ const PILL_LINK =
   'inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400'
 
 function LandingView() {
-  const wa = whatsappLink(PLATFORM_WHATSAPP, WA_GENERAL_MESSAGE)
   const { data, isError } = usePlans()
   const plans = resolveLandingPlans(data, isError)
   const priced = plans.filter((p) => !p.customPricing)
@@ -74,7 +76,7 @@ function LandingView() {
         )}
       >
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-6">
-          <NavBarItems wa={wa} />
+          <NavBarItems />
         </div>
       </div>
 
@@ -82,35 +84,51 @@ function LandingView() {
       <header className="relative overflow-hidden">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-40 left-1/2 size-[42rem] -translate-x-1/2 rounded-full bg-brand-500/25 blur-[120px]"
+          className="rf-glow pointer-events-none absolute -top-40 left-1/2 size-[42rem] -translate-x-1/2 rounded-full bg-brand-500/25 blur-[120px]"
         />
         {/* Barra estática de entrada: "Ingresar" visible sin scrollear (la
             sticky la releva cuando el hero sale de pantalla). */}
         <div className="relative mx-auto flex h-14 max-w-5xl items-center gap-3 px-6 pt-4">
-          <NavBarItems wa={wa} />
+          <NavBarItems />
         </div>
         <div className="relative mx-auto max-w-5xl px-6 pb-14 pt-8 sm:pb-20 sm:pt-10">
           <div className="flex flex-col gap-10 @4xl:flex-row @4xl:items-start @4xl:justify-between">
             <div className="min-w-0 flex-1">
-              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-400">
+              <span className="rf-fade-up block text-xs font-semibold uppercase tracking-[0.25em] text-brand-400">
                 Software de gestión para gimnasios
               </span>
 
-              <h1 className="mt-8 break-words font-display text-6xl uppercase leading-[0.85] tracking-tight sm:text-8xl">
-                Entrená tu gimnasio.
+              <h1
+                className="rf-fade-up mt-8 break-words font-display text-5xl uppercase leading-[0.95] tracking-tight sm:text-7xl lg:text-8xl"
+                style={{ animationDelay: '80ms' }}
+              >
+                Poné tu gimnasio en forma.
               </h1>
-              <div className="mt-5 h-1.5 w-24 rounded-full bg-brand-500" />
+              <div
+                className="rf-fade-up mt-5 h-1.5 w-24 rounded-full bg-brand-500"
+                style={{ animationDelay: '160ms' }}
+              />
 
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-300 sm:text-lg">
-                {APP_NAME} ordena tu día a día: socios, pagos, rutinas, asistencia con QR y tu
-                propia página para captar nuevos socios. Todo en un solo lugar, desde el celular.
+              <p
+                className="rf-fade-up mt-6 max-w-xl text-base leading-relaxed text-zinc-300 sm:text-lg"
+                style={{ animationDelay: '240ms' }}
+              >
+                Socios, pagos, rutinas y asistencia con QR en una sola app. Menos planillas, más
+                tiempo para tu gente.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                {wa && (
-                  <CtaButton href={wa} primary icon={<MessageCircle className="size-4" />}>
-                    Quiero {APP_NAME} en mi gimnasio
-                  </CtaButton>
+              <div
+                className="rf-fade-up mt-8 flex flex-wrap gap-3"
+                style={{ animationDelay: '320ms' }}
+              >
+                {PLATFORM_EMAIL && (
+                  <ContactMenu email={PLATFORM_EMAIL} subject={EMAIL_GENERAL_SUBJECT}>
+                    {({ toggle }) => (
+                      <CtaButton onClick={toggle} primary icon={<Mail className="size-4" />}>
+                        Quiero {APP_NAME} en mi gimnasio
+                      </CtaButton>
+                    )}
+                  </ContactMenu>
                 )}
                 <CtaButton href="#planes" external={false} onClick={() => scrollToId('planes')}>
                   Ver planes
@@ -118,7 +136,10 @@ function LandingView() {
               </div>
             </div>
 
-            <aside className="w-full shrink-0 space-y-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-5 @4xl:mt-14 @4xl:w-80">
+            <aside
+              className="rf-fade-up w-full shrink-0 space-y-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-5 @4xl:mt-14 @4xl:w-80"
+              style={{ animationDelay: '400ms' }}
+            >
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
                 Info rápida
               </p>
@@ -214,10 +235,14 @@ function LandingView() {
             Contanos de tu gimnasio y te lo dejamos andando.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            {wa && (
-              <CtaButton href={wa} primary icon={<MessageCircle className="size-4" />}>
-                Quiero {APP_NAME} en mi gimnasio
-              </CtaButton>
+            {PLATFORM_EMAIL && (
+              <ContactMenu email={PLATFORM_EMAIL} subject={EMAIL_GENERAL_SUBJECT}>
+                {({ toggle }) => (
+                  <CtaButton onClick={toggle} primary icon={<Mail className="size-4" />}>
+                    Quiero {APP_NAME} en mi gimnasio
+                  </CtaButton>
+                )}
+              </ContactMenu>
             )}
             <Link
               to="/login"
@@ -232,7 +257,9 @@ function LandingView() {
 
       <footer className="border-t border-white/10 px-6 py-10">
         <div className="mx-auto max-w-5xl space-y-4 text-center">
-          <p className="font-display text-xl uppercase tracking-wide">{APP_NAME}</p>
+          <div className="flex justify-center">
+            <BrandLockup />
+          </div>
           <p className="text-[11px] leading-relaxed text-zinc-500">{PLATFORM_TAGLINE}</p>
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-zinc-400">
             <button type="button" onClick={() => scrollToId('funciones')} className="hover:text-white">
@@ -258,13 +285,11 @@ function LandingView() {
 }
 
 /** Contenido de la barra de navegación (compartido entre la estática y la sticky). */
-function NavBarItems({ wa }: { wa: string | null }) {
+function NavBarItems() {
   return (
     <>
-      <img src="/favicon.svg" alt={APP_NAME} className="size-8 shrink-0 rounded-lg" />
-      <span className="min-w-0 flex-1 truncate font-display text-lg uppercase tracking-wide">
-        {APP_NAME}
-      </span>
+      <BrandLockup className="shrink-0" />
+      <div className="flex-1" />
       <button
         type="button"
         onClick={() => scrollToId('funciones')}
@@ -283,16 +308,15 @@ function NavBarItems({ wa }: { wa: string | null }) {
         <LogIn className="size-3.5" />
         Ingresar
       </Link>
-      {wa && (
-        <a
-          href={wa}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(PILL_LINK, 'bg-brand-500 text-white')}
-        >
-          <MessageCircle className="size-3.5" />
-          Escribinos
-        </a>
+      {PLATFORM_EMAIL && (
+        <ContactMenu email={PLATFORM_EMAIL} subject={EMAIL_GENERAL_SUBJECT} align="end">
+          {({ toggle }) => (
+            <button type="button" onClick={toggle} className={cn(PILL_LINK, 'bg-brand-500 text-white')}>
+              <Mail className="size-3.5" />
+              Escribinos
+            </button>
+          )}
+        </ContactMenu>
       )}
     </>
   )
@@ -312,7 +336,8 @@ function ClientsSection() {
       label={`Ya entrenan con ${APP_NAME}`}
       sub="Gimnasios que gestionan su día a día con la plataforma. Tocá cualquiera y mirá su página."
     >
-      <div className="flex flex-wrap gap-3">
+      {/* Grid (no flex-wrap): cards de ancho uniforme y alineadas en mobile. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 @3xl:grid-cols-4">
         {clients.map((c) => (
           <Link
             key={c.id}
@@ -326,7 +351,7 @@ function ClientsSection() {
               fallbackClassName="bg-brand-500"
               iconClassName="size-5"
             />
-            <span className="font-semibold text-white">{c.name}</span>
+            <span className="min-w-0 flex-1 truncate font-semibold text-white">{c.name}</span>
             <ArrowRight className="size-4 shrink-0 text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-400" />
           </Link>
         ))}
@@ -338,7 +363,7 @@ function ClientsSection() {
 function FeatureCard({ feature }: { feature: LandingFeature }) {
   const Icon = feature.icon
   return (
-    <div className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-5">
+    <div className={cn('flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-5', CARD_HOVER)}>
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-400">
         <Icon className="size-4" />
       </span>
@@ -351,7 +376,7 @@ function FeatureCard({ feature }: { feature: LandingFeature }) {
 function StepCard({ step, index }: { step: LandingStep; index: number }) {
   const Icon = step.icon
   return (
-    <div className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-5">
+    <div className={cn('flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-5', CARD_HOVER)}>
       <div className="flex items-center justify-between">
         <span className="font-display text-5xl leading-none text-brand-500/40">{index}</span>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-400">

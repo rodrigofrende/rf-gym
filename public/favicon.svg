@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="RF FIT">
   <rect width="32" height="32" rx="8" fill="#4f46e5"/>
-  <rect x="5" y="11" width="4.5" height="10" rx="1.2" fill="#ffffff"/>
-  <rect x="10" y="14.5" width="12" height="3" rx="1.5" fill="#ffffff"/>
-  <rect x="22.5" y="11" width="4.5" height="10" rx="1.2" fill="#ffffff"/>
+  <!-- Pesa vertical (mismo ícono que el tag FIT), centrada. Blanco sobre azul. -->
+  <rect x="15" y="12.5" width="2" height="7" rx="1" fill="#ffffff"/>
+  <rect x="10" y="9" width="12" height="3.5" rx="1" fill="#ffffff"/>
+  <rect x="13" y="6" width="6" height="2.5" rx="1" fill="#ffffff"/>
+  <rect x="10" y="19.5" width="12" height="3.5" rx="1" fill="#ffffff"/>
+  <rect x="13" y="23.5" width="6" height="2.5" rx="1" fill="#ffffff"/>
 </svg>

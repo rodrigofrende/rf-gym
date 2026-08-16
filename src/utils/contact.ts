@@ -19,6 +19,18 @@ export function mailtoLink(email?: string, subject?: string): string | null {
 }
 
 /**
+ * URL del compositor web de Gmail, con destinatario y asunto pre-armados.
+ * Alternativa a `mailto:` para quien no usa el cliente de correo por defecto
+ * del sistema (ej. tiene Outlook asociado pero trabaja con Gmail en el navegador).
+ */
+export function gmailComposeUrl(email: string, subject?: string, body?: string): string {
+  const params = new URLSearchParams({ view: 'cm', fs: '1', to: email })
+  if (subject) params.set('su', subject)
+  if (body) params.set('body', body)
+  return `https://mail.google.com/mail/?${params.toString()}`
+}
+
+/**
  * Normaliza cualquier input de Instagram a un handle limpio: acepta que peguen
  * la URL completa o el `@handle`, y devuelve solo `[A-Za-z0-9._]`. `''` si vacío.
  */

@@ -5,6 +5,12 @@ export const APP_NAME = 'RF FIT'
 export const PLATFORM_TAGLINE = 'Gestión y presencia online para gimnasios.'
 
 /**
+ * Email comercial de la plataforma (CTA principal de la landing, vía Cloudflare
+ * Email Routing → Gmail). Vacío = los CTA de email se ocultan solos (mailtoLink → null).
+ */
+export const PLATFORM_EMAIL = 'hola@rf-platform.com'
+
+/**
  * WhatsApp comercial de la plataforma, con código de país (ej. '5491122334455').
  * Vacío = los CTAs de WhatsApp de la landing se ocultan solos (whatsappLink → null).
  */

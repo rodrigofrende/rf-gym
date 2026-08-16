@@ -3,8 +3,8 @@ import {
   CalendarCheck,
   ClipboardList,
   Dumbbell,
-  Megaphone,
-  MessageCircle,
+  Gift,
+  Mail,
   Palette,
   QrCode,
   Rocket,
@@ -40,12 +40,12 @@ export const FEATURE_GROUPS: LandingFeatureGroup[] = [
       {
         icon: Users,
         title: 'Socios y pagos bajo control',
-        body: 'Altas por email, estados, tarifas e historial de pagos. La mora se ve de lejos y el acceso del moroso se corta solo si querés.',
+        body: 'Altas por email, estados, tarifas e historial de pagos. Ves quién está al día de un vistazo y, si lo necesitás, el acceso se pausa solo hasta que la persona regularice.',
       },
       {
         icon: BarChart3,
         title: 'Números que se entienden',
-        body: 'Ingresos, altas, actividad y morosos en un dashboard con gráficos. Decisiones con datos, no con intuición.',
+        body: 'Ingresos, altas, actividad y cuotas pendientes en un dashboard con gráficos. Decisiones con datos, no con intuición.',
       },
       {
         icon: Store,
@@ -53,9 +53,9 @@ export const FEATURE_GROUPS: LandingFeatureGroup[] = [
         body: 'Suplementos, ropa, lo que vendas. Fotos, promos y pedidos que te llegan directo al chat.',
       },
       {
-        icon: Megaphone,
-        title: 'Tu página pública + patrocinadores',
-        body: 'Un micrositio con tu marca, videos y tarifas para captar socios. Y espacios de sponsors que te ayudan a monetizar.',
+        icon: Palette,
+        title: 'Tu marca, en todo',
+        body: 'Tu logo y tus colores en toda la app, y tu propia página pública con videos, tarifas y sponsors para captar socios.',
       },
     ],
   },
@@ -70,7 +70,7 @@ export const FEATURE_GROUPS: LandingFeatureGroup[] = [
       {
         icon: ClipboardList,
         title: 'Tu catálogo de ejercicios',
-        body: 'Ejercicios propios con categorías, grupos musculares y video demostrativo.',
+        body: 'Ejercicios propios con categorías, grupos musculares y valores por defecto de series, reps y descanso. Listos para armar tus rutinas.',
       },
       {
         icon: QrCode,
@@ -95,7 +95,7 @@ export const FEATURE_GROUPS: LandingFeatureGroup[] = [
       {
         icon: TrendingUp,
         title: 'Progreso que se ve',
-        body: 'Registro de cargas con historial. Ver que el número sube es lo que hace que vuelvan.',
+        body: 'Registro de cargas con historial. Ver su propio progreso los motiva a seguir viniendo.',
       },
       {
         icon: CalendarCheck,
@@ -103,9 +103,9 @@ export const FEATURE_GROUPS: LandingFeatureGroup[] = [
         body: 'Calendario de días entrenados y su lugar en el ranking del mes.',
       },
       {
-        icon: Palette,
-        title: 'Tu marca, no la nuestra',
-        body: 'Con white-label, la app lleva tu logo y tus colores. Tus socios ven TU gimnasio.',
+        icon: Gift,
+        title: 'Acceso sin costo',
+        body: 'Tus socios usan la app gratis: su rutina, su asistencia y su progreso, siempre en el celular.',
       },
     ],
   },
@@ -119,14 +119,14 @@ export interface LandingStep {
 
 export const STEPS: LandingStep[] = [
   {
-    icon: MessageCircle,
+    icon: Mail,
     title: 'Escribinos',
-    body: 'Nos contás cómo trabaja tu gimnasio por WhatsApp. Sin formularios eternos ni demos agendadas a 15 días.',
+    body: 'Nos contás cómo trabaja tu gimnasio por email. Sin formularios eternos ni reuniones interminables: la app es simple e intuitiva y arrancás enseguida.',
   },
   {
     icon: Rocket,
-    title: 'Lo dejamos listo',
-    body: 'Creamos tu gimnasio, cargamos tu marca y tus tarifas. En días, no en meses.',
+    title: 'Activamos tu gimnasio',
+    body: 'Creamos tu gimnasio y tu usuario admin. El resto —marca, tarifas y socios— lo cargás vos en minutos, con una app simple e intuitiva.',
   },
   {
     icon: QrCode,
@@ -135,10 +135,12 @@ export const STEPS: LandingStep[] = [
   },
 ]
 
+// Chips del hero enfocados en el beneficio para el dueño. Se eligen para NO
+// repetir lo que ya dice el aside "Info rápida" (100% web, precios, planes desde).
 export const TRUTHS = [
-  'Sin instalación — es 100% web',
-  'Tus socios entran gratis',
-  'Precios en pesos argentinos',
+  'Menos papeleo, más orden',
+  'Todo en un solo lugar',
+  'Tu propia página web',
 ]
 
 export interface LandingFaq {
@@ -157,7 +159,7 @@ export const FAQS: LandingFaq[] = [
   },
   {
     q: '¿La plata de las cuotas pasa por RF FIT?',
-    a: 'No. Vos cobrás como siempre y registrás el pago en el sistema. RF FIT te ordena quién pagó, quién debe y cuánto entra por mes.',
+    a: 'No. Vos cobrás como siempre y registrás el pago en el sistema. RF FIT te ordena quién está al día, quién tiene la cuota pendiente y cuánto entra por mes.',
   },
   {
     q: '¿Qué pasa si supero el límite de socios de mi plan?',
@@ -165,7 +167,7 @@ export const FAQS: LandingFaq[] = [
   },
   {
     q: '¿Puedo cambiar de plan más adelante?',
-    a: 'Sí, cuando quieras. Escribinos por WhatsApp y hacemos el cambio sin perder nada de lo cargado.',
+    a: 'Sí, cuando quieras. Escribinos por email y hacemos el cambio sin perder nada de lo cargado.',
   },
   {
     q: '¿La app puede llevar mi marca?',
@@ -173,11 +175,11 @@ export const FAQS: LandingFaq[] = [
   },
 ]
 
-/** Mensajes de WhatsApp pre-armados por contexto. */
-export const WA_GENERAL_MESSAGE = 'Hola! Quiero RF FIT en mi gimnasio.'
-export function waPlanMessage(plan: SubscriptionPlan): string {
-  if (plan.customPricing) return `Hola! Quiero hablar del plan ${plan.name} de RF FIT para mi gimnasio.`
-  return `Hola! Me interesa el plan ${plan.name} de RF FIT para mi gimnasio.`
+/** Asuntos de email pre-armados por contexto (CTA vía mailto). */
+export const EMAIL_GENERAL_SUBJECT = 'Quiero RF FIT en mi gimnasio'
+export function emailPlanSubject(plan: SubscriptionPlan): string {
+  if (plan.customPricing) return `Consulta por el plan ${plan.name} de RF FIT`
+  return `Me interesa el plan ${plan.name} de RF FIT`
 }
 
 /** Etiqueta del CTA según el rol del plan en la escalera de precios. */
@@ -196,19 +198,19 @@ export const FALLBACK_PLANS: SubscriptionPlan[] = [
   {
     id: 'fallback-inicial',
     name: 'Entrada en Calor',
-    price: 9999,
+    price: 19999,
     maxAdmins: 1,
-    maxMembers: 30,
-    maxRoutines: 10,
-    maxExercises: 30,
+    maxMembers: 25,
+    maxRoutines: 15,
+    maxExercises: 40,
     maxSponsors: 1,
     logsEnabled: false,
     maxLogsPerMember: 0,
     whiteLabel: 'none',
     features: [
-      'Hasta 30 socios activos',
+      'Hasta 25 socios activos',
       'Gestión de socios, pagos y vencimientos',
-      '10 rutinas y 30 ejercicios propios',
+      '15 rutinas y 40 ejercicios propios',
       'Check-in con QR y asistencia del día',
       'Página pública de tu gimnasio',
       '1 espacio para patrocinador',
@@ -220,9 +222,9 @@ export const FALLBACK_PLANS: SubscriptionPlan[] = [
   {
     id: 'fallback-pro',
     name: 'Ritmo',
-    price: 25000,
+    price: 49999,
     maxAdmins: 3,
-    maxMembers: 150,
+    maxMembers: 100,
     maxRoutines: 50,
     maxExercises: 150,
     maxSponsors: 5,
@@ -230,7 +232,7 @@ export const FALLBACK_PLANS: SubscriptionPlan[] = [
     maxLogsPerMember: 100,
     whiteLabel: 'basic',
     features: [
-      'Hasta 150 socios y 3 administradores',
+      'Hasta 100 socios y 3 administradores',
       'Todo lo de Entrada en Calor',
       'Registro de cargas y progreso para tus socios',
       '50 rutinas y 150 ejercicios propios',

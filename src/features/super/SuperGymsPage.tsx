@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Building2, LogIn, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Wallet } from 'lucide-react'
+import { AlertTriangle, Building2, LogIn, Pencil, Plus, ShieldCheck, Trash2, Upload, UserPlus, Wallet } from 'lucide-react'
 import type { Gym, GymSubscription, Member, SubscriptionPlan } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
+import { useToast } from '@/providers/ToastProvider'
 import { useTenant } from '@/providers/TenantProvider'
+import { fileToLogoDataUrl, LogoImageError } from '@/utils/image'
 import { useGymAdminActions, useGyms } from '@/hooks/useGyms'
 import { useCreateMember, useMembers, useRemoveMember } from '@/hooks/useMembers'
 import { useToastAction } from '@/hooks/useToastAction'
@@ -169,6 +171,23 @@ function GymFormModal({
   })
   const [status, setStatus] = useState<GymSubscription['status']>(gym?.subscription?.status ?? 'active')
   const [errors, setErrors] = useState<GymFormErrors>({})
+  const { notify } = useToast()
+  // Logo del gym: mismo pipeline que Marca (data URL comprimida, sin Storage).
+  // Como el super-admin edita acá, el write saltea el rate-limit por las rules.
+  const [logoURL, setLogoURL] = useState<string>(gym?.logoURL ?? '')
+  const [logoProcessing, setLogoProcessing] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const handleLogoFile = async (file?: File) => {
+    if (!file) return
+    setLogoProcessing(true)
+    try {
+      setLogoURL(await fileToLogoDataUrl(file))
+    } catch (err) {
+      notify(err instanceof LogoImageError ? err.message : 'No se pudo procesar la imagen.', 'error')
+    } finally {
+      setLogoProcessing(false)
+    }
+  }
 
   const clearError = (field: keyof GymFormErrors) => {
     setErrors((prev) => {
@@ -202,7 +221,7 @@ function GymFormModal({
     const firstDueDate = addMonths(parseDateInput(startDate), 1)
     await onSubmit({
       name: name.trim(),
-      logoURL: gym?.logoURL,
+      logoURL,
       subscription: planId
         ? {
             planId,
@@ -239,13 +258,44 @@ function GymFormModal({
           </FormField>
           <FormField
             label="Logo"
-            hint="Temporalmente deshabilitado. Lo vamos a reactivar cuando definamos el hosting de imágenes."
+            hint="Cuadrado; se recorta y comprime solo. Aparece en el selector y en la marca del gym."
           >
-            <Input
-              value={gym?.logoURL ? 'Logo configurado (bloqueado temporalmente)' : ''}
-              placeholder="Bloqueado por el momento"
-              disabled
-            />
+            <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border border-zinc-200 bg-zinc-50/60 px-3 py-2">
+              <LogoImage
+                src={logoURL}
+                alt={name || 'Logo del gimnasio'}
+                className="size-11 shrink-0 rounded-xl"
+                iconClassName="size-5"
+              />
+              <span className="min-w-0 flex-1 truncate text-sm text-zinc-600">
+                {logoURL ? 'Logo cargado' : 'Sin logo'}
+              </span>
+              {logoURL && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setLogoURL('')}>
+                  Quitar
+                </Button>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                leftIcon={<Upload className="size-3.5" />}
+                loading={logoProcessing}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                Subir logo
+              </Button>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  void handleLogoFile(e.target.files?.[0])
+                  e.target.value = ''
+                }}
+              />
+            </div>
           </FormField>
           <FormField
             label="Plan de suscripción"

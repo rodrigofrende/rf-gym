@@ -1,1 +1,7 @@
+# Redirige el subdominio de fábrica de Netlify al dominio propio (SEO + marca).
+# DEBE ir ANTES del fallback SPA: _redirects es "primer match gana" y la regla
+# /* de abajo matchea cualquier host. El :splat conserva la ruta; 301! fuerza.
+https://rf-fit.netlify.app/*  https://fit.rf-platform.com/:splat  301!
+
+# Fallback SPA: cualquier otra ruta sirve index.html (React Router rutea del lado del cliente).
 /*    /index.html   200
