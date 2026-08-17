@@ -11,13 +11,30 @@ const MAX_LOGO_OUTPUT_BYTES = 150 * 1024 // tope del data URL guardado en Firest
 // Firestore): con hasta 6 sponsors + el logo, 100KB c/u deja margen de sobra.
 const MAX_SPONSOR_OUTPUT_BYTES = 100 * 1024
 // Producto: doc propio (margen de sobra vs 1MiB) y card más protagonista → más
-// resolución. Entrada más generosa porque la foto suele venir del teléfono.
+// resolución. Entrada generosa porque la foto suele venir del teléfono (una
+// cámara de 48/50MP puede superar los 10MB); el tope solo cuida la memoria al
+// decodificar, la salida igual se comprime a <150KB.
 const PRODUCT_SIZE = 512
-const MAX_PRODUCT_INPUT_BYTES = 10 * 1024 * 1024
+const MAX_PRODUCT_INPUT_BYTES = 25 * 1024 * 1024
 const MAX_PRODUCT_OUTPUT_BYTES = 150 * 1024 // espejado en firestore.rules (153600)
 const QUALITY_STEPS = [0.85, 0.7, 0.55, 0.4]
 
 export class LogoImageError extends Error {}
+
+// Safari/WebKit (todo navegador en iOS) no codifica WebP desde canvas:
+// `toDataURL('image/webp')` devuelve un PNG e ignora la calidad, y un PNG
+// fotográfico nunca entra en el tope → ahí se usa JPEG (las rules ya lo
+// aceptan). Se detecta una sola vez con un canvas de 1×1.
+let webpEncodeSupported: boolean | null = null
+function supportsWebpEncoding(): boolean {
+  if (webpEncodeSupported === null) {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1
+    canvas.height = 1
+    webpEncodeSupported = canvas.toDataURL('image/webp').startsWith('data:image/webp')
+  }
+  return webpEncodeSupported
+}
 
 async function loadBitmap(file: File): Promise<ImageBitmap | HTMLImageElement> {
   if (typeof createImageBitmap === 'function') {
@@ -70,6 +87,13 @@ async function fileToSquareDataUrl(
     throw new LogoImageError('No se pudo procesar la imagen en este navegador.')
   }
 
+  // JPEG no tiene canal alfa: sin esto, lo transparente (ej. logos PNG) sale negro.
+  const mime = supportsWebpEncoding() ? 'image/webp' : 'image/jpeg'
+  if (mime === 'image/jpeg') {
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, size, size)
+  }
+
   // Recorte tipo `cover`: se toma el cuadrado central de la imagen original.
   const side = Math.min(width, height)
   const sx = (width - side) / 2
@@ -78,8 +102,7 @@ async function fileToSquareDataUrl(
   if ('close' in source) source.close()
 
   for (const quality of QUALITY_STEPS) {
-    const dataUrl = canvas.toDataURL('image/webp', quality)
-    // Si el navegador no soporta WebP devuelve PNG; igual sirve si entra en el tope.
+    const dataUrl = canvas.toDataURL(mime, quality)
     if (dataUrl.length <= maxOutputBytes) return dataUrl
   }
   throw new LogoImageError('No se pudo comprimir la imagen; probá con una más simple.')
@@ -104,8 +127,9 @@ export function fileToSponsorImageDataUrl(file: File): Promise<string> {
 }
 
 /**
- * Foto de producto: 512×512 recorte `cover`, WebP, tope 150KB (espejado en
- * firestore.rules). Acepta originales de hasta 10MB (fotos de celular).
+ * Foto de producto: 512×512 recorte `cover`, WebP (o JPEG donde el navegador
+ * no codifica WebP, ej. iOS), tope 150KB (espejado en firestore.rules).
+ * Acepta originales de hasta 25MB (fotos de celular).
  */
 export function fileToProductImageDataUrl(file: File): Promise<string> {
   return fileToSquareDataUrl(file, MAX_PRODUCT_OUTPUT_BYTES, PRODUCT_SIZE, MAX_PRODUCT_INPUT_BYTES)

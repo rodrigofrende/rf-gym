@@ -170,8 +170,8 @@ export function ProductFormModal({
 
 /**
  * Subida de la foto del producto: mismo flujo que sponsors/logo (archivo →
- * recorte cuadrado 512 → WebP comprimido → data URL en el form). Pensado para
- * fotos de celular: acepta hasta 10MB y sale liviana (<150KB).
+ * recorte cuadrado 512 → WebP/JPEG comprimido → data URL en el form). Pensado
+ * para fotos de celular: acepta hasta 25MB y sale liviana (<150KB).
  */
 function ProductImageField({
   value,
