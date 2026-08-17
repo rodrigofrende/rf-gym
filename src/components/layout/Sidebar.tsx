@@ -6,7 +6,7 @@ import { usePrivacy } from '@/providers/PrivacyProvider'
 import { ROLE_LABEL } from '@/utils/roles'
 import { cn } from '@/utils/cn'
 import { emailLocalPart } from '@/utils/loginEmail'
-import { Avatar, LogoImage, Text, Toggle } from '@/components/ui'
+import { Avatar, BrandLockup, LogoImage, Text, Toggle } from '@/components/ui'
 import { APP_NAME, APP_VERSION } from '@/config/app'
 import { TenantSwitcher } from './TenantSwitcher'
 import { navForRole, PLATFORM_NAV, SUPER_NAV_ITEM } from './navItems'
@@ -42,20 +42,31 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {/* Marca: logo grande + nombre del gym */}
+        {/* Marca: en la plataforma (super-admin), el lockup RF FIT; en un gym, su
+            propio logo + nombre (con "by RF FIT"). */}
         <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <LogoImage src={logoURL} alt={brandName} className="size-11 shrink-0 rounded-xl" />
-            <div className="min-w-0">
-              <p className="truncate text-lg font-bold leading-tight text-zinc-900">{brandName}</p>
-              <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-                {!isPlatform && <span>by {APP_NAME}</span>}
-                <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
-                  v{APP_VERSION}
-                </span>
-              </p>
+          {isPlatform ? (
+            <div className="flex min-w-0 items-center">
+              {/* mr-7: reserva espacio para el tag "FIT" que cuelga a la derecha del RF. */}
+              <BrandLockup variant="onLight" className="mr-7 shrink-0" />
+              <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                v{APP_VERSION}
+              </span>
             </div>
-          </div>
+          ) : (
+            <div className="flex min-w-0 items-center gap-3">
+              <LogoImage src={logoURL} alt={brandName} className="size-11 shrink-0 rounded-xl" />
+              <div className="min-w-0">
+                <p className="truncate text-lg font-bold leading-tight text-zinc-900">{brandName}</p>
+                <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                  <span>by {APP_NAME}</span>
+                  <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                    v{APP_VERSION}
+                  </span>
+                </p>
+              </div>
+            </div>
+          )}
           <button onClick={onClose} className="shrink-0 text-zinc-400 lg:hidden" aria-label="Cerrar menú">
             <X className="size-5" />
           </button>

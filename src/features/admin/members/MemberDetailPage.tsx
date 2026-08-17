@@ -32,7 +32,7 @@ import {
 } from '@/components/ui'
 import { InfoGrid } from '@/components/shared/InfoGrid'
 import { formatDate } from '@/utils/format'
-import { suggestLoginEmail } from '@/utils/loginEmail'
+import { suggestLoginEmail, tenantEmailDomain } from '@/utils/loginEmail'
 import { memberAccessState, ROLE_LABEL } from '@/utils/roles'
 import { ROUTES } from '@/routes/routePaths'
 import { cn } from '@/utils/cn'
@@ -44,12 +44,15 @@ import { PaymentsTab } from './tabs/PaymentsTab'
 import { ProgressTab } from './tabs/ProgressTab'
 
 type Tab = 'data' | 'notes' | 'payments' | 'routines' | 'progress'
+// Un socio "admin" es un profe/administrador, no un alumno: no tiene pagos ni
+// entrenamiento. Las tabs userOnly se ocultan para ellos (si quieren entrenar,
+// se crean un usuario aparte de tipo "socio").
 const TABS: { key: Tab; label: string; userOnly?: boolean }[] = [
   { key: 'data', label: 'Datos' },
   { key: 'notes', label: 'Notas' },
   { key: 'payments', label: 'Pagos', userOnly: true },
-  { key: 'routines', label: 'Rutinas y cargas' },
-  { key: 'progress', label: 'Progreso' },
+  { key: 'routines', label: 'Rutinas y cargas', userOnly: true },
+  { key: 'progress', label: 'Progreso', userOnly: true },
 ]
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
@@ -138,11 +141,15 @@ export function MemberDetailPage() {
   const accessEmail = member.loginEmail || member.email
   const access = memberAccessState(member)
   const existingEmails = members.filter((m) => m.id !== memberId).map((m) => m.loginEmail || m.email)
+  // ¿El acceso es un alias interno del gym (@nombre-del-gym.com) o un email real?
+  // El alias no es un buzón real → el reset por email nunca le llega.
+  const esAlias =
+    !!gym?.name && accessEmail.toLowerCase().endsWith(`@${tenantEmailDomain(gym.name)}`)
 
   const handleSendReset = async () => {
     setSendingReset(true)
     const ok = await run(() => sendPasswordReset(accessEmail), {
-      success: `Le enviamos un email a ${accessEmail} para crear una nueva contraseña.`,
+      success: `Si la cuenta existe, le llegó un email a ${accessEmail} (decile que revise spam). Su contraseña actual sigue funcionando hasta que use el link.`,
       error: 'No pudimos enviar el email de restablecimiento.',
     })
     setSendingReset(false)
@@ -331,17 +338,49 @@ export function MemberDetailPage() {
           <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-zinc-900">{accessEmail}</p>
-              <p className="text-xs text-zinc-500">{access.label}</p>
+              <p className="text-xs text-zinc-500">
+                {access.label} · {esAlias ? 'alias interno del gym' : 'email real'}
+              </p>
             </div>
             <Badge tone={access.tone}>{access.needsAttention ? 'Requiere acción' : 'OK'}</Badge>
           </div>
 
-          {/* Blanqueo por re-emisión: anda aunque haya olvidado la contraseña */}
-          <div className="space-y-2 rounded-xl border border-brand-100 bg-brand-50/60 p-3">
-            <p className="text-sm font-medium text-brand-900">Se olvidó la contraseña</p>
-            <p className="text-xs text-brand-800">
-              Le damos un acceso nuevo y crea su contraseña en el primer ingreso, sin saber la
-              anterior. Conserva todos sus datos; lo único que cambia es su email de acceso.
+          {/* Reset por email: blanqueo MISMO email, repetible. Solo sirve con email real. */}
+          {member.uid && !esAlias && (
+            <div className="space-y-2 rounded-xl border border-brand-100 bg-brand-50/60 p-3">
+              <p className="text-sm font-medium text-brand-900">Se olvidó la contraseña</p>
+              <p className="text-xs text-brand-800">
+                Le mandamos a <span className="font-medium">{accessEmail}</span> un link para crear una
+                nueva. Lo podés hacer las veces que necesite, sin cambiarle el email.
+              </p>
+              <Button
+                fullWidth
+                leftIcon={<Mail className="size-4" />}
+                loading={sendingReset}
+                onClick={handleSendReset}
+              >
+                Enviar email de restablecimiento
+              </Button>
+              <p className="text-[11px] text-brand-700">
+                Que revise spam. Su contraseña actual sigue andando hasta que use el link.
+              </p>
+            </div>
+          )}
+
+          {/* Re-emitir acceso: migrar alias→real (primario si es alias) o cambiar el email. */}
+          <div
+            className={cn(
+              'space-y-2 rounded-xl border p-3',
+              esAlias ? 'border-brand-100 bg-brand-50/60' : 'border-zinc-200 bg-zinc-50',
+            )}
+          >
+            <p className={cn('text-sm font-medium', esAlias ? 'text-brand-900' : 'text-zinc-800')}>
+              {esAlias ? 'Pasarlo a su email real' : 'Cambiar su email de acceso'}
+            </p>
+            <p className={cn('text-xs', esAlias ? 'text-brand-800' : 'text-zinc-500')}>
+              {esAlias
+                ? 'Su alias interno no recibe emails, así que no puede recuperar la clave solo. Cargá su email real: vuelve a primer ingreso, crea su contraseña y de ahí en más la recupera por email.'
+                : 'Le asignás otro email (o un usuario del gym) y vuelve a primer ingreso. Conserva todos sus datos.'}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
@@ -354,55 +393,34 @@ export function MemberDetailPage() {
                 Usuario del gym
               </Button>
             </div>
-            <p className="text-[11px] text-brand-700">
-              Ideal: su email real (así recupera la contraseña solo a futuro). O un usuario nuevo del
-              gimnasio.
-            </p>
             <Button
               fullWidth
+              variant={esAlias ? undefined : 'secondary'}
               leftIcon={<RefreshCw className="size-4" />}
               loading={reissuing}
               disabled={!reissueEmail.trim()}
               onClick={handleReissue}
             >
-              Re-emitir acceso
+              {esAlias ? 'Migrar a email real' : 'Re-emitir acceso'}
             </Button>
           </div>
 
-          {/* Opciones para cuando el socio SÍ puede entrar */}
+          {/* Forzar cambio: cuando el socio SÍ recuerda su contraseña */}
           {member.uid && (
-            <div className="space-y-4 border-t border-zinc-100 pt-4">
-              <div>
-                <p className="text-sm font-medium text-zinc-700">Su email es real</p>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Mandale el link de restablecimiento de Firebase (solo llega si el email existe de verdad).
-                </p>
-                <Button
-                  variant="secondary"
-                  fullWidth
-                  className="mt-2"
-                  leftIcon={<Mail className="size-4" />}
-                  loading={sendingReset}
-                  onClick={handleSendReset}
-                >
-                  Enviar email de restablecimiento
-                </Button>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-700">Todavía recuerda su contraseña</p>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Forzá el cambio en su próximo ingreso, sin tocar el email.
-                </p>
-                <Button
-                  variant="ghost"
-                  fullWidth
-                  className="mt-2"
-                  loading={updateMember.isPending}
-                  onClick={requirePasswordChange}
-                >
-                  Requerir cambio en el próximo ingreso
-                </Button>
-              </div>
+            <div className="border-t border-zinc-100 pt-4">
+              <p className="text-sm font-medium text-zinc-700">Todavía recuerda su contraseña</p>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Forzá el cambio en su próximo ingreso, sin tocar el email.
+              </p>
+              <Button
+                variant="ghost"
+                fullWidth
+                className="mt-2"
+                loading={updateMember.isPending}
+                onClick={requirePasswordChange}
+              >
+                Requerir cambio en el próximo ingreso
+              </Button>
             </div>
           )}
         </div>

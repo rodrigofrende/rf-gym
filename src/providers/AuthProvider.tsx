@@ -153,7 +153,21 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
         await updatePassword(auth.currentUser, password)
       },
       sendPasswordReset: async (email) => {
-        await sendPasswordResetEmail(auth, email)
+        // Continue URL: al terminar el reset, la página de Firebase muestra un
+        // botón "Continuar" que vuelve al login de la app. Requiere que el dominio
+        // esté en Authorized domains; si no lo está, reintentamos SIN el continueUrl
+        // para no romper el envío (el botón es un extra, no algo crítico).
+        const actionSettings = { url: `${window.location.origin}/login`, handleCodeInApp: false }
+        try {
+          await sendPasswordResetEmail(auth, email, actionSettings)
+        } catch (err) {
+          const code = (err as { code?: string } | null)?.code
+          if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri') {
+            await sendPasswordResetEmail(auth, email)
+          } else {
+            throw err
+          }
+        }
       },
       updateDisplayName: async (name) => {
         if (!auth.currentUser) throw new Error('auth/no-current-user')
