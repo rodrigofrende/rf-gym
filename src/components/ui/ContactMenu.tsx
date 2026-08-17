@@ -29,6 +29,12 @@ type TriggerRender = (opts: { toggle: () => void; isOpen: boolean }) => ReactNod
  * la landing quedaba tapado por contenedores vecinos). Panel claro y
  * self-contained: colores propios, sirve sobre fondo oscuro o claro.
  */
+export interface ContactMenuExtraItem {
+  icon: ReactNode
+  label: string
+  onClick: () => void
+}
+
 export function ContactMenu({
   email,
   subject,
@@ -37,6 +43,7 @@ export function ContactMenu({
   direction = 'down',
   block = false,
   className,
+  extraItems,
   children,
 }: {
   email: string
@@ -46,6 +53,8 @@ export function ContactMenu({
   direction?: 'down' | 'up'
   block?: boolean
   className?: string
+  /** Ítems adicionales al final del menú (ej. "Novedades"), separados con una línea. */
+  extraItems?: ContactMenuExtraItem[]
   children: TriggerRender
 }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -185,6 +194,23 @@ export function ContactMenu({
             <MenuItem icon={<Mail className="size-4" />} onClick={openMailto}>
               Abrir en mi app de correo
             </MenuItem>
+            {extraItems && extraItems.length > 0 && (
+              <>
+                <div className="my-1 border-t border-zinc-100" />
+                {extraItems.map((item) => (
+                  <MenuItem
+                    key={item.label}
+                    icon={item.icon}
+                    onClick={() => {
+                      close()
+                      item.onClick()
+                    }}
+                  >
+                    {item.label}
+                  </MenuItem>
+                ))}
+              </>
+            )}
           </div>,
           document.body,
         )}

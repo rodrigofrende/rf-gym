@@ -97,7 +97,7 @@ export function SponsorsPage() {
       subtitle="Marcas que auspician tu gimnasio. Se muestran en tu página pública y a tus socios."
       actions={
         <>
-          <SharePublicGymButton gymId={gymId} gymName={gym?.name} />
+          <SharePublicGymButton gymId={gymId} gymName={gym?.name} logoURL={gym?.logoURL} theme={gym?.theme} />
           <Button
             variant="secondary"
             leftIcon={<ExternalLink className="size-4" />}

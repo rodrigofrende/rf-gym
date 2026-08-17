@@ -25,6 +25,8 @@ import {
   type Column,
 } from '@/components/ui'
 import { memberAccessState, ROLE_LABEL, STATUS_LABEL } from '@/utils/roles'
+import { formatDate } from '@/utils/format'
+import { getPaymentStatus } from '@/utils/payments'
 import { adminMemberDetail } from '@/routes/routePaths'
 import { MemberFormModal } from './MemberFormModal'
 import { MemberRegisterPaymentModal } from './MemberRegisterPaymentModal'
@@ -37,6 +39,31 @@ const STATUS_TONE: Record<MemberStatus, 'green' | 'amber' | 'red'> = {
 
 function canRegisterPayment(member: Member): boolean {
   return member.role === 'user'
+}
+
+/**
+ * Vencimiento de la cuota con recordatorio sutil de deuda: la fecha en texto
+ * normal y, si está atrasado, una línea chica en ámbar (aviso, no error) con
+ * cuotas adeudadas y días de atraso.
+ */
+function DueDateInfo({ member, prefix }: { member: Member; prefix?: string }) {
+  const due = member.role === 'user' ? member.paymentDate : undefined
+  if (!due) return <span className="text-zinc-400">—</span>
+  const status = getPaymentStatus(due)
+  return (
+    <div>
+      <span>
+        {prefix ? `${prefix} ` : ''}
+        {formatDate(due)}
+      </span>
+      {status.daysOverdue > 0 && (
+        <span className="block text-xs text-amber-600">
+          Debe {status.monthsOwed === 1 ? '1 cuota' : `${status.monthsOwed} cuotas`} ·{' '}
+          {status.daysOverdue === 1 ? '1 día de atraso' : `${status.daysOverdue} días de atraso`}
+        </span>
+      )}
+    </div>
+  )
 }
 
 function RoleBadge({ role }: { role: Role }) {
@@ -114,6 +141,11 @@ export function MembersListPage() {
       key: 'cost',
       header: 'Mensual',
       render: (m) => (m.role === 'admin' ? '—' : <Money value={m.monthlyCost} />),
+    },
+    {
+      key: 'due',
+      header: 'Vencimiento',
+      render: (m) => <DueDateInfo member={m} />,
     },
     {
       key: 'status',
@@ -242,6 +274,11 @@ export function MembersListPage() {
                         <Badge tone={memberAccessState(m).tone}>{memberAccessState(m).label}</Badge>
                       ) : null}
                     </div>
+                    {m.role === 'user' && m.paymentDate ? (
+                      <div className="mt-1.5 text-xs text-zinc-500">
+                        <DueDateInfo member={m} prefix="Vence" />
+                      </div>
+                    ) : null}
                   </div>
                   <ChevronRight className="size-5 shrink-0 text-zinc-300" aria-hidden />
                 </button>

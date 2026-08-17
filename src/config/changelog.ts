@@ -1,0 +1,71 @@
+/**
+ * Historial de novedades ("¿Qué hay de nuevo?") que ven los admins desde el
+ * menú de Soporte. Lenguaje de USUARIO FINAL: qué mejora o arregla cada
+ * versión, sin jerga técnica.
+ *
+ * Al sacar una versión: agregar la entrada acá (la más nueva PRIMERO) y
+ * mantener `version` en sync con package.json. El punto de "hay novedades"
+ * del botón de Soporte se enciende solo comparando contra la primera entrada.
+ */
+export type ChangeKind = 'new' | 'improved' | 'fixed'
+
+export interface ChangelogItem {
+  kind: ChangeKind
+  text: string
+}
+
+export interface ChangelogRelease {
+  version: string
+  /** Fecha de la release como YYYY-MM-DD (se formatea al mostrar). */
+  date: string
+  items: ChangelogItem[]
+}
+
+export const CHANGELOG: ChangelogRelease[] = [
+  {
+    version: '1.2.0',
+    date: '2026-08-17',
+    items: [
+      {
+        kind: 'improved',
+        text: 'El menú lateral se reorganizó en secciones para encontrar cada función más rápido.',
+      },
+      {
+        kind: 'new',
+        text: 'La lista de socios ahora muestra la fecha de vencimiento de la cuota y señala los pagos atrasados.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Se corrigió un error que impedía subir fotos de productos desde iPhone.',
+      },
+      {
+        kind: 'improved',
+        text: 'Mejoras visuales en la página pública del gimnasio: logo más grande y datos de contacto en Info rápida.',
+      },
+      {
+        kind: 'improved',
+        text: 'La ficha del socio muestra información más útil, sin datos repetidos.',
+      },
+    ],
+  },
+  {
+    version: '1.1.6',
+    date: '2026-08-15',
+    items: [
+      {
+        kind: 'new',
+        text: 'Nueva página para restablecer la contraseña.',
+      },
+      {
+        kind: 'new',
+        text: 'Nuevo botón para compartir el enlace público del gimnasio.',
+      },
+      {
+        kind: 'improved',
+        text: 'Mejoras de visibilidad en buscadores y en la vista previa al compartir el sitio.',
+      },
+    ],
+  },
+]
+
+export const LATEST_VERSION = CHANGELOG[0]?.version ?? ''

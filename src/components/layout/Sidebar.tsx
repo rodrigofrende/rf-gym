@@ -9,7 +9,29 @@ import { emailLocalPart } from '@/utils/loginEmail'
 import { Avatar, BrandLockup, LogoImage, Text, Toggle } from '@/components/ui'
 import { APP_NAME, APP_VERSION } from '@/config/app'
 import { TenantSwitcher } from './TenantSwitcher'
-import { navForRole, PLATFORM_NAV, SUPER_NAV_ITEM } from './navItems'
+import { navGroupsForRole, PLATFORM_NAV, SUPER_NAV_ITEM, type NavItem } from './navItems'
+
+/** Link del menú: estilo único para plataforma, super-admin y grupos del gym. */
+function SidebarLink({ item, onClose }: { item: NavItem; onClose: () => void }) {
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      onClick={onClose}
+      className={({ isActive }) =>
+        cn(
+          'flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium transition-colors',
+          isActive
+            ? 'bg-brand-50 text-brand-700'
+            : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
+        )
+      }
+    >
+      <item.icon className="size-5" />
+      {item.label}
+    </NavLink>
+  )
+}
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, logout } = useAuth()
@@ -19,9 +41,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // Plataforma RF FIT (vistas del super-admin): marca general, sin logo de gym.
   const isPlatform = pathname.startsWith('/super')
 
-  const items = isPlatform
-    ? PLATFORM_NAV
-    : [...(isSuperAdmin ? [SUPER_NAV_ITEM] : []), ...(role ? navForRole(role) : [])]
+  const groups = role ? navGroupsForRole(role) : []
   const brandName = isPlatform ? APP_NAME : (activeMembership?.gymName ?? APP_NAME)
   const logoURL = isPlatform ? undefined : activeMembership?.gymLogoURL
   // El switcher solo tiene sentido si hay más de un gym (evita duplicar el nombre).
@@ -78,26 +98,38 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           </div>
         )}
 
-        <nav className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 pb-2">
-          {items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
-                )
-              }
-            >
-              <item.icon className="size-5" />
-              {item.label}
-            </NavLink>
-          ))}
+        <nav className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
+          {isPlatform ? (
+            <div className="space-y-1">
+              {PLATFORM_NAV.map((item) => (
+                <SidebarLink key={item.to} item={item} onClose={onClose} />
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Super-admin mirando un gym: "Gimnasios" arriba, separado de los
+                  grupos del gimnasio (es navegación cross-tenant, no del gym). */}
+              {isSuperAdmin && (
+                <div className="mb-2 border-b border-zinc-100 pb-2">
+                  <SidebarLink item={SUPER_NAV_ITEM} onClose={onClose} />
+                </div>
+              )}
+              {groups.map((group) => (
+                <div key={group.key} className="pt-3 first:pt-0">
+                  {group.label && (
+                    <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                      {group.label}
+                    </p>
+                  )}
+                  <div className="space-y-1">
+                    {group.items.map((item) => (
+                      <SidebarLink key={item.to} item={item} onClose={onClose} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </nav>
 
         {/* Usuario + acciones */}

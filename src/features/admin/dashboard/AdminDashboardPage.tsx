@@ -40,7 +40,7 @@ export function AdminDashboardPage() {
 
   return (
     <AppLayout
-      title="Panel"
+      title="Estadísticas"
       subtitle={
         dataUpdatedAt
           ? `Última actualización: ${formatDate(new Date(dataUpdatedAt))}`

@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from 'react'
-import { Menu, MessageSquarePlus } from 'lucide-react'
+import { Menu, MessageSquarePlus, Sparkles } from 'lucide-react'
 import { useTenant } from '@/providers/TenantProvider'
 import { cn } from '@/utils/cn'
 import { ContactMenu } from '@/components/ui'
 import { APP_NAME, PLATFORM_EMAIL } from '@/config/app'
+import { WhatsNewModal } from '@/features/whats-new/WhatsNewModal'
+import { useWhatsNew } from '@/features/whats-new/useWhatsNew'
 import { Sidebar } from './Sidebar'
 
 export function AppLayout({
@@ -21,6 +23,7 @@ export function AppLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { role, activeMembership, isSuperAdmin } = useTenant()
+  const whatsNew = useWhatsNew()
 
   // Contacto con RF FIT: solo para admins de gym (el super-admin es RF, no se
   // escribe a sí mismo). Vive en la barra superior —accesible desde cualquier
@@ -30,16 +33,31 @@ export function AppLayout({
       ? `Sugerencia o reporte — ${activeMembership?.gymName ?? APP_NAME}`
       : null
   const support = supportSubject ? (
-    <ContactMenu email={PLATFORM_EMAIL} subject={supportSubject} align="end">
+    <ContactMenu
+      email={PLATFORM_EMAIL}
+      subject={supportSubject}
+      align="end"
+      extraItems={[
+        { icon: <Sparkles className="size-4" />, label: 'Novedades de la app', onClick: whatsNew.show },
+      ]}
+    >
       {({ toggle }) => (
         <button
           type="button"
           onClick={toggle}
-          title="Sugerí mejoras o reportá un problema a RF FIT"
-          aria-label="Sugerencias y soporte"
+          title="Sugerí mejoras, reportá un problema o mirá las novedades"
+          aria-label="Sugerencias, soporte y novedades"
           className="inline-flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
         >
-          <MessageSquarePlus className="size-5" aria-hidden />
+          <span className="relative shrink-0">
+            <MessageSquarePlus className="size-5" aria-hidden />
+            {whatsNew.hasUnseen && (
+              <span
+                aria-hidden
+                className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-brand-500 ring-2 ring-surface"
+              />
+            )}
+          </span>
           <span className="hidden sm:inline">Soporte</span>
         </button>
       )}
@@ -94,6 +112,8 @@ export function AppLayout({
           </div>
         </main>
       </div>
+
+      <WhatsNewModal open={whatsNew.open} onClose={whatsNew.close} />
     </div>
   )
 }

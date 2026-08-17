@@ -112,11 +112,11 @@ export function MyGymPage() {
 
   return (
     <AppLayout
-      title="Mi gimnasio"
+      title="Página pública"
       subtitle="Presentación y contacto que ven tus socios y futuros socios."
       actions={
         <>
-          <SharePublicGymButton gymId={gymId} gymName={gym?.name} />
+          <SharePublicGymButton gymId={gymId} gymName={gym?.name} logoURL={gym?.logoURL} theme={gym?.theme} />
           <Button
             variant="secondary"
             leftIcon={<ExternalLink className="size-4" />}

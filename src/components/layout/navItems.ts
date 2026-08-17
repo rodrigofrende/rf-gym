@@ -31,32 +31,76 @@ export interface NavItem {
   end?: boolean
 }
 
-const ADMIN_NAV: NavItem[] = [
-  { to: ROUTES.ADMIN_MEMBERS, label: 'Socios', icon: Users },
-  { to: ROUTES.ADMIN_MY_QR, label: 'Mi QR', icon: QrCode },
-  { to: ROUTES.ADMIN_TODAY, label: 'Hoy', icon: CalendarCheck },
-  { to: ROUTES.ADMIN_RANKING, label: 'Ranking', icon: Trophy },
-  { to: ROUTES.ADMIN_CLASSES, label: 'Clases', icon: CalendarClock },
-  { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
-  { to: ROUTES.ADMIN_EXERCISES, label: 'Ejercicios', icon: ListChecks },
-  { to: ROUTES.ADMIN_TARIFFS, label: 'Tarifas', icon: Tags },
-  { to: ROUTES.ADMIN_PRODUCTS, label: 'Productos', icon: ShoppingBag },
-  { to: ROUTES.ADMIN_MY_GYM, label: 'Mi gimnasio', icon: Megaphone },
-  { to: ROUTES.ADMIN_SPONSORS, label: 'Patrocinadores', icon: Star },
-  { to: ROUTES.ADMIN_BRANDING, label: 'Marca', icon: Palette },
-  { to: ROUTES.ADMIN_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
+/** Sección del menú lateral. Sin `label` se renderiza plana (sin título). */
+export interface NavGroup {
+  key: string
+  label?: string
+  items: NavItem[]
+}
+
+const ADMIN_NAV: NavGroup[] = [
+  {
+    key: 'gestion',
+    label: 'Gestión',
+    items: [
+      { to: ROUTES.ADMIN_MEMBERS, label: 'Socios', icon: Users },
+      { to: ROUTES.ADMIN_TODAY, label: 'Asistencias', icon: CalendarCheck },
+      { to: ROUTES.ADMIN_MY_QR, label: 'Mi QR', icon: QrCode },
+      { to: ROUTES.ADMIN_RANKING, label: 'Ranking', icon: Trophy },
+      // Estadísticas al final del grupo: dashboard pesado, la home es Socios.
+      { to: ROUTES.ADMIN_DASHBOARD, label: 'Estadísticas', icon: LayoutDashboard, end: true },
+    ],
+  },
+  {
+    key: 'entrenamiento',
+    label: 'Entrenamiento',
+    items: [
+      { to: ROUTES.ADMIN_CLASSES, label: 'Clases', icon: CalendarClock },
+      { to: ROUTES.ADMIN_ROUTINES, label: 'Rutinas', icon: Dumbbell },
+      { to: ROUTES.ADMIN_EXERCISES, label: 'Ejercicios', icon: ListChecks },
+    ],
+  },
+  {
+    key: 'configuracion',
+    label: 'Configuración',
+    items: [
+      { to: ROUTES.ADMIN_TARIFFS, label: 'Tarifas', icon: Tags },
+      { to: ROUTES.ADMIN_PRODUCTS, label: 'Productos', icon: ShoppingBag },
+      { to: ROUTES.ADMIN_MY_GYM, label: 'Página pública', icon: Megaphone },
+      { to: ROUTES.ADMIN_SPONSORS, label: 'Patrocinadores', icon: Star },
+      { to: ROUTES.ADMIN_BRANDING, label: 'Marca', icon: Palette },
+    ],
+  },
 ]
 
-const USER_NAV: NavItem[] = [
-  { to: ROUTES.APP_ROUTINES, label: 'Mis rutinas', icon: ClipboardList },
-  { to: ROUTES.APP_CLASSES, label: 'Clases', icon: CalendarClock },
-  { to: ROUTES.APP_SCAN_QR, label: 'Escanear QR', icon: QrCode },
-  { to: ROUTES.APP_ATTENDANCE, label: 'Mi asistencia', icon: CalendarDays },
-  { to: ROUTES.APP_RANKING, label: 'Ranking', icon: Trophy },
-  { to: ROUTES.APP_LOGS, label: 'Mis registros', icon: History },
-  { to: ROUTES.APP_MY_GYM, label: 'Mi gimnasio', icon: Building2 },
-  { to: ROUTES.APP_PRODUCTS, label: 'Tienda', icon: Store },
-  { to: ROUTES.APP_PROFILE, label: 'Mi perfil', icon: User },
+const USER_NAV: NavGroup[] = [
+  {
+    key: 'entrenamiento',
+    label: 'Entrenamiento',
+    items: [
+      { to: ROUTES.APP_ROUTINES, label: 'Mis rutinas', icon: ClipboardList },
+      { to: ROUTES.APP_CLASSES, label: 'Clases', icon: CalendarClock },
+      { to: ROUTES.APP_RANKING, label: 'Ranking', icon: Trophy },
+    ],
+  },
+  {
+    key: 'actividad',
+    label: 'Mi actividad',
+    items: [
+      { to: ROUTES.APP_SCAN_QR, label: 'Escanear QR', icon: QrCode },
+      { to: ROUTES.APP_ATTENDANCE, label: 'Mi asistencia', icon: CalendarDays },
+      { to: ROUTES.APP_LOGS, label: 'Mis registros', icon: History },
+    ],
+  },
+  {
+    key: 'gimnasio',
+    label: 'Gimnasio',
+    items: [
+      { to: ROUTES.APP_MY_GYM, label: 'Mi gimnasio', icon: Building2 },
+      { to: ROUTES.APP_PRODUCTS, label: 'Tienda', icon: Store },
+      { to: ROUTES.APP_PROFILE, label: 'Mi perfil', icon: User },
+    ],
+  },
 ]
 
 /** Sección exclusiva del super-admin (cross-tenant). */
@@ -73,6 +117,6 @@ export const PLATFORM_NAV: NavItem[] = [
   { to: ROUTES.SUPER_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
 ]
 
-export function navForRole(role: Role): NavItem[] {
+export function navGroupsForRole(role: Role): NavGroup[] {
   return role === 'admin' ? ADMIN_NAV : USER_NAV
 }

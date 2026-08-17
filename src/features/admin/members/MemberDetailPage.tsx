@@ -33,6 +33,7 @@ import {
 import { InfoGrid } from '@/components/shared/InfoGrid'
 import { formatDate } from '@/utils/format'
 import { suggestLoginEmail, tenantEmailDomain } from '@/utils/loginEmail'
+import { frequencyLabel } from '@/utils/tariffs'
 import { memberAccessState, ROLE_LABEL } from '@/utils/roles'
 import { ROUTES } from '@/routes/routePaths'
 import { cn } from '@/utils/cn'
@@ -278,7 +279,11 @@ export function MemberDetailPage() {
               items={[
                 { label: 'Nombre', value: member.fullName },
                 { label: 'Email', value: <Sensitive>{member.email}</Sensitive> },
-                { label: 'Email de acceso', value: <Sensitive>{member.loginEmail || member.email}</Sensitive> },
+                // Solo cuando difiere del email de contacto: repetido no aporta.
+                ...(member.loginEmail &&
+                member.loginEmail.trim().toLowerCase() !== member.email.trim().toLowerCase()
+                  ? [{ label: 'Email de acceso', value: <Sensitive>{member.loginEmail}</Sensitive> }]
+                  : []),
                 {
                   label: 'Contraseña',
                   value:
@@ -290,6 +295,24 @@ export function MemberDetailPage() {
                 },
                 { label: 'Teléfono', value: <Sensitive>{member.phone || '—'}</Sensitive> },
                 { label: 'Nacimiento', value: formatDate(member.birthDate) },
+                ...(!isAdminMember
+                  ? [
+                      {
+                        label: 'Servicio',
+                        value: member.service
+                          ? [
+                              member.service,
+                              member.weeklyFrequency != null
+                                ? frequencyLabel(member.weeklyFrequency)
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')
+                          : '—',
+                      },
+                      { label: 'Alta', value: formatDate(member.startDate) },
+                    ]
+                  : []),
               ]}
             />
           </CardBody>

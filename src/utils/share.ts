@@ -22,8 +22,9 @@ export async function nativeShare(data: {
 
 /**
  * Links de "compartir a" por red social, para el fallback web cuando no hay share
- * nativo (o como opciones explícitas). Instagram no admite compartir por URL, así
- * que ese caso se cubre con "copiar link".
+ * nativo (o como opciones explícitas). Instagram no admite compartir por URL: ese
+ * caso se cubre generando una imagen de historia + copiar el link (ver
+ * SharePublicGymButton).
  */
 export function socialShareLinks(url: string, text: string) {
   const u = encodeURIComponent(url)

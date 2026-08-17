@@ -69,8 +69,8 @@ export function TodayAttendancePage() {
 
   return (
     <AppLayout
-      title="Hoy en el gym"
-      subtitle={`${formatDate(new Date())} · actualización en vivo cuando esta pantalla está abierta`}
+      title="Asistencias"
+      subtitle={`Hoy, ${formatDate(new Date())} · actualización en vivo cuando esta pantalla está abierta`}
       actions={
         <Button
           size="sm"

@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, Copy, Mail, MessageCircle, Share2 } from 'lucide-react'
+import type { GymTheme } from '@/types'
 import { useToast } from '@/providers/ToastProvider'
 import { publicGymRoute } from '@/routes/routePaths'
-import { canNativeShare, nativeShare, socialShareLinks } from '@/utils/share'
+import { canNativeShare, nativeShare, shareOrDownloadPng, socialShareLinks } from '@/utils/share'
+import { drawGymStoryImage } from '@/features/gym-presentation/gymStoryImage'
 import { cn } from '@/utils/cn'
 import { Button } from '@/components/ui'
 
@@ -17,7 +19,17 @@ const MARGIN = 8
  * (copiar link, WhatsApp, Facebook, X, email). El menú se monta en un portal con
  * `position: fixed` para no quedar tapado por contenedores con overflow.
  */
-export function SharePublicGymButton({ gymId, gymName }: { gymId: string; gymName?: string }) {
+export function SharePublicGymButton({
+  gymId,
+  gymName,
+  logoURL,
+  theme,
+}: {
+  gymId: string
+  gymName?: string
+  logoURL?: string
+  theme?: GymTheme | null
+}) {
   const { notify } = useToast()
   const url = new URL(publicGymRoute(gymId), window.location.origin).toString()
   const text = gymName ? `Conocé ${gymName} 💪` : 'Mirá la página de nuestro gimnasio 💪'
@@ -115,12 +127,39 @@ export function SharePublicGymButton({ gymId, gymName }: { gymId: string; gymNam
     copyTimer.current = setTimeout(close, 1200)
   }
 
-  // Instagram no admite compartir un link por URL. Lo pragmático: copiar el link
-  // y abrir Instagram para pegarlo como sticker de enlace en una historia.
-  const doInstagram = async () => {
+  // Instagram no admite compartir un link por URL. El flujo: se genera una
+  // tarjeta de historia (canvas, branding del gym), se comparte como IMAGEN por
+  // el share sheet nativo (Instagram la ofrece con "Agregar a historia" ya
+  // cargada) y el link queda copiado para pegarlo como sticker "Enlace". En
+  // desktop no hay share con archivos: la imagen se descarga.
+  const [generating, setGenerating] = useState(false)
+  const doStoryImage = async () => {
+    if (generating) return
+    setGenerating(true)
     await writeClipboard()
-    notify('Link copiado 📎. Abrí una historia en Instagram y pegalo como sticker de enlace.', 'info')
-    window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')
+    try {
+      const blob = await drawGymStoryImage({
+        gymName: gymName ?? 'Nuestro gimnasio',
+        logoURL,
+        theme,
+      })
+      const outcome = await shareOrDownloadPng(blob, `historia-${gymId}.png`, {
+        title: gymName ?? 'RF FIT',
+        text,
+      })
+      if (outcome === 'shared') {
+        notify('Link copiado. Pegalo en la historia con el sticker "Enlace".', 'info')
+      } else if (outcome === 'downloaded') {
+        notify(
+          'Imagen descargada y link copiado. Subila a tu historia y pegá el link con el sticker "Enlace".',
+          'info',
+        )
+      }
+    } catch {
+      notify('No se pudo generar la imagen. El link igual quedó copiado.', 'error')
+    } finally {
+      setGenerating(false)
+    }
     close()
   }
 
@@ -159,8 +198,8 @@ export function SharePublicGymButton({ gymId, gymName }: { gymId: string; gymNam
             <MenuItem icon={<MessageCircle className="size-4" />} onClick={() => openLink(links.whatsapp)}>
               WhatsApp
             </MenuItem>
-            <MenuItem icon={<InstagramIcon />} onClick={doInstagram}>
-              Instagram (historia)
+            <MenuItem icon={<InstagramIcon />} onClick={doStoryImage}>
+              {generating ? 'Generando imagen…' : 'Historia de Instagram'}
             </MenuItem>
             <MenuItem icon={<FacebookIcon />} onClick={() => openLink(links.facebook)}>
               Facebook
