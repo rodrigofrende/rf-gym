@@ -3,6 +3,9 @@ import type { Role } from '@/types'
 export const ROUTES = {
   LOGIN: '/login',
   SET_PASSWORD: '/set-password',
+  // Página propia (branded) para las acciones de email de Firebase (reset de
+  // contraseña). Firebase apunta acá cuando se setea el "custom action URL".
+  AUTH_ACTION: '/auth/action',
   SELECT_GYM: '/select-gym',
 
   // Presentación pública del gym (sin login, compartible con prospectos)

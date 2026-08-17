@@ -11,6 +11,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   signInWithPopup,
   signOut,
   updateProfile,
@@ -46,6 +48,10 @@ interface AuthContextValue {
    * (es una operación de Auth, no depende de las rules de Firestore).
    */
   sendPasswordReset: (email: string) => Promise<void>
+  /** Valida el código de una acción de reset (link del email) y devuelve el email asociado. */
+  verifyResetCode: (oobCode: string) => Promise<string>
+  /** Confirma el reset: aplica el código con la contraseña nueva. */
+  confirmReset: (oobCode: string, newPassword: string) => Promise<void>
   /** Actualiza el displayName del usuario y lo persiste en su perfil global. */
   updateDisplayName: (name: string) => Promise<void>
   loginGoogle: () => Promise<void>
@@ -93,6 +99,8 @@ function DemoAuthProvider({ children }: { children: ReactNode }) {
       },
       changePassword: async () => undefined,
       sendPasswordReset: async () => undefined,
+      verifyResetCode: async () => 'demo@rf-fit.app',
+      confirmReset: async () => undefined,
       updateDisplayName: async () => undefined,
       loginGoogle: async () => setIdentity('admin'),
       logout: async () => setIdentity(null),
@@ -169,6 +177,8 @@ function FirebaseAuthProvider({ children }: { children: ReactNode }) {
           }
         }
       },
+      verifyResetCode: (oobCode) => verifyPasswordResetCode(auth, oobCode),
+      confirmReset: (oobCode, newPassword) => confirmPasswordReset(auth, oobCode, newPassword),
       updateDisplayName: async (name) => {
         if (!auth.currentUser) throw new Error('auth/no-current-user')
         await updateProfile(auth.currentUser, { displayName: name })

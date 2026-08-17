@@ -45,6 +45,9 @@ const MyAttendancePage = lazyPage(() => import('@/features/member/attendance/MyA
 const ProfilePage = lazyPage(() => import('@/features/member/profile/ProfilePage'), (m) => m.ProfilePage)
 const MyGymMemberPage = lazyPage(() => import('@/features/member/my-gym/MyGymMemberPage'), (m) => m.MyGymMemberPage)
 const ShopPage = lazyPage(() => import('@/features/member/shop/ShopPage'), (m) => m.ShopPage)
+// Acción de email (reset de contraseña) con página propia branded. Lazy: solo
+// se llega desde el link del email, no es camino crítico del primer acceso.
+const AuthActionPage = lazyPage(() => import('@/features/auth/AuthActionPage'), (m) => m.AuthActionPage)
 // Pública y super-admin
 const PublicGymPage = lazyPage(() => import('@/features/public/PublicGymPage'), (m) => m.PublicGymPage)
 const LandingPage = lazyPage(() => import('@/features/landing/LandingPage'), (m) => m.LandingPage)
@@ -73,6 +76,7 @@ export function AppRoutes() {
       <Routes>
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.SET_PASSWORD} element={<SetPasswordPage />} />
+      <Route path={ROUTES.AUTH_ACTION} element={<AuthActionPage />} />
       <Route path={ROUTES.CHECK_IN} element={<CheckInPage />} />
       <Route path={ROUTES.PUBLIC_GYM} element={<PublicGymPage />} />
       <Route path={ROUTES.SELECT_GYM} element={<TenantSelectPage />} />
