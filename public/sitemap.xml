@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sitemap de fit.rf-platform.com. Solo listamos URLs públicas y estables.
+  Las páginas de gimnasios (/g/:gymId) son dinámicas (una por tenant en Firestore)
+  y no se pueden enumerar en un build estático; se descubren cuando los gimnasios
+  comparten su link. Si más adelante querés incluirlas, hay que generar este XML
+  en build-time leyendo la lista de gyms.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://fit.rf-platform.com/</loc>
+    <lastmod>2026-08-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

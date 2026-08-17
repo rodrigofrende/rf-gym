@@ -1,0 +1,17 @@
+# robots.txt — fit.rf-platform.com
+# Permitimos el rastreo de todo lo público (landing + páginas de gimnasios /g/).
+User-agent: *
+Allow: /
+
+# Zonas privadas (detrás de login, sin valor SEO): que no gasten crawl budget.
+# No bloquean /assets ni /brand, así Google puede renderizar el JS/CSS.
+Disallow: /login
+Disallow: /set-password
+Disallow: /auth/
+Disallow: /select-gym
+Disallow: /admin/
+Disallow: /app/
+Disallow: /super/
+Disallow: /check-in/
+
+Sitemap: https://fit.rf-platform.com/sitemap.xml
