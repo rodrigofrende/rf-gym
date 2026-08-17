@@ -8,10 +8,6 @@ import { getOne, updateOne } from './firestore'
 import { getGym } from './gymsService'
 import { paths } from './paths'
 
-export function defaultAuthStatus(member: Pick<Member, 'uid' | 'authStatus'>): MemberAuthStatus {
-  return member.authStatus ?? (member.uid ? 'active' : 'pending_password')
-}
-
 export function getMemberLogin(email: string): Promise<MemberLoginIndex | null> {
   if (env.demoMode) return demo.getMemberLogin(email)
   return getOne<MemberLoginIndex>(paths.memberLoginIndex(normalizeEmailKey(email)))
@@ -27,15 +23,15 @@ export async function syncMemberLoginIndex(
   const gymData = gym ?? (await getGym(gymId))
   const email = member.loginEmail || member.email
   // OVERWRITE (sin merge): el índice de login es world-readable y las rules lo
-  // validan con hasOnly([5 claves]). Un merge conservaría claves legacy de docs
+  // validan con hasOnly([4 claves]). Un merge conservaría claves legacy de docs
   // viejos y rompería esa validación → "permiso denegado". Sobrescribir garantiza
-  // que el doc quede exactamente con las 5 claves permitidas.
+  // que el doc quede exactamente con las 4 claves permitidas. NO se guarda
+  // authStatus (no filtrar qué socios están sin reclamar).
   await setDoc(doc(db, paths.memberLoginIndex(normalizeEmailKey(email))), {
     email,
     gymId,
     gymName: gymData?.name ?? 'Gimnasio',
     memberId,
-    authStatus: defaultAuthStatus(member),
   } satisfies Omit<MemberLoginIndex, 'id'>)
 }
 

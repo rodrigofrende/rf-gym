@@ -58,10 +58,6 @@ const nextId = (prefix: string) => `${prefix}-${++counter}-demo`
 
 const ok = <T>(value: T) => Promise.resolve(value)
 
-function memberAuthStatus(member: Pick<Member, 'uid' | 'authStatus'>): MemberAuthStatus {
-  return member.authStatus ?? (member.uid ? 'active' : 'pending_password')
-}
-
 function loginIndexForMember(member: Member): MemberLoginIndex {
   const email = member.loginEmail || member.email
   return {
@@ -70,7 +66,6 @@ function loginIndexForMember(member: Member): MemberLoginIndex {
     gymId: DEMO_GYM_ID,
     gymName: data.gym.name,
     memberId: member.id,
-    authStatus: memberAuthStatus(member),
   }
 }
 

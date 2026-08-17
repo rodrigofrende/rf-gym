@@ -28,11 +28,6 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 type LoginStep = 'email' | 'password'
 
-function isFirstAccessAuthFailure(err: unknown) {
-  const code = extractAuthCode(err)
-  return code === 'auth/user-not-found' || code === 'auth/invalid-credential'
-}
-
 export function LoginPage() {
   const { user, loginEmail, loginGoogle, setDemoIdentity } = useAuth()
   const location = useLocation()
@@ -44,7 +39,12 @@ export function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const canUseGoogle = env.googleLoginEnabled
   const redirect = new URLSearchParams(location.search).get('redirect')
-  const safeRedirect = redirect?.startsWith('/') ? redirect : '/'
+  // Solo rutas internas: rechazar también '//' y '/\' (URLs protocolo-relativas)
+  // para no habilitar un open-redirect si algún día se usara window.location.
+  const safeRedirect =
+    redirect && redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/\\')
+      ? redirect
+      : '/'
 
   const {
     register,
@@ -60,18 +60,9 @@ export function LoginPage() {
     try {
       const email = values.email.trim().toLowerCase()
       if (step === 'email') {
-        const login = await getMemberLogin(email)
-        // Alta por "invitación reclamable": si todavía no creó su contraseña,
-        // lo mandamos directo a crearla en vez de pedirle una que no existe.
-        // Pasamos el índice ya leído por state para ahorrarle esa lectura.
-        if (login?.authStatus === 'pending_password') {
-          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(email)}&mode=create`, {
-            state: { login },
-          })
-          return
-        }
-        // Socio con contraseña, super-admin o cuenta directa (Google/email) sin
-        // índice de socio → paso contraseña. No revelamos si el email es socio.
+        // El índice de login ya NO expone authStatus (para no filtrar qué socios
+        // están sin reclamar), así que no auto-ruteamos el primer acceso: el socio
+        // pasa al paso contraseña, donde hay un enlace "¿Primera vez?".
         setResolvedEmail(email)
         setValue('password', '')
         setStep('password')
@@ -83,18 +74,7 @@ export function LoginPage() {
         return
       }
       const login = await getMemberLogin(resolvedEmail || email)
-      let loggedUser: Awaited<ReturnType<typeof loginEmail>>
-      try {
-        loggedUser = await loginEmail(resolvedEmail || email, values.password)
-      } catch (err) {
-        if (login?.authStatus === 'pending_password' && isFirstAccessAuthFailure(err)) {
-          navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail || email)}&mode=create`, {
-            state: { login },
-          })
-          return
-        }
-        throw err
-      }
+      const loggedUser = await loginEmail(resolvedEmail || email, values.password)
       const claimed = new Map<string, ClaimedMembership>()
 
       // 1) Claim principal del índice de login (si falla, no lo silenciamos).
@@ -245,6 +225,18 @@ export function LoginPage() {
             <Button type="submit" fullWidth loading={isSubmitting}>
               {step === 'email' ? 'Continuar' : 'Entrar'}
             </Button>
+
+            {step === 'password' && (
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail)}&mode=create`)
+                }
+                className="block w-full text-center text-sm font-medium text-brand-600 hover:text-brand-700"
+              >
+                ¿Primera vez? Creá tu contraseña
+              </button>
+            )}
           </form>
 
           {canUseGoogle && (

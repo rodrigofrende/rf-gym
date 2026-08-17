@@ -1,0 +1,22 @@
+# Security headers (Netlify los aplica a todas las respuestas del sitio).
+# Objetivo principal: anti-clickjacking + hardening de defensa en profundidad.
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: geolocation=(), microphone=(), payment=(), camera=(self)
+  Content-Security-Policy: frame-ancestors 'none'
+
+# NOTA — CSP completa (script-src/connect-src/etc.): quedó pendiente a propósito.
+# Una CSP restrictiva es defensa en profundidad valiosa, PERO mal calibrada rompe
+# Firebase (Firestore WebChannel), App Check/reCAPTCHA y el login con Google, y no
+# se puede testear sin deployar. Activar y PROBAR en un deploy de preview antes de
+# producción. Plantilla de arranque (ajustar y verificar en la consola del navegador):
+#
+#   Content-Security-Policy: default-src 'self'; frame-ancestors 'none';
+#     script-src 'self' https://www.gstatic.com https://www.google.com https://apis.google.com;
+#     connect-src 'self' https://*.googleapis.com https://*.google.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com;
+#     frame-src https://www.google.com https://*.firebaseapp.com https://accounts.google.com;
+#     img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+#     font-src 'self' https://fonts.gstatic.com; base-uri 'self'; object-src 'none'

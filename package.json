@@ -1,7 +1,7 @@
 {
   "name": "RF-Fit",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.1.2",
   "type": "module",
   "packageManager": "pnpm@11.1.1",
   "engines": {
@@ -23,7 +23,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@hookform/resolvers": "^5.8.0",
+    "@hookform/resolvers": "^5.9.0",
     "@tanstack/react-query": "^5.101.4",
     "clsx": "^2.1.1",
     "firebase": "^12.17.1",
@@ -57,5 +57,10 @@
     "typescript-eslint": "^8.67.0",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
+  },
+  "pnpm": {
+    "overrides": {
+      "uuid": ">=11.1.1"
+    }
   }
 }

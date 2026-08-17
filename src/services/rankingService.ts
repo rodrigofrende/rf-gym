@@ -24,8 +24,9 @@ export function listMonthlyLeaderboard(gymId: string, monthKey: string) {
 /**
  * Suma 1 al contador mensual del socio. Lo llama checkInMember SOLO en la rama
  * de primer check-in del día, así cada día cuenta una única vez. setDoc(merge)
- * + increment cubre create y update: las rules validan days == 1 en create y
- * days == anterior + 1 en update del propio socio.
+ * + increment cubre create y update. Las rules validan (para el propio socio):
+ * days == 1 en create, days == anterior + 1 en update, `lastDay` creciente y que
+ * EXISTA la asistencia real de ese día → no se puede inflar el ranking.
  */
 export async function bumpMonthlyAttendance(
   gymId: string,
@@ -42,6 +43,7 @@ export async function bumpMonthlyAttendance(
       memberUid: member.uid,
       displayName: displayNameShort(member.fullName),
       days: increment(1),
+      lastDay: dayKey,
     },
     { merge: true },
   )
@@ -77,12 +79,16 @@ export async function recomputeMonthlyLeaderboard(gymId: string, monthKey: strin
   // Un batch alcanza para gyms reales (límite 500 ops ≈ 500 socios activos/mes).
   const batch = createBatch()
   for (const [memberId, entry] of agg) {
+    // lastDay = día más reciente con asistencia (deja el contador listo para que
+    // los próximos bumps del socio comparen "hacia adelante" contra este valor).
+    const lastDay = [...entry.days].sort().slice(-1)[0]
     batch.set(doc(db, paths.attendanceMonthlyRecord(gymId, monthlyAttendanceId(monthKey, memberId))), {
       monthKey,
       memberId,
       memberUid: entry.memberUid,
       displayName: displayNameShort(entry.memberName),
       days: entry.days.size,
+      lastDay,
     })
   }
   for (const row of existing) {

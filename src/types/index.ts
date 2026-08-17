@@ -193,7 +193,9 @@ export interface MemberLoginIndex {
   gymId: string
   gymName: string
   memberId: string
-  authStatus: MemberAuthStatus
+  // Nota: NO se guarda authStatus acá. El índice es world-readable (el login lo
+  // lee antes de autenticar) y exponer "pending_password" delataba qué socios
+  // están sin reclamar. El estado se resuelve tras autenticar, leyendo el member.
 }
 
 /** Tarifa / plan que ofrece el gym (`gyms/{gymId}/tariffs`). */
@@ -377,6 +379,9 @@ export interface MonthlyAttendance {
   memberUid: string
   displayName: string // "Rodrigo F." — enmascarado al escribir
   days: number // días distintos con check-in en el mes
+  // Último día contado (YYYY-MM-DD). Las rules solo dejan sumar hacia adelante
+  // (lastDay creciente) y con asistencia real → el socio no puede inflar el ranking.
+  lastDay?: string
 }
 
 /** Registro de carga del propio user (`.../members/{uid}/logs`). */

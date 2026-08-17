@@ -135,16 +135,25 @@ service cloud.firestore {
     match /memberLoginIndex/{emailKey} {
       function validLoginIndex() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['email', 'gymId', 'gymName', 'memberId', 'authStatus'])
+        return d.keys().hasOnly(['email', 'gymId', 'gymName', 'memberId'])
           && (!('email' in d) || (d.email is string && d.email.size() <= 200))
           && (!('gymId' in d) || (d.gymId is string && d.gymId.size() <= 200))
           && (!('gymName' in d) || (d.gymName is string && d.gymName.size() <= 120))
-          && (!('memberId' in d) || (d.memberId is string && d.memberId.size() <= 200))
-          && (!('authStatus' in d) || (d.authStatus is string && d.authStatus.size() <= 40));
+          && (!('memberId' in d) || (d.memberId is string && d.memberId.size() <= 200));
+      }
+      // La clave del doc DEBE ser el email (normalizado) que declara el payload:
+      // impide que un admin escriba/reapunte el índice de un email ajeno
+      // (envenenamiento cross-tenant del ruteo de login).
+      function keyMatchesEmail() {
+        return 'email' in request.resource.data
+          && emailKey == request.resource.data.email.lower();
       }
       allow get: if true;
       allow list: if false;
       allow create, update: if validLoginIndex()
+        && keyMatchesEmail()
+        // No re-apuntar un índice existente a otro gym.
+        && (resource == null || resource.data.gymId == request.resource.data.gymId)
         && (isGymAdmin(request.resource.data.gymId)
           || (isSignedIn()
             && get(/databases/$(database)/documents/gyms/$(request.resource.data.gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid));
@@ -379,6 +388,35 @@ service cloud.firestore {
       }
 
       match /attendance/{attendanceId} {
+        function validAttendance() {
+          let d = request.resource.data;
+          return d.keys().hasOnly([
+              'memberId', 'memberUid', 'memberName', 'email',
+              'dayKey', 'checkedInAt', 'lastSeenAt', 'scanCount', 'paymentState', 'memberStatus'
+            ])
+            && d.memberId is string && d.memberId.size() <= 200
+            && d.memberUid == request.auth.uid
+            && d.dayKey is string && d.dayKey.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+            && d.scanCount is int && d.scanCount >= 1 && d.scanCount <= 5000
+            && (!('memberName' in d) || (d.memberName is string && d.memberName.size() <= 160))
+            && (!('email' in d) || (d.email is string && d.email.size() <= 200))
+            && (!('paymentState' in d) || (d.paymentState is string && d.paymentState.size() <= 20))
+            && (!('memberStatus' in d) || (d.memberStatus is string && d.memberStatus.size() <= 20))
+            && (!('checkedInAt' in d) || d.checkedInAt is timestamp)
+            && (!('lastSeenAt' in d) || d.lastSeenAt is timestamp);
+        }
+        // Ata el doc-id a (dayKey, memberId): un doc por día por socio; no se puede
+        // sobrescribir la asistencia de otro ni desdoblar el día.
+        function attendanceIdBound() {
+          return attendanceId == request.resource.data.dayKey + '_' + request.resource.data.memberId;
+        }
+        // El socio referenciado por memberId es el propio (uid del token).
+        function isOwnAttendanceWrite() {
+          return isSignedIn()
+            && request.resource.data.memberUid == request.auth.uid
+            && exists(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId))
+            && get(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid;
+        }
         allow get: if isGymAdmin(gymId)
           || (isSignedIn()
             && exists(/databases/$(database)/documents/gyms/$(gymId)/attendance/$(attendanceId))
@@ -387,10 +425,12 @@ service cloud.firestore {
             && !exists(/databases/$(database)/documents/gyms/$(gymId)/attendance/$(attendanceId))
             && isGymMember(gymId));
         allow list: if isGymAdmin(gymId);
-        allow create, update: if isSignedIn()
-          && request.resource.data.memberUid == request.auth.uid
-          && exists(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId))
-          && get(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid;
+        allow create: if isOwnAttendanceWrite() && validAttendance() && attendanceIdBound()
+          && request.resource.data.scanCount == 1;
+        // Re-scan del mismo día: solo cambia contadores; día y socio quedan fijos.
+        allow update: if isOwnAttendanceWrite() && validAttendance() && attendanceIdBound()
+          && request.resource.data.dayKey == resource.data.dayKey
+          && request.resource.data.memberId == resource.data.memberId;
       }
 
       // Ranking mensual de asistencia. Legible por todo el gym (admin + socios),
@@ -401,15 +441,15 @@ service cloud.firestore {
       match /attendanceMonthly/{entryId} {
         function validMonthly() {
           let d = request.resource.data;
-          return d.keys().hasOnly(['monthKey', 'memberId', 'memberUid', 'displayName', 'days'])
+          return d.keys().hasOnly(['monthKey', 'memberId', 'memberUid', 'displayName', 'days', 'lastDay'])
             && d.monthKey is string && d.monthKey.matches('[0-9]{4}-[0-9]{2}')
             && d.memberId is string && d.memberId.size() <= 200
             && d.memberUid is string && d.memberUid.size() <= 128
             && d.displayName is string && d.displayName.size() >= 1 && d.displayName.size() <= 40
             // Tope 31 = máximo de días de un mes. Acota el inflado del ranking vía
-            // API directa (el incremento de a 1 no se puede limitar a 1/día sin
-            // backend, pero nadie puede mostrar más días que los que tiene el mes).
-            && d.days is int && d.days >= 1 && d.days <= 31;
+            // API directa (nadie puede mostrar más días que los que tiene el mes).
+            && d.days is int && d.days >= 1 && d.days <= 31
+            && (!('lastDay' in d) || (d.lastDay is string && d.lastDay.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')));
         }
         // Identidad como en attendance: el doc referencia un member reclamado por este uid.
         function isOwnMonthly() {
@@ -418,12 +458,24 @@ service cloud.firestore {
             && exists(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId))
             && get(/databases/$(database)/documents/gyms/$(gymId)/members/$(request.resource.data.memberId)).data.uid == request.auth.uid;
         }
+        // El socio solo cuenta un día por el que EXISTE su asistencia real de ese
+        // día (doc atado en /attendance) → no puede sumar días que no fue.
+        function ownDayHasAttendance() {
+          return 'lastDay' in request.resource.data
+            && exists(/databases/$(database)/documents/gyms/$(gymId)/attendance/$(request.resource.data.lastDay + '_' + request.resource.data.memberId));
+        }
         allow get, list: if canAccessGym(gymId);
         allow create: if validMonthly()
-          && (isGymAdmin(gymId) || (isOwnMonthly() && request.resource.data.days == 1));
+          && (isGymAdmin(gymId)
+            || (isOwnMonthly() && request.resource.data.days == 1 && ownDayHasAttendance()));
+        // Update propio: +1, con asistencia real de ese día y SOLO hacia adelante
+        // (lastDay creciente) → no se puede recontar un día ni inflar el contador.
         allow update: if validMonthly()
           && (isGymAdmin(gymId)
-            || (isOwnMonthly() && request.resource.data.days == resource.data.days + 1));
+            || (isOwnMonthly()
+                && request.resource.data.days == resource.data.days + 1
+                && ownDayHasAttendance()
+                && request.resource.data.lastDay > resource.data.get('lastDay', '')));
         allow delete: if isGymAdmin(gymId);
       }
 
