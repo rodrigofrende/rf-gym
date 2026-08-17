@@ -29,7 +29,7 @@ type FormValues = z.infer<typeof schema>
 type LoginStep = 'email' | 'password'
 
 export function LoginPage() {
-  const { user, loginEmail, loginGoogle, setDemoIdentity } = useAuth()
+  const { user, loginEmail, loginGoogle, setDemoIdentity, sendPasswordReset } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -37,6 +37,7 @@ export function LoginPage() {
   const [step, setStep] = useState<LoginStep>('email')
   const [resolvedEmail, setResolvedEmail] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [forgotSending, setForgotSending] = useState(false)
   const canUseGoogle = env.googleLoginEnabled
   const redirect = new URLSearchParams(location.search).get('redirect')
   // Solo rutas internas: rechazar también '//' y '/\' (URLs protocolo-relativas)
@@ -147,6 +148,25 @@ export function LoginPage() {
     setValue('password', '')
   }
 
+  // Olvidó la contraseña (ya tiene cuenta): dispara el email de restablecimiento.
+  // Honesto con el caso "alias del gym": si el email no es real, no le llega y
+  // tiene que pedirle el reseteo a su gimnasio.
+  const handleForgot = async () => {
+    if (!resolvedEmail || forgotSending) return
+    setForgotSending(true)
+    try {
+      await sendPasswordReset(resolvedEmail)
+      notify(
+        'Si tu email es válido, te enviamos un link para restablecerla (revisá spam). Si tu acceso es un usuario del gimnasio, pedile a tu gym que te lo resetee.',
+        'success',
+      )
+    } catch (err) {
+      notify(mapAuthError(err, 'No pudimos enviar el email de restablecimiento'), 'error')
+    } finally {
+      setForgotSending(false)
+    }
+  }
+
   const onPasswordSubmit = handleSubmit(onSubmit)
 
   const onGoogle = async () => {
@@ -227,15 +247,25 @@ export function LoginPage() {
             </Button>
 
             {step === 'password' && (
-              <button
-                type="button"
-                onClick={() =>
-                  navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail)}&mode=create`)
-                }
-                className="block w-full text-center text-sm font-medium text-brand-600 hover:text-brand-700"
-              >
-                ¿Primera vez? Creá tu contraseña
-              </button>
+              <div className="space-y-1.5 pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail)}&mode=create`)
+                  }
+                  className="block w-full text-sm font-medium text-brand-600 hover:text-brand-700"
+                >
+                  ¿Primera vez? Creá tu contraseña
+                </button>
+                <button
+                  type="button"
+                  onClick={handleForgot}
+                  disabled={forgotSending}
+                  className="block w-full text-sm text-zinc-500 hover:text-zinc-800 disabled:opacity-60"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
             )}
           </form>
 

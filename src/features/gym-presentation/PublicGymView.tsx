@@ -1,7 +1,7 @@
 import { createElement, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowRight, Clock, Mail, MapPin, MessageCircle, PlayCircle } from 'lucide-react'
 import type { GymLink, GymPresentation as GymPresentationData, PublicTariff } from '@/types'
-import { LogoImage } from '@/components/ui'
+import { BrandLockup, LogoImage } from '@/components/ui'
 import { parseVideoUrl } from '@/utils/video'
 import { mailtoLink, whatsappLink } from '@/utils/contact'
 import { resolvePresentation } from '@/utils/presentation'
@@ -37,7 +37,10 @@ export function PublicGymView({
   const tariffs = (data.tariffs ?? []).filter((t) => t && t.name && typeof t.price === 'number')
   const wa = whatsappLink(data.whatsapp, `Hola, me interesa información sobre ${gymName}`)
   const mail = mailtoLink(data.email, `Consulta sobre ${gymName}`)
-  const hasContact = wa || mail || data.address || data.openingHours
+  // Solo contacto (WhatsApp/email): la dirección y el horario ya viven en "Info
+  // rápida", no se repiten acá abajo. Así "Sumate" no queda vacío si el gym solo
+  // cargó dirección/horario sin WhatsApp ni email.
+  const hasContact = Boolean(wa || mail)
   const minPrice = tariffs.length ? Math.min(...tariffs.map((t) => t.price)) : null
   const hasQuickInfo = Boolean(data.address || data.openingHours || minPrice != null)
 
@@ -109,17 +112,13 @@ export function PublicGymView({
         <div className="relative mx-auto max-w-5xl px-6 pb-14 pt-12 sm:pb-20 sm:pt-16">
           <div className="flex flex-col gap-10 @4xl:flex-row @4xl:items-start @4xl:justify-between">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-3">
-                <LogoImage
-                  src={data.logoURL}
-                  alt={gymName}
-                  className="size-11 rounded-xl ring-1 ring-white/15"
-                  fallbackClassName="bg-brand-500 ring-0"
-                />
-                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-400">
-                  by {APP_NAME}
-                </span>
-              </div>
+              <LogoImage
+                src={data.logoURL}
+                alt={gymName}
+                className="size-16 shrink-0 rounded-2xl ring-1 ring-white/15 sm:size-20"
+                iconClassName="size-8"
+                fallbackClassName="bg-brand-500 ring-0"
+              />
 
               <h1 className="mt-8 break-words font-display text-6xl uppercase leading-[0.85] tracking-tight sm:text-8xl">
                 {gymName}
@@ -252,22 +251,6 @@ export function PublicGymView({
                   )}
                 </div>
               )}
-              {(data.address || data.openingHours) && (
-                <div className="space-y-2 text-sm text-zinc-400">
-                  {data.address && (
-                    <p className="flex items-center gap-2">
-                      <MapPin className="size-4 shrink-0 text-brand-400" />
-                      {data.address}
-                    </p>
-                  )}
-                  {data.openingHours && (
-                    <p className="flex items-center gap-2">
-                      <Clock className="size-4 shrink-0 text-brand-400" />
-                      {data.openingHours}
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           </Section>
         )}
@@ -277,15 +260,24 @@ export function PublicGymView({
         <div className="mx-auto max-w-5xl space-y-8">
           {sponsors.length === 0 && <SponsorPlaceholder variant="dark" whatsapp={data.whatsapp} />}
           <div className="space-y-2 text-center">
-            <p className="text-xs uppercase tracking-widest text-zinc-500">
-              by <span className="font-semibold text-zinc-300">{APP_NAME}</span>
-            </p>
+            <div className="flex justify-center">
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${APP_NAME} — conocé la plataforma`}
+                className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500 transition-opacity hover:opacity-80"
+              >
+                by
+                <BrandLockup variant="onDark" />
+              </a>
+            </div>
             <p className="text-[11px] leading-relaxed text-zinc-600">
               Gestión y presencia online para gimnasios.
             </p>
             <p className="text-[11px] leading-relaxed text-zinc-600">
               © {CURRENT_YEAR} {gymName} · Todos los derechos reservados. Precios, horarios y
-              promociones sujetos a cambios sin previo aviso.
+              promociones sujetos a cambios.
             </p>
           </div>
         </div>

@@ -14,53 +14,27 @@ export interface BrandingPreset {
   theme: GymTheme
 }
 
-/** Paletas sugeridas para aplicar de un clic en la pantalla Marca. */
+/**
+ * Paletas CURADAS para el white-label (única forma de tematizar; no hay selección
+ * de color libre). Cada una está anclada en la escala de Tailwind: accent en el
+ * tono ~600, fondo muy claro del mismo hue y texto muy oscuro → buen contraste
+ * garantizado en la app, en la página pública (fondo derivado oscuro) y con el
+ * logo RF blanco. Ordenadas por hue para que la galería se lea prolija.
+ */
 export const BRANDING_PRESETS: BrandingPreset[] = [
-  {
-    id: 'tiger',
-    label: 'Naranja',
-    theme: {
-      accent: '#ea580c',
-      background: '#fafaf9',
-      container: '#ffffff',
-      text: '#0f172a',
-    },
-  },
-  {
-    id: 'indigo',
-    label: 'Índigo',
-    theme: PLATFORM_DEFAULT_THEME,
-  },
-  {
-    id: 'emerald',
-    label: 'Verde',
-    theme: {
-      accent: '#059669',
-      background: '#f0fdf4',
-      container: '#ffffff',
-      text: '#14532d',
-    },
-  },
-  {
-    id: 'rose',
-    label: 'Rosa',
-    theme: {
-      accent: '#e11d48',
-      background: '#fff1f2',
-      container: '#ffffff',
-      text: '#881337',
-    },
-  },
-  {
-    id: 'slate',
-    label: 'Gris',
-    theme: {
-      accent: '#475569',
-      background: '#f8fafc',
-      container: '#ffffff',
-      text: '#0f172a',
-    },
-  },
+  { id: 'indigo', label: 'Índigo', theme: PLATFORM_DEFAULT_THEME },
+  { id: 'blue', label: 'Azul', theme: { accent: '#2563eb', background: '#eff6ff', container: '#ffffff', text: '#172554' } },
+  { id: 'sky', label: 'Cielo', theme: { accent: '#0284c7', background: '#f0f9ff', container: '#ffffff', text: '#082f49' } },
+  { id: 'teal', label: 'Turquesa', theme: { accent: '#0d9488', background: '#f0fdfa', container: '#ffffff', text: '#042f2e' } },
+  { id: 'emerald', label: 'Verde', theme: { accent: '#059669', background: '#f0fdf4', container: '#ffffff', text: '#052e16' } },
+  { id: 'lime', label: 'Lima', theme: { accent: '#65a30d', background: '#f7fee7', container: '#ffffff', text: '#1a2e05' } },
+  { id: 'amber', label: 'Ámbar', theme: { accent: '#d97706', background: '#fffbeb', container: '#ffffff', text: '#451a03' } },
+  { id: 'orange', label: 'Naranja', theme: { accent: '#ea580c', background: '#fff7ed', container: '#ffffff', text: '#431407' } },
+  { id: 'red', label: 'Rojo', theme: { accent: '#dc2626', background: '#fef2f2', container: '#ffffff', text: '#450a0a' } },
+  { id: 'rose', label: 'Rosa', theme: { accent: '#e11d48', background: '#fff1f2', container: '#ffffff', text: '#4c0519' } },
+  { id: 'fuchsia', label: 'Fucsia', theme: { accent: '#c026d3', background: '#fdf4ff', container: '#ffffff', text: '#4a044e' } },
+  { id: 'violet', label: 'Violeta', theme: { accent: '#7c3aed', background: '#f5f3ff', container: '#ffffff', text: '#2e1065' } },
+  { id: 'slate', label: 'Gris', theme: { accent: '#475569', background: '#f8fafc', container: '#ffffff', text: '#0f172a' } },
 ]
 
 const HEX6 = /^#?[0-9a-f]{6}$/i

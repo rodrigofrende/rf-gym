@@ -1,23 +1,16 @@
 import { useRef, useState, type CSSProperties } from 'react'
-import { RotateCcw, Upload } from 'lucide-react'
+import { Upload } from 'lucide-react'
 import type { GymTheme } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
 import { useGym, useUpdateGymBranding } from '@/hooks/useGym'
 import { useToastAction } from '@/hooks/useToastAction'
-import {
-  BRANDING_PRESETS,
-  buildThemeVars,
-  normalizeHex,
-  PLATFORM_DEFAULT_THEME,
-} from '@/utils/theme'
+import { BRANDING_PRESETS, buildThemeVars, PLATFORM_DEFAULT_THEME } from '@/utils/theme'
 import { fileToLogoDataUrl } from '@/utils/image'
 import { isSafeImageSrc } from '@/utils/url'
 import { toDate } from '@/utils/format'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Heading, Input, LogoImage, Text } from '@/components/ui'
+import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Heading, LogoImage, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
-
-const FIELD_DEFAULTS: Record<keyof GymTheme, string> = { ...PLATFORM_DEFAULT_THEME }
 
 // Límite de cambios de logo, espejado en firestore.rules (logoLimitOk).
 const LOGO_CHANGES_PER_DAY = 3
@@ -58,12 +51,7 @@ export function BrandingPage() {
   const current = theme ?? savedTheme
   const currentLogo = logoURL ?? gym.logoURL ?? ''
 
-  const setColor = (key: keyof GymTheme, value: string) =>
-    setTheme({ ...current, [key]: normalizeHex(value, FIELD_DEFAULTS[key]) })
-
   const applyPreset = (preset: GymTheme) => setTheme({ ...preset })
-
-  const resetAllDefaults = () => setTheme({ ...PLATFORM_DEFAULT_THEME })
 
   // Ventana de rate-limit del logo (espejo de lo que validan las firestore.rules).
   const windowStart = toDate(gym.logoWindowStart)
@@ -125,7 +113,6 @@ export function BrandingPage() {
     )
 
   const previewStyle = buildThemeVars(current) as CSSProperties
-  const isCustomized = JSON.stringify(current) !== JSON.stringify(PLATFORM_DEFAULT_THEME)
 
   return (
     <AppLayout
@@ -200,76 +187,41 @@ export function BrandingPage() {
 
             <fieldset>
               <Text variant="label" as="legend" className="mb-2">
-                Paletas sugeridas
+                Tema
               </Text>
               <p className="mb-3 text-xs text-zinc-500">
-                Aplicá un conjunto de colores y ajustá los detalles después.
+                Elegí una paleta. Todas están pensadas para buen contraste en la app, en tu página
+                pública y con la marca.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {BRANDING_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => applyPreset(preset.theme)}
-                    className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                  >
-                    <span
-                      className="size-4 shrink-0 rounded-full ring-1 ring-zinc-200"
-                      style={{ backgroundColor: preset.theme.accent }}
-                      aria-hidden
-                    />
-                    {preset.label}
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {BRANDING_PRESETS.map((preset) => {
+                  const selected = current.accent.toLowerCase() === preset.theme.accent.toLowerCase()
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyPreset(preset.theme)}
+                      aria-pressed={selected}
+                      className={cn(
+                        'flex items-center gap-2.5 rounded-xl border p-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+                        selected
+                          ? 'border-brand-500 ring-2 ring-brand-500'
+                          : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50',
+                      )}
+                    >
+                      <span
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-black/5"
+                        style={{ backgroundColor: preset.theme.background }}
+                        aria-hidden
+                      >
+                        <span className="size-4 rounded-full" style={{ backgroundColor: preset.theme.accent }} />
+                      </span>
+                      <span className="truncate text-zinc-700">{preset.label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </fieldset>
-
-            <div className="space-y-4 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <Text variant="label">Colores</Text>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  leftIcon={<RotateCcw className="size-3.5" />}
-                  onClick={resetAllDefaults}
-                  disabled={!isCustomized && !theme}
-                >
-                  Restaurar predeterminados
-                </Button>
-              </div>
-
-              <ColorField
-                label="Color principal (accent)"
-                hint="Botones, links y estados activos."
-                value={current.accent}
-                defaultValue={FIELD_DEFAULTS.accent}
-                onChange={(v) => setColor('accent', v)}
-                swatches={BRANDING_PRESETS.map((p) => p.theme.accent)}
-              />
-              <ColorField
-                label="Fondo de página"
-                hint="Color de fondo general de la app."
-                value={current.background}
-                defaultValue={FIELD_DEFAULTS.background}
-                onChange={(v) => setColor('background', v)}
-              />
-              <ColorField
-                label="Superficie (contenedores)"
-                hint="Fondo de tarjetas, modales y menú."
-                value={current.container}
-                defaultValue={FIELD_DEFAULTS.container}
-                onChange={(v) => setColor('container', v)}
-              />
-              <ColorField
-                label="Color del texto"
-                hint="Elegí según tus fondos para que se lea bien."
-                value={current.text}
-                defaultValue={FIELD_DEFAULTS.text}
-                onChange={(v) => setColor('text', v)}
-                swatches={['#18181b', '#0f172a', '#ffffff', '#14532d']}
-              />
-            </div>
 
             <div className="flex justify-end border-t border-zinc-100 pt-3">
               <Button loading={save.isPending} onClick={handleSave}>
@@ -316,83 +268,3 @@ export function BrandingPage() {
   )
 }
 
-function ColorField({
-  label,
-  hint,
-  value,
-  defaultValue,
-  onChange,
-  swatches,
-}: {
-  label: string
-  hint: string
-  value: string
-  defaultValue: string
-  onChange: (v: string) => void
-  swatches?: string[]
-}) {
-  const safeValue = normalizeHex(value, defaultValue)
-  const isDefault = safeValue.toLowerCase() === defaultValue.toLowerCase()
-
-  return (
-    <FormField label={label} hint={hint}>
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative size-10 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-            <span
-              className="absolute inset-1 rounded-md ring-1 ring-inset ring-black/10"
-              style={{ backgroundColor: safeValue }}
-              aria-hidden
-            />
-            <input
-              type="color"
-              value={safeValue}
-              onChange={(e) => onChange(e.target.value)}
-              className="absolute inset-0 size-full cursor-pointer opacity-0"
-              aria-label={`Elegir ${label}`}
-            />
-          </label>
-          <Input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onBlur={(e) => onChange(normalizeHex(e.target.value, defaultValue))}
-            className="min-w-[7rem] flex-1 font-mono uppercase sm:max-w-[9rem]"
-            spellCheck={false}
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant={isDefault ? 'secondary' : 'ghost'}
-            onClick={() => onChange(defaultValue)}
-            disabled={isDefault}
-            className="shrink-0"
-          >
-            Predeterminado
-          </Button>
-        </div>
-        {swatches && swatches.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {swatches.map((swatch) => {
-              const normalized = normalizeHex(swatch)
-              const selected = safeValue.toLowerCase() === normalized.toLowerCase()
-              return (
-                <button
-                  key={normalized}
-                  type="button"
-                  aria-label={`Usar color ${normalized}`}
-                  aria-pressed={selected}
-                  onClick={() => onChange(normalized)}
-                  className={cn(
-                    'size-7 rounded-full ring-1 ring-zinc-200 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
-                    selected && 'ring-2 ring-brand-500 ring-offset-1',
-                  )}
-                  style={{ backgroundColor: normalized }}
-                />
-              )
-            })}
-          </div>
-        )}
-      </div>
-    </FormField>
-  )
-}

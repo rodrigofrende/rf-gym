@@ -33,6 +33,7 @@ import { fileToSponsorImageDataUrl, LogoImageError } from '@/utils/image'
 import { toDate } from '@/utils/format'
 import { canCreateSponsor, usageLabel } from '@/utils/plans'
 import { publicGymRoute } from '@/routes/routePaths'
+import { SharePublicGymButton } from '@/components/shared/SharePublicGymButton'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge, Button, Card, CardBody, CardHeader, FormField, FullPageSpinner, Input, LogoImage, Text } from '@/components/ui'
 import { cn } from '@/utils/cn'
@@ -95,13 +96,16 @@ export function SponsorsPage() {
       title="Patrocinadores"
       subtitle="Marcas que auspician tu gimnasio. Se muestran en tu página pública y a tus socios."
       actions={
-        <Button
-          variant="secondary"
-          leftIcon={<ExternalLink className="size-4" />}
-          onClick={() => window.open(publicGymRoute(gymId), '_blank', 'noopener,noreferrer')}
-        >
-          Ver página pública
-        </Button>
+        <>
+          <SharePublicGymButton gymId={gymId} gymName={gym?.name} />
+          <Button
+            variant="secondary"
+            leftIcon={<ExternalLink className="size-4" />}
+            onClick={() => window.open(publicGymRoute(gymId), '_blank', 'noopener,noreferrer')}
+          >
+            Ver página pública
+          </Button>
+        </>
       }
     >
       {gymLoading || presLoading || !gym ? (

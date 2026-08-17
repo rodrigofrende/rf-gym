@@ -10,7 +10,8 @@ interface Toast {
 }
 
 interface ToastContextValue {
-  notify: (message: string, tone?: ToastTone) => void
+  /** `durationMs` opcional; por defecto se adapta al largo del mensaje (4s–10s). */
+  notify: (message: string, tone?: ToastTone, durationMs?: number) => void
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null)
@@ -32,10 +33,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const notify = useCallback(
-    (message: string, tone: ToastTone = 'info') => {
+    (message: string, tone: ToastTone = 'info', durationMs?: number) => {
       const id = ++counter
       setToasts((prev) => [...prev, { id, tone, message }])
-      setTimeout(() => remove(id), 4000)
+      // Duración adaptada al largo del mensaje (~60ms/char) para dar tiempo a leer
+      // los textos largos, con piso 4s y techo 10s. Igual siempre se puede cerrar
+      // con la X. El caller puede forzar una duración con `durationMs`.
+      const ms = durationMs ?? Math.min(10000, Math.max(4000, message.length * 60))
+      setTimeout(() => remove(id), ms)
     },
     [remove],
   )
@@ -57,12 +62,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={t.id}
               role="status"
               className={cn(
-                'flex items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-lg',
+                'flex items-start gap-3 rounded-xl border bg-white px-4 py-3 shadow-lg',
                 TONES[t.tone],
               )}
             >
-              <Icon className="size-5 shrink-0" aria-hidden />
-              <span className="flex-1 text-sm text-zinc-700">{t.message}</span>
+              <Icon className="mt-0.5 size-5 shrink-0" aria-hidden />
+              <span className="flex-1 text-sm leading-relaxed text-zinc-700">{t.message}</span>
               <button
                 type="button"
                 onClick={() => remove(t.id)}
