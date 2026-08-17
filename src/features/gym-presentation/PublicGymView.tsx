@@ -37,12 +37,10 @@ export function PublicGymView({
   const tariffs = (data.tariffs ?? []).filter((t) => t && t.name && typeof t.price === 'number')
   const wa = whatsappLink(data.whatsapp, `Hola, me interesa información sobre ${gymName}`)
   const mail = mailtoLink(data.email, `Consulta sobre ${gymName}`)
-  // Solo contacto (WhatsApp/email): la dirección y el horario ya viven en "Info
-  // rápida", no se repiten acá abajo. Así "Sumate" no queda vacío si el gym solo
-  // cargó dirección/horario sin WhatsApp ni email.
-  const hasContact = Boolean(wa || mail)
   const minPrice = tariffs.length ? Math.min(...tariffs.map((t) => t.price)) : null
-  const hasQuickInfo = Boolean(data.address || data.openingHours || minPrice != null)
+  const hasQuickInfo = Boolean(
+    data.address || data.openingHours || data.whatsapp || data.email || minPrice != null,
+  )
 
   // Videos separados por formato: los 16:9 (YouTube) y los verticales (Instagram)
   // van en grillas distintas para que cada fila tenga alturas coherentes.
@@ -51,6 +49,11 @@ export function PublicGymView({
     .filter((v) => v.video != null)
   const wideVideos = parsedVideos.filter((v) => v.video?.kind === 'youtube')
   const tallVideos = parsedVideos.filter((v) => v.video?.kind !== 'youtube')
+
+  // Si el gym no cargó contenido extra, el contenedor de secciones no se
+  // renderiza: evita ~80px de padding muerto entre el hero y el footer.
+  const hasSections =
+    parsedVideos.length > 0 || tariffs.length > 0 || links.length > 0 || sponsors.length > 0
 
   // La barra sticky aparece recién al scrollear pasado el inicio del hero (el
   // sentinel invisible sale del viewport). Con IntersectionObserver funciona
@@ -109,21 +112,29 @@ export function PublicGymView({
           aria-hidden
           className="pointer-events-none absolute -top-40 left-1/2 size-[42rem] -translate-x-1/2 rounded-full bg-brand-500/25 blur-[120px]"
         />
-        <div className="relative mx-auto max-w-5xl px-6 pb-14 pt-12 sm:pb-20 sm:pt-16">
+        <div className="relative mx-auto max-w-5xl px-6 pb-14 pt-8 sm:pb-20 sm:pt-10">
           <div className="flex flex-col gap-10 @4xl:flex-row @4xl:items-start @4xl:justify-between">
             <div className="min-w-0 flex-1">
-              <LogoImage
-                src={data.logoURL}
-                alt={gymName}
-                className="size-16 shrink-0 rounded-2xl ring-1 ring-white/15 sm:size-20"
-                iconClassName="size-8"
-                fallbackClassName="bg-brand-500 ring-0"
-              />
-
-              <h1 className="mt-8 break-words font-display text-6xl uppercase leading-[0.85] tracking-tight sm:text-8xl">
-                {gymName}
-              </h1>
-              <div className="mt-5 h-1.5 w-24 rounded-full bg-brand-500" />
+              {/* Lockup de marca: en containers angostos va apilado (el nombre
+                  gigante no comparte fila sin envolver feo); desde @2xl el logo
+                  acompaña al nombre en la misma fila, centrado verticalmente
+                  aunque el nombre ocupe varias líneas. Variantes @ para que la
+                  preview angosta del admin siga apilada en viewports anchos. */}
+              <div className="flex flex-col gap-6 @2xl:flex-row @2xl:items-center @2xl:gap-8">
+                <LogoImage
+                  src={data.logoURL}
+                  alt={gymName}
+                  className="size-24 shrink-0 rounded-2xl ring-1 ring-white/15 @2xl:size-32"
+                  iconClassName="size-10 @2xl:size-14"
+                  fallbackClassName="bg-brand-500 ring-0"
+                />
+                <div className="min-w-0">
+                  <h1 className="break-words font-display text-6xl uppercase leading-[0.85] tracking-tight sm:text-8xl">
+                    {gymName}
+                  </h1>
+                  <div className="mt-5 h-1.5 w-24 rounded-full bg-brand-500" />
+                </div>
+              </div>
 
               {data.description && (
                 <p className="mt-6 max-w-xl whitespace-pre-line text-base leading-relaxed text-zinc-300 sm:text-lg">
@@ -148,7 +159,9 @@ export function PublicGymView({
             </div>
 
             {hasQuickInfo && (
-              <aside className="w-full shrink-0 space-y-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-5 @4xl:mt-14 @4xl:w-80">
+              // mt-6 ≈ alinea el borde superior con el nombre (centrado contra
+              // el logo de 128px) ahora que el lockup va en fila.
+              <aside className="w-full shrink-0 space-y-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-5 @4xl:mt-6 @4xl:w-80">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
                   Info rápida
                 </p>
@@ -163,6 +176,26 @@ export function PublicGymView({
                     <Clock className="mt-0.5 size-4 shrink-0 text-brand-400" />
                     {data.openingHours}
                   </p>
+                )}
+                {wa && data.whatsapp && (
+                  <a
+                    href={wa}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-2 text-sm text-zinc-300 transition-colors hover:text-white"
+                  >
+                    <MessageCircle className="mt-0.5 size-4 shrink-0 text-brand-400" />
+                    {data.whatsapp}
+                  </a>
+                )}
+                {mail && data.email && (
+                  <a
+                    href={mail}
+                    className="flex items-start gap-2 text-sm text-zinc-300 transition-colors hover:text-white"
+                  >
+                    <Mail className="mt-0.5 size-4 shrink-0 text-brand-400" />
+                    <span className="min-w-0 break-all">{data.email}</span>
+                  </a>
                 )}
                 {minPrice != null && (
                   <div className="border-t border-white/10 pt-4">
@@ -179,6 +212,7 @@ export function PublicGymView({
         </div>
       </header>
 
+      {hasSections && (
       <div className="mx-auto max-w-5xl space-y-16 px-6 pb-20 @4xl:space-y-20">
         {parsedVideos.length > 0 && (
           <Section label="En acción">
@@ -233,28 +267,8 @@ export function PublicGymView({
             <SponsorsShowcase sponsors={sponsors} variant="dark" />
           </Section>
         )}
-
-        {hasContact && (
-          <Section label="Sumate">
-            <div className="flex flex-col gap-8 @3xl:flex-row @3xl:items-center @3xl:justify-between">
-              {(wa || mail) && (
-                <div className="flex flex-wrap gap-3">
-                  {wa && (
-                    <CtaButton href={wa} primary icon={<MessageCircle className="size-4" />}>
-                      WhatsApp
-                    </CtaButton>
-                  )}
-                  {mail && (
-                    <CtaButton href={mail} icon={<Mail className="size-4" />}>
-                      Email
-                    </CtaButton>
-                  )}
-                </div>
-              )}
-            </div>
-          </Section>
-        )}
       </div>
+      )}
 
       <footer className="border-t border-white/10 px-6 py-10">
         <div className="mx-auto max-w-5xl space-y-8">
