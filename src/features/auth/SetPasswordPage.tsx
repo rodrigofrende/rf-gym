@@ -17,6 +17,7 @@ import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors
 import { queryKeys } from '@/hooks/queryKeys'
 import { useMemberships } from '@/hooks/useMemberships'
 import { ROUTES } from '@/routes/routePaths'
+import { persistActiveGymId } from '@/providers/TenantProvider'
 
 const schema = z
   .object({
@@ -169,6 +170,7 @@ export function SetPasswordPage() {
         // Sin await: la refetch corre mientras navegamos (HomeRedirect muestra spinner).
         void queryClient.invalidateQueries({ queryKey: queryKeys.memberships(activatedUser.uid) })
       }
+      persistActiveGymId(login.gymId)
       notify(mode === 'create' ? 'Contraseña creada' : 'Contraseña actualizada', 'success')
       navigate('/')
     } catch (err) {

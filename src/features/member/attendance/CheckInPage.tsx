@@ -9,6 +9,7 @@ import { useGymPresentation } from '@/hooks/useGymPresentation'
 import { Badge, Button, Card, FullPageSpinner, Heading, Text } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
 import { formatDate } from '@/utils/format'
+import { mapFirestoreError } from '@/utils/firestoreErrors'
 import { resolvePresentation } from '@/utils/presentation'
 import { SponsorSpot } from '@/features/sponsors/SponsorsShowcase'
 
@@ -36,13 +37,25 @@ const MEMBER_COPY: Record<MemberStatus, string> = {
   overdue: 'Membresía vencida',
 }
 
+function checkInErrorDescription(err: unknown): string {
+  if (err instanceof Error) {
+    if (err.message === 'member-not-found') {
+      return 'No encontramos tu ficha de socio en este gimnasio. Hablá con administración.'
+    }
+    if (err.message === 'member-not-claimed') {
+      return 'Tu cuenta todavía no está vinculada a este gimnasio. Completá el primer acceso o hablá con administración.'
+    }
+  }
+  return mapFirestoreError(err, 'No pudimos registrar tu ingreso. Si ya marcaste hoy, el próximo presente es mañana.')
+}
+
 export function CheckInPage() {
   const { gymId } = useParams()
   const location = useLocation()
   const { user, isInitialized } = useAuth()
   const { memberships, isLoading, selectGym, activeGymId } = useTenant()
   const membership = memberships.find((m) => m.gymId === gymId)
-  const checkIn = useCheckIn(gymId ?? '', membership?.memberId ?? '')
+  const { mutate, data, isError, error, isPending } = useCheckIn(gymId ?? '', membership?.memberId ?? '')
   const { data: presentation } = useGymPresentation(gymId ?? '')
   const fired = useRef(false)
 
@@ -50,8 +63,8 @@ export function CheckInPage() {
     if (!gymId || !membership || membership.role !== 'user' || fired.current) return
     if (activeGymId !== gymId) selectGym(gymId)
     fired.current = true
-    checkIn.mutate()
-  }, [activeGymId, checkIn, gymId, membership, selectGym])
+    mutate()
+  }, [activeGymId, mutate, gymId, membership, selectGym])
 
   if (!gymId) return <Navigate to="/" replace />
   if (!isInitialized || (user && isLoading)) return <FullPageSpinner />
@@ -86,20 +99,20 @@ export function CheckInPage() {
     )
   }
 
-  if (checkIn.isError) {
+  if (isError) {
     return (
       <CheckInShell>
         <StatusCard
           icon={<AlertTriangle className="size-7" />}
           tone="red"
           title="No pudimos registrar tu ingreso"
-          description="Revisá tu conexión e intentá escanear el QR nuevamente."
+          description={checkInErrorDescription(error)}
         />
       </CheckInShell>
     )
   }
 
-  if (checkIn.isPending || !checkIn.data) {
+  if (isPending || !data) {
     return (
       <CheckInShell>
         <Card className="flex flex-col items-center p-8 text-center">
@@ -113,8 +126,26 @@ export function CheckInPage() {
     )
   }
 
-  const copy = PAYMENT_COPY[checkIn.data.paymentState]
-  const isPaused = checkIn.data.memberStatus === 'paused'
+  if (data.alreadyCheckedInToday) {
+    return (
+      <CheckInShell>
+        <StatusCard
+          icon={<Clock className="size-7" />}
+          tone="amber"
+          title="Ya registraste tu presente de hoy"
+          description="Este gimnasio ya sumó tu asistencia de hoy. El próximo presente lo podés cargar mañana."
+        >
+          <div className="mt-5 rounded-xl bg-surface-muted p-3 text-sm text-zinc-600">
+            <Clock className="mr-1 inline size-4 align-[-2px]" />
+            Ingreso de hoy: {formatDate(data.checkedInAt)}
+          </div>
+        </StatusCard>
+      </CheckInShell>
+    )
+  }
+
+  const copy = PAYMENT_COPY[data.paymentState]
+  const isPaused = data.memberStatus === 'paused'
   const sponsors = resolvePresentation(presentation).sponsors
 
   return (
@@ -126,12 +157,12 @@ export function CheckInPage() {
         description={isPaused ? 'Tu visita quedó registrada. Hablá con administración antes de entrenar.' : copy.description}
       >
         <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <Badge tone={isPaused ? 'amber' : copy.tone}>{MEMBER_COPY[checkIn.data.memberStatus]}</Badge>
+          <Badge tone={isPaused ? 'amber' : copy.tone}>{MEMBER_COPY[data.memberStatus]}</Badge>
           <Badge tone={copy.tone}>{copy.title}</Badge>
         </div>
         <div className="mt-5 rounded-xl bg-surface-muted p-3 text-sm text-zinc-600">
           <Clock className="mr-1 inline size-4 align-[-2px]" />
-          Ingreso registrado: {formatDate(checkIn.data.checkedInAt)}
+          Ingreso registrado: {formatDate(data.checkedInAt)}
         </div>
       </StatusCard>
       <div className="mt-4">

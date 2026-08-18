@@ -16,12 +16,16 @@ interface TenantContextValue {
 }
 
 const TenantContext = createContext<TenantContextValue | null>(null)
-const STORAGE_KEY = 'gym:activeGymId'
+export const ACTIVE_GYM_STORAGE_KEY = 'gym:activeGymId'
+
+export function persistActiveGymId(gymId: string) {
+  localStorage.setItem(ACTIVE_GYM_STORAGE_KEY, gymId)
+}
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { user, isSuperAdmin } = useAuth()
   const { data: memberships = [], isLoading, error } = useMemberships(user, isSuperAdmin)
-  const [picked, setPicked] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY))
+  const [picked, setPicked] = useState<string | null>(() => localStorage.getItem(ACTIVE_GYM_STORAGE_KEY))
 
   const value = useMemo<TenantContextValue>(() => {
     // El gym activo se DERIVA: la elección persistida si sigue siendo válida,
@@ -49,11 +53,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       isSuperAdmin,
       selectGym: (gymId) => {
         setPicked(gymId)
-        localStorage.setItem(STORAGE_KEY, gymId)
+        persistActiveGymId(gymId)
       },
       clearGym: () => {
         setPicked(null)
-        localStorage.removeItem(STORAGE_KEY)
+        localStorage.removeItem(ACTIVE_GYM_STORAGE_KEY)
       },
     }
   }, [memberships, isLoading, error, picked, isSuperAdmin, user])

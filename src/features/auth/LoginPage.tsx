@@ -20,6 +20,7 @@ import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
 import { BrandLockup, Button, Card, FormField, Input, PasswordInput, Text } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
+import { persistActiveGymId } from '@/providers/TenantProvider'
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -116,6 +117,9 @@ export function LoginPage() {
       )
 
       void queryClient.invalidateQueries({ queryKey: queryKeys.memberships(loggedUser.uid) })
+      if (claimed.size === 1) {
+        persistActiveGymId([...claimed.values()][0].gymId)
+      }
       let shouldForcePasswordChange = false
       if (login?.gymId && login?.memberId) {
         const member =

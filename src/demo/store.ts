@@ -506,11 +506,7 @@ export function checkInMember(_gymId: string, memberId: string) {
   const paymentState = getPaymentStatus(member.paymentDate, member.lastPaymentDate).state
 
   if (existing) {
-    existing.lastSeenAt = now
-    existing.scanCount += 1
-    existing.paymentState = paymentState
-    existing.memberStatus = member.status
-    return ok({ ...existing })
+    return ok({ ...existing, alreadyCheckedInToday: true as const })
   }
 
   const created: Attendance = {
@@ -529,7 +525,7 @@ export function checkInMember(_gymId: string, memberId: string) {
   attendance[dayKey] = [created, ...list]
   // Primer check-in del día → suma 1 al ranking mensual (misma semántica que prod).
   bumpDemoMonthly(member, dayKey)
-  return ok({ ...created })
+  return ok({ ...created, alreadyCheckedInToday: false as const })
 }
 
 function bumpDemoMonthly(member: Member, dayKey: string) {

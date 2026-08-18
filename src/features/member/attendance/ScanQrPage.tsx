@@ -8,16 +8,30 @@ import { ROUTES } from '@/routes/routePaths'
 
 type ScannerState = 'idle' | 'requesting' | 'scanning' | 'found' | 'error'
 
-function checkInPathFromQr(value: string): string | null {
+function parseQrUrl(value: string): URL | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
   try {
-    const url = value.startsWith('/') ? new URL(value, window.location.origin) : new URL(value)
-    if (url.origin !== window.location.origin) return null
-    const match = url.pathname.match(/^\/check-in\/([^/]+)$/)
-    if (!match) return null
-    return `${url.pathname}${url.search}`
+    if (trimmed.startsWith('/')) return new URL(trimmed, window.location.origin)
+    return new URL(trimmed)
   } catch {
-    return null
+    try {
+      return new URL(`https://${trimmed}`)
+    } catch {
+      return null
+    }
   }
+}
+
+function checkInPathFromQr(value: string): string | null {
+  const url = parseQrUrl(value)
+  if (!url) return null
+  const path = url.pathname.replace(/\/+$/, '') || '/'
+  const checkIn = path.match(/^\/check-in\/([^/]+)$/)
+  if (checkIn) return `/check-in/${checkIn[1]}${url.search}`
+  const publicGym = path.match(/^\/g\/([^/]+)$/)
+  if (publicGym) return `/check-in/${publicGym[1]}`
+  return null
 }
 
 export function ScanQrPage() {
@@ -63,7 +77,7 @@ export function ScanQrPage() {
       return
     }
 
-    if (result) setMessage('Encontré un QR, pero no corresponde a este gimnasio. Probá con el QR de recepción.')
+    if (result) setMessage('Encontré un QR, pero no es el de ingreso al gimnasio. Probá con el QR de recepción.')
     frameRef.current = requestAnimationFrame(scanFrame)
   }
 

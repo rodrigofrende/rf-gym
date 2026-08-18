@@ -2,12 +2,10 @@ import {
   Timestamp,
   doc,
   getDoc,
-  increment,
   onSnapshot,
   orderBy,
   query,
   setDoc,
-  updateDoc,
   where,
   collection,
   type Unsubscribe,
@@ -23,11 +21,13 @@ import { getMember } from './membersService'
 import { paths } from './paths'
 import { bumpMonthlyAttendance } from './rankingService'
 
+export type CheckInResult = Attendance & { alreadyCheckedInToday: boolean }
+
 export function attendanceId(dayKey: string, memberId: string): string {
   return `${dayKey}_${memberId}`.replace(/[^a-zA-Z0-9_-]/g, '-')
 }
 
-export async function checkInMember(gymId: string, memberId: string): Promise<Attendance> {
+export async function checkInMember(gymId: string, memberId: string): Promise<CheckInResult> {
   if (env.demoMode) return demo.checkInMember(gymId, memberId)
 
   const member = await getMember(gymId, memberId)
@@ -38,9 +38,14 @@ export async function checkInMember(gymId: string, memberId: string): Promise<At
   const dayKey = localDayKey(now.toDate())
   const id = attendanceId(dayKey, memberId)
   const ref = doc(db, paths.attendanceRecord(gymId, id))
-  const paymentState = getPaymentStatus(member.paymentDate, member.lastPaymentDate).state
 
-  const base = {
+  const existing = await getDoc(ref)
+  if (existing.exists()) {
+    return { id: existing.id, ...(existing.data() as Omit<Attendance, 'id'>), alreadyCheckedInToday: true }
+  }
+
+  const paymentState = getPaymentStatus(member.paymentDate, member.lastPaymentDate).state
+  const created: Omit<Attendance, 'id'> = {
     memberId,
     memberUid: member.uid,
     memberName: member.fullName,
@@ -49,29 +54,20 @@ export async function checkInMember(gymId: string, memberId: string): Promise<At
     lastSeenAt: now,
     paymentState,
     memberStatus: member.status,
+    checkedInAt: now,
+    scanCount: 1,
   }
 
+  await setDoc(ref, created)
   try {
-    await updateDoc(ref, { ...base, scanCount: increment(1) })
-  } catch (err) {
-    if (!isNotFoundError(err)) throw err
-    // Primer check-in del día → crea la asistencia y suma 1 al ranking mensual.
-    await setDoc(ref, { ...base, checkedInAt: now, scanCount: 1 })
-    try {
-      await bumpMonthlyAttendance(gymId, member, dayKey)
-    } catch (rankErr) {
-      // Best-effort: el check-in del socio nunca debe fallar por el ranking.
-      // Un undercount se repara con "Actualizar" (recompute) del admin.
-      console.warn('ranking-bump-failed', rankErr)
-    }
+    await bumpMonthlyAttendance(gymId, member, dayKey)
+  } catch (rankErr) {
+    // Best-effort: el check-in del socio nunca debe fallar por el ranking.
+    // Un undercount se repara con "Actualizar" (recompute) del admin.
+    console.warn('ranking-bump-failed', rankErr)
   }
 
-  const saved = await getDoc(ref)
-  return { id: saved.id, ...(saved.data() as Omit<Attendance, 'id'>) }
-}
-
-function isNotFoundError(err: unknown) {
-  return err && typeof err === 'object' && 'code' in err && err.code === 'not-found'
+  return { id, ...created, alreadyCheckedInToday: false }
 }
 
 export function listTodayAttendance(gymId: string, dayKey = localDayKey(new Date())) {
