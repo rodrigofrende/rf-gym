@@ -23,6 +23,9 @@ const IGNORED = [
   /^Script error\.?$/i,
   // Chunks renombrados por un deploy en el medio de una sesión abierta.
   /dynamically imported module|Importing a module script failed/i,
+  // Safari/iOS: el chunk viejo ya no existe y el host responde index.html.
+  /not a valid JavaScript MIME type/i,
+  /Expected a JavaScript.*MIME type/i,
 ]
 
 function report(
