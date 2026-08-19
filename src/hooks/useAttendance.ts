@@ -24,6 +24,7 @@ export function useCheckIn(gymId: string, memberId: string) {
         'check-in',
         'Falló el registro de asistencia',
         extractFirestoreCode(err) ?? (err instanceof Error ? err.message.slice(0, 120) : 'unknown'),
+        { gym: gymId, socio: memberId },
       )
     },
     onSuccess: () => {

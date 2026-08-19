@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import type { Membership, Role } from '@/types'
 import { useAuth } from './AuthProvider'
 import { useMemberships } from '@/hooks/useMemberships'
+import { ACTIVE_GYM_STORAGE_KEY } from '@/config/storageKeys'
 
 interface TenantContextValue {
   memberships: Membership[]
@@ -16,7 +17,6 @@ interface TenantContextValue {
 }
 
 const TenantContext = createContext<TenantContextValue | null>(null)
-export const ACTIVE_GYM_STORAGE_KEY = 'gym:activeGymId'
 
 export function persistActiveGymId(gymId: string) {
   localStorage.setItem(ACTIVE_GYM_STORAGE_KEY, gymId)

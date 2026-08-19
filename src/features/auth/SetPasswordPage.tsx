@@ -11,7 +11,13 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { Button, Card, FormField, Heading, PasswordInput, Text } from '@/components/ui'
 import { claimMembership, claimPendingMemberships } from '@/services/membershipsService'
-import { getMemberLogin, LOGIN_INDEX_MISSING_MESSAGE, updateMemberAuthStatus } from '@/services/memberLoginService'
+import {
+  diagnoseLoginMiss,
+  getMemberLogin,
+  loginMissMessage,
+  updateMemberAuthStatus,
+} from '@/services/memberLoginService'
+import { emailDomain } from '@/utils/loginEmail'
 import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
 import { queryKeys } from '@/hooks/queryKeys'
@@ -88,12 +94,17 @@ export function SetPasswordPage() {
       const login =
         stateLogin?.email?.toLowerCase() === email ? stateLogin : await getMemberLogin(email)
       if (!login) {
-        reportOperational(
-          'login-index-miss',
-          'Alta de contraseña: no hay índice de login',
-          `domain: ${email.split('@')[1] ?? '?'}`,
-        )
-        notify(LOGIN_INDEX_MISSING_MESSAGE, 'error')
+        const miss = await diagnoseLoginMiss(email)
+        reportOperational('login-index-miss', 'Alta de contraseña: no hay índice de login', undefined, {
+          email,
+          motivo: miss.reason,
+          sug: miss.suggestion ? emailDomain(miss.suggestion) : undefined,
+          modo: mode,
+          // Distingue "vino del login" de "pegó el link directo": si no hay
+          // state, LoginPage no leyó el índice y el miss es de otra naturaleza.
+          deepLink: !stateLogin,
+        })
+        notify(loginMissMessage(miss), 'error')
         return
       }
 
@@ -187,6 +198,7 @@ export function SetPasswordPage() {
           'set-password',
           'Falló crear/cambiar contraseña',
           extractFirestoreCode(err) ?? (err instanceof Error ? err.message.slice(0, 120) : 'unknown'),
+          { email, modo: mode },
         )
       }
       const message =

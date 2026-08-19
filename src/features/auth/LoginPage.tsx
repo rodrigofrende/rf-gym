@@ -11,7 +11,13 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
 import { queryKeys } from '@/hooks/queryKeys'
-import { getMemberLogin, LOGIN_INDEX_MISSING_MESSAGE, updateMemberAuthStatus } from '@/services/memberLoginService'
+import {
+  diagnoseLoginMiss,
+  getMemberLogin,
+  loginMissMessage,
+  updateMemberAuthStatus,
+} from '@/services/memberLoginService'
+import { emailDomain } from '@/utils/loginEmail'
 import { getOne } from '@/services/firestore'
 import { paths } from '@/services/paths'
 import type { ClaimedMembership } from '@/services/membershipsService'
@@ -41,6 +47,9 @@ export function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [forgotSending, setForgotSending] = useState(false)
   const [createAccessLoading, setCreateAccessLoading] = useState(false)
+  // Email corregido que sí existe en el índice (typo del socio). Sólo se setea
+  // cuando está confirmado contra el índice, así que nunca se ofrece un invento.
+  const [suggestion, setSuggestion] = useState<string | null>(null)
   const canUseGoogle = env.googleLoginEnabled
   const redirect = new URLSearchParams(location.search).get('redirect')
   // Solo rutas internas: rechazar también '//' y '/\' (URLs protocolo-relativas)
@@ -151,24 +160,35 @@ export function LoginPage() {
   const resetStep = () => {
     setStep('email')
     setResolvedEmail('')
+    setSuggestion(null)
     setValue('password', '')
   }
 
-  const goToCreatePassword = async () => {
-    if (!resolvedEmail || createAccessLoading) return
+  /** `emailOverride` viene del botón de sugerencia cuando el socio tipeó mal. */
+  const goToCreatePassword = async (emailOverride?: string) => {
+    const target = emailOverride ?? resolvedEmail
+    if (!target || createAccessLoading) return
     setCreateAccessLoading(true)
+    setSuggestion(null)
+    if (emailOverride) {
+      setResolvedEmail(emailOverride)
+      setValue('email', emailOverride)
+    }
     try {
-      const login = await getMemberLogin(resolvedEmail)
+      const login = await getMemberLogin(target)
       if (!login) {
-        reportOperational(
-          'login-index-miss',
-          'Alta de contraseña: no hay índice de login',
-          `domain: ${resolvedEmail.split('@')[1] ?? '?'}`,
-        )
-        notify(LOGIN_INDEX_MISSING_MESSAGE, 'error')
+        const miss = await diagnoseLoginMiss(target)
+        reportOperational('login-index-miss', 'Alta de contraseña: no hay índice de login', undefined, {
+          email: target,
+          motivo: miss.reason,
+          sug: miss.suggestion ? emailDomain(miss.suggestion) : undefined,
+          paso: 'primera-vez',
+        })
+        setSuggestion(miss.suggestion ?? null)
+        notify(loginMissMessage(miss), 'error')
         return
       }
-      navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail)}&mode=create`, {
+      navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(target)}&mode=create`, {
         state: { login },
       })
     } catch (err) {
@@ -176,6 +196,7 @@ export function LoginPage() {
         'login-index-read',
         'No se pudo leer el índice de login',
         extractFirestoreCode(err) ?? 'unknown',
+        { email: target, paso: 'primera-vez' },
       )
       notify(mapFirestoreError(err, 'No pudimos verificar tu acceso. Probá de nuevo.'), 'error')
     } finally {
@@ -299,6 +320,26 @@ export function LoginPage() {
                 >
                   ¿Olvidaste tu contraseña?
                 </button>
+              </div>
+            )}
+
+            {/* Sugerencia de typo. No se autocorrige a propósito: hace falta un
+                click explícito para no mandar al socio al alta de otra cuenta. */}
+            {suggestion && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center">
+                <p className="text-sm text-amber-900">
+                  ¿Quisiste decir <span className="font-semibold break-all">{suggestion}</span>?
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  fullWidth
+                  className="mt-2"
+                  loading={createAccessLoading}
+                  onClick={() => void goToCreatePassword(suggestion)}
+                >
+                  Sí, usar ese email
+                </Button>
               </div>
             )}
           </form>

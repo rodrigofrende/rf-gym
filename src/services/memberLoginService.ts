@@ -2,19 +2,76 @@ import { deleteDoc, doc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { env } from '@/config/env'
 import type { Gym, Member, MemberAuthStatus, MemberLoginIndex } from '@/types'
-import { normalizeEmailKey, loginEmailKeys } from '@/utils/loginEmail'
+import {
+  emailTypoCandidates,
+  isPublicEmailProvider,
+  loginEmailKeys,
+  normalizeEmailKey,
+} from '@/utils/loginEmail'
+import { extractFirestoreCode } from '@/utils/firestoreErrors'
+import { reportOperational } from '@/utils/errorReporting'
 import * as demo from '@/demo/store'
-import { getOne, updateOne } from './firestore'
+import { getOne, getOneFromServer, updateOne } from './firestore'
 import { getGym } from './gymsService'
 import { paths } from './paths'
 
 export function getMemberLogin(email: string): Promise<MemberLoginIndex | null> {
   if (env.demoMode) return demo.getMemberLogin(email)
-  return getOne<MemberLoginIndex>(paths.memberLoginIndex(normalizeEmailKey(email)))
+  // getOneFromServer y NO getOne: acá `null` decide si el socio "no está dado de
+  // alta", así que no puede venir de la caché. Sin red esto TIRA en vez de dar un
+  // falso negativo — ver el comentario en firestore.ts.
+  return getOneFromServer<MemberLoginIndex>(paths.memberLoginIndex(normalizeEmailKey(email)))
 }
 
 export const LOGIN_INDEX_MISSING_MESSAGE =
   'Este email no está dado de alta. Pedile a tu gimnasio que te agregue, o usá el email de acceso que te dieron.'
+
+export const PERSONAL_EMAIL_MESSAGE =
+  'Ese parece tu email personal. Tu acceso al gimnasio es un usuario tipo nombre@tugimnasio.com: pedíselo a tu gimnasio si no lo tenés.'
+
+// Redactado para servir con y sin botón de sugerencia en pantalla (LoginPage lo
+// muestra; SetPasswordPage, al que se llega por deep-link, no).
+export const EMAIL_TYPO_MESSAGE =
+  'Ese email no está dado de alta. Revisá el dominio: parece que tiene un error de tipeo.'
+
+/** Por qué un email no resolvió a ningún socio. */
+export type LoginMissReason = 'typo-corregible' | 'proveedor-publico' | 'no-existe'
+
+export interface LoginMiss {
+  reason: LoginMissReason
+  /** Email corregido que SÍ existe en el índice. Sólo en 'typo-corregible'. */
+  suggestion?: string
+}
+
+/**
+ * Diagnostica un miss del índice de login, para elegir qué se le dice al socio y
+ * para clasificar el aviso al dueño.
+ *
+ * El caso 'typo-corregible' se confirma contra el índice: la sugerencia sólo
+ * existe si el email corregido está dado de alta de verdad, así que nunca se le
+ * ofrece al socio un email inventado. No filtra nada nuevo — confirmar que ese
+ * doc existe ya es posible con el `get` público del índice.
+ */
+export async function diagnoseLoginMiss(email: string): Promise<LoginMiss> {
+  for (const candidate of emailTypoCandidates(email)) {
+    try {
+      if (await getMemberLogin(candidate)) return { reason: 'typo-corregible', suggestion: candidate }
+    } catch {
+      // Sin red no se puede confirmar ninguna sugerencia: cortamos y seguimos
+      // con el diagnóstico estático, que no necesita leer nada.
+      break
+    }
+  }
+  if (isPublicEmailProvider(email)) return { reason: 'proveedor-publico' }
+  return { reason: 'no-existe' }
+}
+
+/** Mensaje para el socio según el diagnóstico. */
+export function loginMissMessage(miss: LoginMiss): string {
+  if (miss.reason === 'typo-corregible') return EMAIL_TYPO_MESSAGE
+  if (miss.reason === 'proveedor-publico') return PERSONAL_EMAIL_MESSAGE
+  return LOGIN_INDEX_MISSING_MESSAGE
+}
 
 export async function syncMemberLoginIndex(
   gymId: string,
@@ -60,9 +117,31 @@ export async function ensureGymLoginIndexes(gymId: string, members: Member[]) {
   if (env.demoMode || members.length === 0) return
   const gym = await getGym(gymId)
   const chunkSize = 10
+  let failed = 0
+  let firstCode = ''
   for (let i = 0; i < members.length; i += chunkSize) {
     const chunk = members.slice(i, i + chunkSize)
-    await Promise.all(chunk.map((member) => syncMemberLoginIndex(gymId, member.id, member, gym)))
+    // allSettled y NO all: con `all`, un solo rechazo tiraba la función entera y
+    // se salteaban TODOS los chunks siguientes, dejando socios sin indexar — y
+    // sin ninguna señal, porque el caller se come el error. Hay un fallo
+    // permanente esperable: las rules prohíben re-apuntar un índice existente a
+    // otro gym, así que el mismo email real en dos gyms queda denegado siempre.
+    const results = await Promise.allSettled(
+      chunk.map((member) => syncMemberLoginIndex(gymId, member.id, member, gym)),
+    )
+    for (const result of results) {
+      if (result.status !== 'rejected') continue
+      failed++
+      if (!firstCode) firstCode = extractFirestoreCode(result.reason) ?? 'unknown'
+    }
+  }
+  if (failed > 0) {
+    reportOperational(
+      'login-index-backfill',
+      'Quedaron socios sin índice de login',
+      `${failed}/${members.length} fallaron · ${firstCode}`,
+      { gym: gymId },
+    )
   }
 }
 

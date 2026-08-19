@@ -23,6 +23,28 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.2.2',
+    date: '2026-08-19',
+    items: [
+      {
+        kind: 'improved',
+        text: 'Si el socio se equivoca en el email al crear su contraseña, la app le sugiere el correcto en vez de dejarlo trabado.',
+      },
+      {
+        kind: 'improved',
+        text: 'Cuando el socio intenta entrar con su email personal, ahora se le aclara que su acceso es el usuario que le dio el gimnasio.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Sin señal ya no aparece “este email no está dado de alta”: ahora avisa que hubo un problema de conexión y que reintente.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Al abrir la lista de socios, un socio con problemas ya no impide que se reparen los accesos de los demás.',
+      },
+    ],
+  },
+  {
     version: '1.2.1',
     date: '2026-08-18',
     items: [

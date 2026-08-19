@@ -1,20 +1,56 @@
 import { APP_VERSION } from '@/config/app'
+import { env } from '@/config/env'
+import {
+  ACTIVE_GYM_STORAGE_KEY,
+  DEVICE_ID_KEY,
+  REPORTS_SENT_KEY,
+  SESSION_ID_KEY,
+} from '@/config/storageKeys'
+import { emailFingerprint, maskEmail } from './privacy'
 
 /**
  * Alertas de errores de producción vía ntfy: push al celular del dueño de la
  * plataforma cuando a un usuario real le explota algo. "Sentry de bolsillo":
  * sin backend ni dependencias, un POST al topic personal.
  *
- * El topic viaja en el bundle público (inevitable sin backend): es un canal de
- * avisos personales sin datos sensibles, no un canal de negocio. Si algún día
- * se spamea, se rota el nombre acá y en la app ntfy.
+ * CANAL PÚBLICO. El nombre del topic viaja en el bundle (inevitable sin backend),
+ * así que cualquiera que lea el JS puede suscribirse y leer el historial que
+ * ntfy.sh cachea, o publicar avisos falsos. De ahí las dos reglas de este módulo:
+ *
+ *   1) Nada de PII en claro. El email del socio entra por `context.email` y se
+ *      enmascara ACÁ ADENTRO (ver `renderContext`), nunca en el call site: un
+ *      solo punto de salida es lo que garantiza que un call site nuevo no filtre
+ *      un email por descuido.
+ *   2) El querystring se redacta (ver REDACTED_PARAMS): `?email=` y el `oobCode`
+ *      de Firebase pasan por la URL, y el segundo es una credencial viva.
+ *
+ * Si algún día hay backend, el fix estructural es mover el POST al servidor y
+ * sacar el topic del bundle.
  */
-const NTFY_URL = 'https://ntfy.sh/rf-fit-errores-x7k2m9'
+const NTFY_URL = env.ntfyTopic ? `https://ntfy.sh/${env.ntfyTopic}` : ''
 
-// Anti-spam: por sesión, máximo de envíos y dedupe por mensaje.
+/**
+ * Hosts desde los que SÍ se reporta. Es una allowlist a propósito: la denylist
+ * anterior sólo excluía `localhost`, así que un `vite preview` en 127.0.0.1, la
+ * IP de LAN (probar desde el celular) y cada deploy preview de Netlify
+ * reportaban como producción. Con allowlist quedan afuera solos.
+ *
+ * Si se agrega un dominio de producción, VA ACÁ — si no, los avisos dejan de
+ * llegar en silencio.
+ */
+const REPORTING_HOSTS = new Set(['fit.rf-platform.com'])
+
+// Anti-spam: por sesión, máximo de envíos y dedupe por mensaje + contexto.
 const MAX_PER_SESSION = 5
 const seen = new Set<string>()
-let sent = 0
+
+/**
+ * Params cuyo VALOR nunca viaja: el email del socio (`/set-password?email=`) y
+ * los códigos de acción de Firebase (`/auth/action?oobCode=`, que es una
+ * credencial de un solo uso todavía válida). Se tapa el valor y se conserva la
+ * clave, así se sigue viendo `mode=create`.
+ */
+const REDACTED_PARAMS = new Set(['email', 'oobcode', 'apikey', 'continueurl', 'token'])
 
 // Ruido conocido que no amerita despertar a nadie.
 const IGNORED = [
@@ -28,38 +64,150 @@ const IGNORED = [
   /Expected a JavaScript.*MIME type/i,
 ]
 
+/**
+ * Contexto estructurado del aviso. `email` es la clave reservada: se pasa CRUDO
+ * y este módulo lo enmascara. El resto son pares libres (`mode`, `step`, `gym`…)
+ * que se renderizan como `clave=valor`.
+ */
+export type ReportContext = {
+  /** Email crudo del socio. Se enmascara en `renderContext`: nunca sale en claro. */
+  email?: string
+  [key: string]: string | number | boolean | null | undefined
+}
+
+// --- storage tolerante a modo privado --------------------------------------
+function readStore(kind: 'local' | 'session', key: string): string | null {
+  try {
+    return (kind === 'local' ? localStorage : sessionStorage).getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeStore(kind: 'local' | 'session', key: string, value: string) {
+  try {
+    ;(kind === 'local' ? localStorage : sessionStorage).setItem(key, value)
+  } catch {
+    /* modo privado: el id vive sólo en memoria */
+  }
+}
+
+function randomId(): string {
+  try {
+    return crypto.randomUUID().replace(/-/g, '').slice(0, 8)
+  } catch {
+    return Math.random().toString(16).slice(2, 10)
+  }
+}
+
+/** Ids anónimos: `s` por pestaña, `d` por dispositivo. Sólo correlacionan avisos. */
+let sessionId = ''
+function ids(): { sid: string; did: string } {
+  if (!sessionId) {
+    sessionId = readStore('session', SESSION_ID_KEY) ?? randomId()
+    writeStore('session', SESSION_ID_KEY, sessionId)
+  }
+  let did = readStore('local', DEVICE_ID_KEY)
+  if (!did) {
+    did = randomId()
+    writeStore('local', DEVICE_ID_KEY, did)
+  }
+  return { sid: sessionId, did }
+}
+
+/** pathname + querystring con los valores sensibles tapados. */
+function safeUrl(): string {
+  const { pathname, search } = window.location
+  if (!search) return pathname
+  const out = new URLSearchParams()
+  new URLSearchParams(search).forEach((value, key) => {
+    out.set(key, REDACTED_PARAMS.has(key.toLowerCase()) ? '***' : value.slice(0, 40))
+  })
+  return `${pathname}?${out.toString()}`
+}
+
+function renderContext(context?: ReportContext): string {
+  if (!context) return ''
+  const parts: string[] = []
+  for (const [key, value] of Object.entries(context)) {
+    if (value === undefined || value === null || value === '') continue
+    if (key === 'email') {
+      // Único lugar donde se toca un email: enmascarado + huella para correlacionar.
+      const raw = String(value)
+      parts.push(`email=${maskEmail(raw)} hash=${emailFingerprint(raw)}`)
+      continue
+    }
+    parts.push(`${key}=${String(value).slice(0, 80)}`)
+  }
+  return parts.join(' ')
+}
+
+function envLine(): string {
+  const conn = (navigator as Navigator & { connection?: { effectiveType?: string } }).connection
+  let tz = ''
+  try {
+    tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  } catch {
+    /* sin Intl: no pasa nada */
+  }
+  return [
+    `v${APP_VERSION}`,
+    // Mayúscula a propósito: "sin red" es la explicación de la mitad de los avisos.
+    navigator.onLine ? 'online' : 'OFFLINE',
+    conn?.effectiveType,
+    `${window.innerWidth}x${window.innerHeight}@${window.devicePixelRatio}`,
+    navigator.language,
+    tz,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
 function report(
   kind: string,
   message: string,
   detail?: string,
-  options?: { priority?: 'high' | 'default'; tags?: string },
+  options?: { priority?: 'high' | 'default'; tags?: string; context?: ReportContext },
 ) {
-  if (!import.meta.env.PROD || window.location.hostname === 'localhost') return
-  if (sent >= MAX_PER_SESSION) return
+  if (!NTFY_URL) return
+  if (!import.meta.env.PROD) return
+  if (!REPORTING_HOSTS.has(window.location.hostname)) return
+
   const msg = message || 'Error sin mensaje'
   if (IGNORED.some((re) => re.test(msg))) return
-  const key = `${kind}:${msg.slice(0, 180)}`
+
+  // El contexto entra en la clave del dedupe: los mensajes son constantes, así
+  // que sin esto dos socios distintos con el mismo error se colapsaban en UN
+  // aviso — justo el caso que interesa ver.
+  const ctx = renderContext(options?.context)
+  const key = `${kind}:${msg.slice(0, 140)}:${ctx}`
   if (seen.has(key)) return
+
+  // Contador persistido por pestaña: un bug que recarga la página no puede
+  // mandar el tope completo por recarga (antes era una variable de módulo).
+  const sent = Number(readStore('session', REPORTS_SENT_KEY) ?? '0') || 0
+  if (sent >= MAX_PER_SESSION) return
   seen.add(key)
-  sent++
+  writeStore('session', REPORTS_SENT_KEY, String(sent + 1))
 
-  let gymId: string | null = null
-  try {
-    gymId = localStorage.getItem('gym:activeGymId')
-  } catch {
-    /* modo privado */
-  }
-
+  const { sid, did } = ids()
+  const gymId = readStore('local', ACTIVE_GYM_STORAGE_KEY)
   const body = [
-    msg.slice(0, 500),
-    detail?.slice(0, 500),
-    `path: ${window.location.pathname}`,
-    gymId ? `gym: ${gymId}` : null,
-    `v${APP_VERSION} · ${navigator.userAgent.slice(0, 140)}`,
+    msg.slice(0, 400),
+    detail?.slice(0, 400),
+    ctx && `ctx: ${ctx}`,
+    `url: ${window.location.host}${safeUrl()}`,
+    gymId && `gym: ${gymId}`,
+    `ses: s=${sid} d=${did} n=${sent + 1}/${MAX_PER_SESSION}`,
+    `env: ${envLine()}`,
+    `ua: ${navigator.userAgent.slice(0, 160)}`,
   ]
     .filter(Boolean)
     .join('\n')
 
+  // Los datos del usuario van SIEMPRE en el body, nunca en los headers: `kind` es
+  // un literal ASCII en todos los call sites, y meter algo con acentos o con un
+  // CR/LF en `Title` haría que `fetch` tire TypeError.
   // Fire-and-forget; keepalive para que sobreviva si la página se está cerrando.
   fetch(NTFY_URL, {
     method: 'POST',
@@ -75,11 +223,16 @@ function report(
 
 /**
  * Fallos de negocio ya mostrados al usuario (login, check-in, claim). No son
- * crashes: prioridad baja, sin PII (nada de emails/contraseñas). Sirve para
- * enterarte antes de que te lo reporten.
+ * crashes: prioridad baja. El email va crudo en `context.email` y se enmascara
+ * adentro; nunca meterlo en `message` ni en `detail`.
  */
-export function reportOperational(kind: string, message: string, detail?: string) {
-  report(kind, message, detail, { priority: 'default', tags: 'warning' })
+export function reportOperational(
+  kind: string,
+  message: string,
+  detail?: string,
+  context?: ReportContext,
+) {
+  report(kind, message, detail, { priority: 'default', tags: 'warning', context })
 }
 
 /** Engancha los handlers globales. Llamar una sola vez, al arrancar la app. */

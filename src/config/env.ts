@@ -28,4 +28,10 @@ export const env = {
   // falta de credenciales, para que un deploy mal configurado falle ruidosamente
   // en vez de servir la app demo con bypass de auth.
   demoMode: import.meta.env.VITE_DEMO_MODE === 'true',
+  // Topic de ntfy donde caen los avisos de error (ver src/utils/errorReporting.ts).
+  // OJO: NO es un secreto. Vite inlinea las VITE_* en el bundle, así que el
+  // nombre es público igual que si estuviera hardcodeado. Está acá para tener una
+  // sola fuente de verdad (la comparte scripts/notify-deploy.mjs) y para poder
+  // rotarlo desde Netlify sin tocar código. Vacío = no se reporta nada.
+  ntfyTopic: (import.meta.env.VITE_NTFY_TOPIC as string | undefined)?.trim() || '',
 }

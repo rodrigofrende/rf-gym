@@ -1,0 +1,32 @@
+/**
+ * Claves de storage compartidas.
+ *
+ * Módulo hoja A PROPÓSITO (sin imports): lo usa `src/utils/errorReporting.ts`,
+ * que corre en `main.tsx` ANTES de montar la app. Por eso estas constantes no
+ * pueden vivir en un provider: importar algo de `TenantProvider` arrastraría
+ * `useMemberships` → services → `@/lib/firebase`, que tira un `throw` a nivel de
+ * módulo si faltan credenciales — justo el error que el reporter existe para
+ * capturar. Se inicializaría Firebase antes que su propio reporter de errores.
+ */
+
+/** Gym activo elegido por el usuario (lo escribe/lee TenantProvider). */
+export const ACTIVE_GYM_STORAGE_KEY = 'gym:activeGymId'
+
+/**
+ * Id anónimo por pestaña. Sirve para correlacionar varios avisos del mismo
+ * intento y para distinguir "un socio reintentando 3 veces" de "3 socios".
+ */
+export const SESSION_ID_KEY = 'rf:sid'
+
+/**
+ * Id anónimo por dispositivo. Responde "¿es el mismo celular que el aviso de
+ * ayer?". Es un id de diagnóstico, no de tracking: 8 hex random sin ninguna
+ * relación con el socio ni con su cuenta.
+ */
+export const DEVICE_ID_KEY = 'rf:did'
+
+/**
+ * Avisos ya enviados en esta pestaña. Persistido (no una variable de módulo)
+ * para que un bug que recarga la página no mande el tope completo por recarga.
+ */
+export const REPORTS_SENT_KEY = 'rf:reportsSent'

@@ -65,3 +65,84 @@ export function suggestLoginEmail(
 export function emailLocalPart(email: string): string {
   return email.split('@')[0] ?? ''
 }
+
+export function emailDomain(email: string): string {
+  return email.trim().toLowerCase().split('@')[1] ?? ''
+}
+
+/**
+ * Proveedores de email personal. Si un socio intenta entrar con uno de estos, lo
+ * más probable es que su acceso al gym sea un alias `local@gimnasio.com` (ver
+ * `tenantEmailDomain`) y esté usando su casilla personal por costumbre. Amerita
+ * un mensaje distinto a "no estás dado de alta".
+ */
+const PUBLIC_EMAIL_PROVIDERS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'hotmail.com',
+  'hotmail.com.ar',
+  'hotmail.es',
+  'outlook.com',
+  'outlook.es',
+  'live.com',
+  'live.com.ar',
+  'yahoo.com',
+  'yahoo.com.ar',
+  'icloud.com',
+  'me.com',
+  'aol.com',
+  'protonmail.com',
+  'proton.me',
+])
+
+export function isPublicEmailProvider(email: string): boolean {
+  return PUBLIC_EMAIL_PROVIDERS.has(emailDomain(email))
+}
+
+/** TLDs que son claramente un `.com` mal tipeado. */
+const COM_TYPOS = new Set(['con', 'cm', 'cmo', 'om', 'co', 'comm', 'xom', 'vom', 'coom'])
+
+/** Dominios de proveedor mal tipeados → dominio correcto. */
+const DOMAIN_TYPOS: Record<string, string> = {
+  'gmial.com': 'gmail.com',
+  'gmai.com': 'gmail.com',
+  'gmail.com.ar': 'gmail.com',
+  'gnail.com': 'gmail.com',
+  'hotmial.com': 'hotmail.com',
+  'hotmai.com': 'hotmail.com',
+  'hotmail.co': 'hotmail.com',
+  'outlok.com': 'outlook.com',
+  'outloo.com': 'outlook.com',
+  'yaho.com': 'yahoo.com',
+  'yahooo.com': 'yahoo.com',
+}
+
+/**
+ * Correcciones plausibles de un email mal tipeado, de la más probable a la menos.
+ *
+ * Existe porque el índice de login no se puede recorrer: las rules permiten `get`
+ * exacto pero `list: false`, así que no hay fuzzy match posible desde el cliente.
+ * La única forma de recuperar un typo es adivinar candidatos y preguntar por cada
+ * uno. Es seguro ser generoso: quien consulta esto sólo muestra la sugerencia si
+ * el candidato EXISTE de verdad en el índice, así que un candidato equivocado no
+ * llega nunca a la pantalla.
+ *
+ * Máximo 2 candidatos, para no encadenar lecturas en el camino de error.
+ */
+export function emailTypoCandidates(email: string): string[] {
+  const normalized = normalizeEmailKey(email)
+  const [local, domain] = normalized.split('@')
+  if (!local || !domain) return []
+
+  const candidates: string[] = []
+  const fixedDomain = DOMAIN_TYPOS[domain]
+  if (fixedDomain) candidates.push(`${local}@${fixedDomain}`)
+
+  const labels = domain.split('.')
+  const tld = labels[labels.length - 1] ?? ''
+  if (labels.length > 1 && COM_TYPOS.has(tld)) {
+    candidates.push(`${local}@${[...labels.slice(0, -1), 'com'].join('.')}`)
+  }
+
+  return [...new Set(candidates)].filter((candidate) => candidate !== normalized).slice(0, 2)
+}

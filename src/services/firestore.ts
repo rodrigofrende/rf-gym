@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   setDoc,
   updateDoc,
@@ -24,6 +25,24 @@ type WithId = { id: string }
 
 export async function getOne<T extends WithId>(path: string): Promise<T | null> {
   const snap = await getDoc(doc(db, path))
+  if (!snap.exists()) return null
+  return { id: snap.id, ...(snap.data() as Omit<T, 'id'>) } as T
+}
+
+/**
+ * Igual que `getOne` pero sin caché: va siempre al servidor y, si no hay red,
+ * TIRA (`unavailable`) en vez de devolver `null`.
+ *
+ * Para lecturas donde `null` es una decisión, no un dato. Con
+ * `persistentLocalCache` activo (ver src/lib/firebase.ts), un `getDoc` sin red
+ * resuelve desde IndexedDB y un doc que nunca se cacheó da `exists() === false`,
+ * indistinguible de "no existe". En el índice de login eso significaba decirle
+ * "no estás dado de alta" a un socio que sí estaba. Preferimos un error visible
+ * y un "probá de nuevo" antes que una respuesta cacheada decidiendo si un email
+ * está registrado.
+ */
+export async function getOneFromServer<T extends WithId>(path: string): Promise<T | null> {
+  const snap = await getDocFromServer(doc(db, path))
   if (!snap.exists()) return null
   return { id: snap.id, ...(snap.data() as Omit<T, 'id'>) } as T
 }
