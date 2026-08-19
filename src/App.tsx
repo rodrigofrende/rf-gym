@@ -7,6 +7,7 @@ import { TenantThemeEffect } from '@/providers/TenantThemeEffect'
 import { ToastProvider } from '@/providers/ToastProvider'
 import { PrivacyProvider } from '@/providers/PrivacyProvider'
 import { AppRoutes } from '@/routes/AppRoutes'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { isNonRetryableError } from '@/utils/firestoreErrors'
 
 const queryClient = new QueryClient({
@@ -26,21 +27,28 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <PrivacyProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <TenantProvider>
-              <CartProvider>
-                <TenantThemeEffect />
-                <AppRoutes />
-              </CartProvider>
-            </TenantProvider>
-          </AuthProvider>
-        </ToastProvider>
-        </PrivacyProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    // Por FUERA de todos los providers a propósito: AuthProvider y TenantProvider
+    // son justamente donde un claim raro o un error de permisos puede tirar en
+    // render, y adentro no los agarraría. El precio es que la pantalla de error
+    // queda por encima del router (no hay navegación blanda), y se paga con los
+    // dos botones de navegación dura del boundary.
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <PrivacyProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <TenantProvider>
+                  <CartProvider>
+                    <TenantThemeEffect />
+                    <AppRoutes />
+                  </CartProvider>
+                </TenantProvider>
+              </AuthProvider>
+            </ToastProvider>
+          </PrivacyProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }

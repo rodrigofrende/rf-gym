@@ -13,10 +13,32 @@ import { CheckInPage } from '@/features/member/attendance/CheckInPage'
 import { SocioPaymentGate } from '@/features/payments/SocioPaymentGate'
 import { PrivateRoute, SuperAdminRoute } from './PrivateRoute'
 import { defaultHomeForRole, ROUTES } from './routePaths'
+import { isStaleChunkError, recoverFromStaleDeploy } from '@/utils/staleDeploy'
 
-/** Lazy para páginas con named export. */
+/**
+ * Lazy para páginas con named export.
+ *
+ * El `.catch` es el punto MÁS TEMPRANO donde se puede atajar un deploy viejo: acá
+ * el fallo todavía es una promesa rechazada y React ni se enteró. Si recuperamos,
+ * devolvemos una promesa que NUNCA resuelve, así <Suspense> se queda con el
+ * spinner los ~200ms hasta que la recarga se lleva la página — en vez de
+ * re-lanzar, hacer que React descarte el árbol entero y dejar `#root` vacío, que
+ * es lo que hacía reaparecer el spinner gris del shell para siempre.
+ */
 function lazyPage<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
-  return lazy(() => load().then((m) => ({ default: pick(m) })))
+  return lazy(() =>
+    load()
+      .then((m) => ({ default: pick(m) }))
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error)
+        if (isStaleChunkError(message) && recoverFromStaleDeploy() === 'reloading') {
+          return new Promise<{ default: ComponentType }>(() => {})
+        }
+        // Otro error, o recuperación ya agotada / sin red: que suba al
+        // ErrorBoundary, que sabe pintar algo y avisar.
+        throw error
+      }),
+  )
 }
 
 // Panel admin (el dashboard además trae recharts)

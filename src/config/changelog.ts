@@ -23,6 +23,24 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.2.3',
+    date: '2026-08-19',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'Si dejás la app abierta muchos días y sacamos una versión nueva, ya no queda cargando para siempre: se actualiza sola.',
+      },
+      {
+        kind: 'improved',
+        text: 'Cuando algo falla al cargar, ahora aparece un mensaje claro con un botón para reintentar en vez de una pantalla en blanco.',
+      },
+      {
+        kind: 'improved',
+        text: 'La app carga más rápido en visitas repetidas desde el celular.',
+      },
+    ],
+  },
+  {
     version: '1.2.2',
     date: '2026-08-19',
     items: [

@@ -68,17 +68,93 @@
         border: 3px solid #e4e4e7;
         border-top-color: #a1a1aa;
         border-radius: 9999px;
-        animation: shell-spin 0.8s linear infinite;
+        /* DOS animaciones: la que gira (infinita) y un "temporizador" de 10s que
+           lo apaga. Sin esto, este spinner gris disfrazaba de "cargando" dos
+           crashes distintos: el bundle que nunca llega (chunk 404, sin red) y el
+           árbol de React desmontado por un error de render. */
+        animation:
+          shell-spin 0.8s linear infinite,
+          shell-hide 0s linear 10s forwards;
       }
       @keyframes shell-spin {
         to {
           transform: rotate(360deg);
         }
       }
+      @keyframes shell-hide {
+        to {
+          opacity: 0;
+          visibility: hidden;
+        }
+      }
+      /* El aviso vive FUERA de #root (adentro haría que `#root:empty` dejara de
+         matchear y el spinner no arrancaría nunca) y se revela con el mismo
+         temporizador. Combinador `~` y no `+`: así no importa si Vite inyecta el
+         <script> del bundle entre los dos (en dev va al body, en el build al
+         head). `position: fixed` porque index.css le da min-height:100dvh a #root
+         y un hermano en flujo quedaría abajo del fold.
+
+         Se auto-cancela solo: si el bundle finalmente llega, #root deja de estar
+         vacío, el selector deja de aplicar y la animación se remueve. Y se
+         re-arma si React descarta el árbol más tarde. */
+      #shell-timeout {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+        font-family: system-ui, sans-serif;
+        font-size: 0.875rem;
+        color: #52525b;
+        background: #fafafa;
+        opacity: 0;
+        visibility: hidden;
+      }
+      #root:empty ~ #shell-timeout {
+        animation: shell-show 0s linear 10s forwards;
+      }
+      @keyframes shell-show {
+        to {
+          opacity: 1;
+          visibility: visible;
+        }
+      }
+      #shell-timeout strong {
+        font-size: 1rem;
+        color: #18181b;
+      }
+      #shell-timeout a {
+        margin-top: 0.25rem;
+        padding: 0.625rem 1.25rem;
+        border-radius: 0.5rem;
+        background: #4f46e5;
+        color: #fff;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      /* OJO: el revelado depende de `animation`. Si algún día se agrega un reset
+         global de prefers-reduced-motion (`* { animation: none }`), hay que
+         excluir shell-hide/shell-show o el aviso no aparece nunca. Hoy el bloque
+         de src/index.css está scopeado a .rf-fade-up/.rf-glow: no molesta. */
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Red de seguridad SIN NADA DE JS: si a los 10s no se montó nada, el spinner
+         se apaga y aparece esto. Tiene que ser HTML inline porque el peor caso es
+         justamente que el chunk de entrada 404ee y NINGÚN JS de la app llegue a
+         correr. El link es un <a> y no un botón con onclick: navegación de verdad,
+         sin JS, y compatible con una CSP `script-src 'self'` el día que se active
+         la del comentario de public/_headers. -->
+    <div id="shell-timeout">
+      <strong>Esto está tardando más de lo normal</strong>
+      <span>Revisá tu conexión y volvé a intentar.</span>
+      <a href="/">Reintentar</a>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

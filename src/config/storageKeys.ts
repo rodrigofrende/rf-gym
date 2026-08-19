@@ -30,3 +30,11 @@ export const DEVICE_ID_KEY = 'rf:did'
  * para que un bug que recarga la página no mande el tope completo por recarga.
  */
 export const REPORTS_SENT_KEY = 'rf:reportsSent'
+
+/**
+ * Marca de "ya intenté recuperarme de un deploy viejo" (ver
+ * `src/utils/staleDeploy.ts`). Va en sessionStorage —por pestaña— a propósito: en
+ * localStorage, una pestaña que falló bloquearía la recuperación de las otras y
+ * la marca sobreviviría al cierre del navegador.
+ */
+export const STALE_RELOAD_KEY = 'rf:staleReload'

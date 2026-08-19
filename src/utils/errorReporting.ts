@@ -7,6 +7,7 @@ import {
   SESSION_ID_KEY,
 } from '@/config/storageKeys'
 import { emailFingerprint, maskEmail } from './privacy'
+import { isStaleChunkError, staleRecoveryFailed } from './staleDeploy'
 
 /**
  * Alertas de errores de producción vía ntfy: push al celular del dueño de la
@@ -57,12 +58,12 @@ const IGNORED = [
   /ResizeObserver loop/i,
   // Scripts cross-origin (extensiones, etc.): el navegador oculta el detalle.
   /^Script error\.?$/i,
-  // Chunks renombrados por un deploy en el medio de una sesión abierta.
-  /dynamically imported module|Importing a module script failed/i,
-  // Safari/iOS: el chunk viejo ya no existe y el host responde index.html.
-  /not a valid JavaScript MIME type/i,
-  /Expected a JavaScript.*MIME type/i,
 ]
+// Los chunks de un deploy viejo YA NO van acá. Estaban descartando EXACTAMENTE el
+// error que dejaba a un socio mirando un spinner gris para siempre: el aviso que
+// más falta hacía era el único que se tiraba a la basura. Ahora los maneja
+// staleDeploy.ts (una recarga) y se avisan sólo si esa recarga ya falló — ver el
+// filtro en report().
 
 /**
  * Contexto estructurado del aviso. `email` es la clave reservada: se pasa CRUDO
@@ -176,11 +177,23 @@ function report(
   const msg = message || 'Error sin mensaje'
   if (IGNORED.some((re) => re.test(msg))) return
 
+  // Deploy viejo: el dueño de este error es staleDeploy.ts, que lo arregla con UNA
+  // recarga. Silencio mientras la recuperación esté disponible o en curso (si no,
+  // cada deploy manda un push por cada pestaña vieja que haya en el mundo), y
+  // aviso cuando la recarga YA se intentó y el socio sigue trabado: eso no es
+  // ruido, es "mis usuarios no pueden entrar".
+  const stale = isStaleChunkError(msg)
+  if (stale && !staleRecoveryFailed()) return
+  // El mismo fallo entra por hasta tres puertas (ErrorBoundary, window.error /
+  // unhandledrejection, onUncaughtError). Normalizar el kind hace que el dedupe
+  // de abajo las colapse en UN aviso en vez de tres.
+  const alertKind = stale ? 'stale-deploy' : kind
+
   // El contexto entra en la clave del dedupe: los mensajes son constantes, así
   // que sin esto dos socios distintos con el mismo error se colapsaban en UN
   // aviso — justo el caso que interesa ver.
   const ctx = renderContext(options?.context)
-  const key = `${kind}:${msg.slice(0, 140)}:${ctx}`
+  const key = `${alertKind}:${msg.slice(0, 140)}:${ctx}`
   if (seen.has(key)) return
 
   // Contador persistido por pestaña: un bug que recarga la página no puede
@@ -213,9 +226,11 @@ function report(
     method: 'POST',
     body,
     headers: {
-      Title: `RF FIT ${options?.priority === 'default' ? 'aviso' : 'error'} (${kind})`,
-      Priority: options?.priority ?? 'high',
-      Tags: options?.tags ?? 'rotating_light',
+      Title: `RF FIT ${!stale && options?.priority === 'default' ? 'aviso' : 'error'} (${alertKind})`,
+      // Prioridad alta explícita para stale: llegó acá porque la recuperación
+      // automática ya falló, o sea que hay gente sin poder entrar.
+      Priority: stale ? 'high' : (options?.priority ?? 'high'),
+      Tags: stale ? 'arrows_counterclockwise' : (options?.tags ?? 'rotating_light'),
     },
     keepalive: true,
   }).catch(() => undefined)
@@ -235,8 +250,31 @@ export function reportOperational(
   report(kind, message, detail, { priority: 'default', tags: 'warning', context })
 }
 
+/**
+ * Crash: el usuario NO está viendo la app (ErrorBoundary, onUncaughtError).
+ * Prioridad alta siempre. `detail` es el componentStack cuando existe: con el
+ * bundle minificado y sin sourcemaps es lo único que dice QUÉ pantalla explotó.
+ */
+export function reportCrash(
+  kind: string,
+  message: string,
+  detail?: string,
+  context?: ReportContext,
+) {
+  report(kind, message, detail, { priority: 'high', tags: 'rotating_light', context })
+}
+
 /** Engancha los handlers globales. Llamar una sola vez, al arrancar la app. */
 export function initErrorReporting() {
+  // Los handlers globales son la red MÁS ANCHA: son los únicos que ven los throw
+  // a nivel de MÓDULO (`@/lib/firebase` sin credenciales), que pasan antes de que
+  // React monte nada y que por eso ningún ErrorBoundary puede atrapar.
+  //
+  // Sólo REPORTAN, nunca recuperan: se disparan para todo, y un error que parece
+  // stale viniendo de un import() no fatal (un modal lazy) no debería volarle a
+  // nadie una pantalla con un formulario a medio llenar. La recarga la deciden
+  // lazyPage y el ErrorBoundary, que son los dos lugares donde se SABE que el
+  // fallo dejó la pantalla vacía.
   window.addEventListener('error', (e) => {
     report('error', e.message, e.error instanceof Error ? e.error.stack : undefined)
   })
