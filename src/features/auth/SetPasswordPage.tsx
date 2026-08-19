@@ -11,13 +11,14 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { Button, Card, FormField, Heading, PasswordInput, Text } from '@/components/ui'
 import { claimMembership, claimPendingMemberships } from '@/services/membershipsService'
-import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
+import { getMemberLogin, LOGIN_INDEX_MISSING_MESSAGE, updateMemberAuthStatus } from '@/services/memberLoginService'
 import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
 import { queryKeys } from '@/hooks/queryKeys'
 import { useMemberships } from '@/hooks/useMemberships'
 import { ROUTES } from '@/routes/routePaths'
 import { persistActiveGymId } from '@/providers/TenantProvider'
+import { reportOperational } from '@/utils/errorReporting'
 
 const schema = z
   .object({
@@ -87,7 +88,12 @@ export function SetPasswordPage() {
       const login =
         stateLogin?.email?.toLowerCase() === email ? stateLogin : await getMemberLogin(email)
       if (!login) {
-        notify('No encontramos un socio con ese email', 'error')
+        reportOperational(
+          'login-index-miss',
+          'Alta de contraseña: no hay índice de login',
+          `domain: ${email.split('@')[1] ?? '?'}`,
+        )
+        notify(LOGIN_INDEX_MISSING_MESSAGE, 'error')
         return
       }
 
@@ -174,6 +180,15 @@ export function SetPasswordPage() {
       notify(mode === 'create' ? 'Contraseña creada' : 'Contraseña actualizada', 'success')
       navigate('/')
     } catch (err) {
+      const isExpectedAuth =
+        err instanceof Error && err.message === 'existing-account-password-mismatch'
+      if (!isExpectedAuth) {
+        reportOperational(
+          'set-password',
+          'Falló crear/cambiar contraseña',
+          extractFirestoreCode(err) ?? (err instanceof Error ? err.message.slice(0, 120) : 'unknown'),
+        )
+      }
       const message =
         err instanceof Error && err.message === 'existing-account-password-mismatch'
           ? 'Esta cuenta ya tenía contraseña. Ingresá con esa contraseña desde Login o pedí blanqueo a administración.'

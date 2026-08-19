@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Plus, Search, Shield, Trash2, Users, Wallet } from 'lucide-react'
 import type { Member, MemberStatus, Role } from '@/types'
@@ -30,6 +30,8 @@ import { getPaymentStatus } from '@/utils/payments'
 import { adminMemberDetail } from '@/routes/routePaths'
 import { MemberFormModal } from './MemberFormModal'
 import { MemberRegisterPaymentModal } from './MemberRegisterPaymentModal'
+import { env } from '@/config/env'
+import { ensureGymLoginIndexes } from '@/services/memberLoginService'
 
 const STATUS_TONE: Record<MemberStatus, 'green' | 'amber' | 'red'> = {
   active: 'green',
@@ -87,6 +89,16 @@ export function MembersListPage() {
   const { data: members = [], isLoading } = useMembers(gymId)
   const createMember = useCreateMember(gymId)
   const removeMember = useRemoveMember(gymId)
+  const healedGymId = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (env.demoMode || isLoading || members.length === 0) return
+    if (healedGymId.current === gymId) return
+    healedGymId.current = gymId
+    void ensureGymLoginIndexes(gymId, members).catch(() => {
+      healedGymId.current = null
+    })
+  }, [gymId, isLoading, members])
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [payMember, setPayMember] = useState<Member | null>(null)

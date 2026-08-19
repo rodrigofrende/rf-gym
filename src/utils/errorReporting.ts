@@ -25,12 +25,17 @@ const IGNORED = [
   /dynamically imported module|Importing a module script failed/i,
 ]
 
-function report(kind: string, message: string, detail?: string) {
+function report(
+  kind: string,
+  message: string,
+  detail?: string,
+  options?: { priority?: 'high' | 'default'; tags?: string },
+) {
   if (!import.meta.env.PROD || window.location.hostname === 'localhost') return
   if (sent >= MAX_PER_SESSION) return
   const msg = message || 'Error sin mensaje'
   if (IGNORED.some((re) => re.test(msg))) return
-  const key = msg.slice(0, 200)
+  const key = `${kind}:${msg.slice(0, 180)}`
   if (seen.has(key)) return
   seen.add(key)
   sent++
@@ -56,9 +61,22 @@ function report(kind: string, message: string, detail?: string) {
   fetch(NTFY_URL, {
     method: 'POST',
     body,
-    headers: { Title: `RF FIT error (${kind})`, Priority: 'high', Tags: 'rotating_light' },
+    headers: {
+      Title: `RF FIT ${options?.priority === 'default' ? 'aviso' : 'error'} (${kind})`,
+      Priority: options?.priority ?? 'high',
+      Tags: options?.tags ?? 'rotating_light',
+    },
     keepalive: true,
   }).catch(() => undefined)
+}
+
+/**
+ * Fallos de negocio ya mostrados al usuario (login, check-in, claim). No son
+ * crashes: prioridad baja, sin PII (nada de emails/contraseñas). Sirve para
+ * enterarte antes de que te lo reporten.
+ */
+export function reportOperational(kind: string, message: string, detail?: string) {
+  report(kind, message, detail, { priority: 'default', tags: 'warning' })
 }
 
 /** Engancha los handlers globales. Llamar una sola vez, al arrancar la app. */

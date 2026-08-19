@@ -11,7 +11,7 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { env } from '@/config/env'
 import { queryKeys } from '@/hooks/queryKeys'
-import { getMemberLogin, updateMemberAuthStatus } from '@/services/memberLoginService'
+import { getMemberLogin, LOGIN_INDEX_MISSING_MESSAGE, updateMemberAuthStatus } from '@/services/memberLoginService'
 import { getOne } from '@/services/firestore'
 import { paths } from '@/services/paths'
 import type { ClaimedMembership } from '@/services/membershipsService'
@@ -21,6 +21,7 @@ import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors
 import { BrandLockup, Button, Card, FormField, Input, PasswordInput, Text } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
 import { persistActiveGymId } from '@/providers/TenantProvider'
+import { reportOperational } from '@/utils/errorReporting'
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -39,6 +40,7 @@ export function LoginPage() {
   const [resolvedEmail, setResolvedEmail] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
   const [forgotSending, setForgotSending] = useState(false)
+  const [createAccessLoading, setCreateAccessLoading] = useState(false)
   const canUseGoogle = env.googleLoginEnabled
   const redirect = new URLSearchParams(location.search).get('redirect')
   // Solo rutas internas: rechazar también '//' y '/\' (URLs protocolo-relativas)
@@ -152,6 +154,35 @@ export function LoginPage() {
     setValue('password', '')
   }
 
+  const goToCreatePassword = async () => {
+    if (!resolvedEmail || createAccessLoading) return
+    setCreateAccessLoading(true)
+    try {
+      const login = await getMemberLogin(resolvedEmail)
+      if (!login) {
+        reportOperational(
+          'login-index-miss',
+          'Alta de contraseña: no hay índice de login',
+          `domain: ${resolvedEmail.split('@')[1] ?? '?'}`,
+        )
+        notify(LOGIN_INDEX_MISSING_MESSAGE, 'error')
+        return
+      }
+      navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail)}&mode=create`, {
+        state: { login },
+      })
+    } catch (err) {
+      reportOperational(
+        'login-index-read',
+        'No se pudo leer el índice de login',
+        extractFirestoreCode(err) ?? 'unknown',
+      )
+      notify(mapFirestoreError(err, 'No pudimos verificar tu acceso. Probá de nuevo.'), 'error')
+    } finally {
+      setCreateAccessLoading(false)
+    }
+  }
+
   // Olvidó la contraseña (ya tiene cuenta): dispara el email de restablecimiento.
   // Honesto con el caso "alias del gym": si el email no es real, no le llega y
   // tiene que pedirle el reseteo a su gimnasio.
@@ -254,12 +285,11 @@ export function LoginPage() {
               <div className="space-y-1.5 pt-1 text-center">
                 <button
                   type="button"
-                  onClick={() =>
-                    navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(resolvedEmail)}&mode=create`)
-                  }
-                  className="block w-full text-sm font-medium text-brand-600 hover:text-brand-700"
+                  onClick={() => void goToCreatePassword()}
+                  disabled={createAccessLoading}
+                  className="block w-full text-sm font-medium text-brand-600 hover:text-brand-700 disabled:opacity-60"
                 >
-                  ¿Primera vez? Creá tu contraseña
+                  {createAccessLoading ? 'Verificando acceso...' : '¿Primera vez? Creá tu contraseña'}
                 </button>
                 <button
                   type="button"

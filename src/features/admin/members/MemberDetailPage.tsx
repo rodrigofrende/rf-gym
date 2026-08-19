@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, KeyRound, Mail, Pencil, RefreshCw, Trash2, Wallet } from 'lucide-react'
@@ -37,6 +37,8 @@ import { frequencyLabel } from '@/utils/tariffs'
 import { memberAccessState, ROLE_LABEL } from '@/utils/roles'
 import { ROUTES } from '@/routes/routePaths'
 import { cn } from '@/utils/cn'
+import { env } from '@/config/env'
+import { syncMemberLoginIndex } from '@/services/memberLoginService'
 import { MemberFormModal } from './MemberFormModal'
 import { MemberRegisterPaymentModal } from './MemberRegisterPaymentModal'
 import { NotesTab } from './tabs/NotesTab'
@@ -81,6 +83,12 @@ export function MemberDetailPage() {
   const [sendingReset, setSendingReset] = useState(false)
   const [reissueEmail, setReissueEmail] = useState('')
   const [reissuing, setReissuing] = useState(false)
+
+  useEffect(() => {
+    if (env.demoMode || !member) return
+    if (member.authStatus !== 'pending_password' && member.authStatus !== 'password_change_required') return
+    void syncMemberLoginIndex(gymId, member.id, member).catch(() => undefined)
+  }, [gymId, member])
 
   if (isLoading) {
     return (

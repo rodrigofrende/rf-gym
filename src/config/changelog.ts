@@ -23,6 +23,24 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.2.1',
+    date: '2026-08-18',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'El QR de recepción registra la asistencia aunque el código se haya generado en otra pantalla o dominio.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Si el socio ya marcó presente hoy, se lo informa y no puede sumar otro hasta mañana.',
+      },
+      {
+        kind: 'fixed',
+        text: 'El primer ingreso con email real ya no falla con “no encontramos un socio” cuando la ficha sí existía.',
+      },
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-08-17',
     items: [

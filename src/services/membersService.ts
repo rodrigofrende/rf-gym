@@ -9,10 +9,10 @@ import {
 } from './membershipIndexService'
 import { listPlans } from './plansService'
 import { addToCollection, getMany, getOne, removeOne, updateOne } from './firestore'
-import { removeMemberLoginIndex, syncMemberLoginIndex } from './memberLoginService'
+import { removeMemberLoginIndex, removeMemberLoginIndexes, syncMemberLoginIndex } from './memberLoginService'
 import { paths } from './paths'
 import { canCreateAdmin } from '@/utils/plans'
-import { normalizeEmailKey } from '@/utils/loginEmail'
+import { loginEmailKeys, normalizeEmailKey } from '@/utils/loginEmail'
 
 export function listMembers(gymId: string) {
   if (env.demoMode) return demo.listMembers(gymId)
@@ -59,10 +59,12 @@ export async function createMember(gymId: string, data: Omit<Member, 'id' | 'uid
   if (env.demoMode) return demo.createMember(gymId, data)
   await assertCanSaveAdmin(gymId, data.role)
   await assertUniqueLoginEmail(gymId, data.loginEmail || data.email)
+  const loginEmail = normalizeEmailKey(data.loginEmail || data.email)
   const payload = {
     ...data,
     uid: '',
-    loginEmail: data.loginEmail || data.email,
+    email: normalizeEmailKey(data.email || loginEmail),
+    loginEmail,
     authStatus: data.authStatus ?? 'pending_password',
   } satisfies Omit<Member, 'id'>
   const memberId = await addToCollection(paths.members(gymId), payload)
@@ -86,10 +88,16 @@ export async function updateMember(gymId: string, memberId: string, data: Partia
     await assertUniqueLoginEmail(gymId, nextEmail, memberId)
   }
   await updateOne(paths.member(gymId, memberId), data)
-  if (prev && (data.email || data.loginEmail) && (data.email ?? data.loginEmail) !== (prev.loginEmail || prev.email)) {
-    await removeMemberLoginIndex(prev.loginEmail || prev.email)
+  if (prev) {
+    const nextMember = { ...prev, ...data }
+    const nextKeys = new Set(loginEmailKeys(nextMember))
+    await Promise.all(
+      loginEmailKeys(prev)
+        .filter((key) => !nextKeys.has(key))
+        .map(removeMemberLoginIndex),
+    )
+    await syncMemberLoginIndex(gymId, memberId, nextMember)
   }
-  if (prev) await syncMemberLoginIndex(gymId, memberId, { ...prev, ...data })
   const nextRole = data.role ?? prev?.role
   const uid = data.uid ?? prev?.uid ?? ''
   if (uid && nextRole) {
@@ -107,7 +115,7 @@ export async function updateMember(gymId: string, memberId: string, data: Partia
  * huérfana e inutilizada.
  */
 export async function reissueMemberAccess(gymId: string, memberId: string, newLoginEmail: string) {
-  const email = newLoginEmail.trim()
+  const email = normalizeEmailKey(newLoginEmail)
   if (env.demoMode) {
     return demo.updateMember(gymId, memberId, {
       loginEmail: email,
@@ -137,7 +145,7 @@ export async function reissueMemberAccess(gymId: string, memberId: string, newLo
     uid: '',
   })
   // Reapuntar el índice de login: sacar el viejo, crear el nuevo (pending).
-  await removeMemberLoginIndex(prev.loginEmail || prev.email)
+  await removeMemberLoginIndexes(prev)
   await syncMemberLoginIndex(gymId, memberId, {
     ...prev,
     loginEmail: email,
@@ -164,6 +172,6 @@ export async function removeMember(gymId: string, memberId: string) {
     await removeGymMembershipIndex(prev.uid, gymId)
     if (prev.role === 'admin') await removeGymAdmin(gymId, prev.uid)
   }
-  if (prev) await removeMemberLoginIndex(prev.loginEmail || prev.email)
+  if (prev) await removeMemberLoginIndexes(prev)
   return removeOne(paths.member(gymId, memberId))
 }

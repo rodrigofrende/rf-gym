@@ -2,6 +2,18 @@ export function normalizeEmailKey(email: string): string {
   return email.trim().toLowerCase()
 }
 
+/** Emails con los que un socio puede intentar entrar (acceso + contacto). */
+export function loginEmailKeys(member: { email?: string; loginEmail?: string }): string[] {
+  return [
+    ...new Set(
+      [member.loginEmail, member.email]
+        .filter((value): value is string => Boolean(value?.trim()))
+        .map(normalizeEmailKey)
+        .filter(Boolean),
+    ),
+  ]
+}
+
 function slug(value: string): string {
   return value
     .normalize('NFD')

@@ -26,7 +26,7 @@ import { displayNameShort, toDate } from '@/utils/format'
 import { isoMonthKey, localDayKey } from '@/utils/dates'
 import { buildDashboard } from '@/utils/dashboard'
 import { dailyLogId } from '@/utils/logs'
-import { normalizeEmailKey } from '@/utils/loginEmail'
+import { loginEmailKeys, normalizeEmailKey } from '@/utils/loginEmail'
 
 interface NewPaymentInput {
   amount: number
@@ -58,11 +58,11 @@ const nextId = (prefix: string) => `${prefix}-${++counter}-demo`
 
 const ok = <T>(value: T) => Promise.resolve(value)
 
-function loginIndexForMember(member: Member): MemberLoginIndex {
-  const email = member.loginEmail || member.email
+function loginIndexForMember(member: Member, email = member.loginEmail || member.email): MemberLoginIndex {
+  const key = normalizeEmailKey(email)
   return {
-    id: normalizeEmailKey(email),
-    email,
+    id: key,
+    email: key,
     gymId: DEMO_GYM_ID,
     gymName: data.gym.name,
     memberId: member.id,
@@ -70,7 +70,13 @@ function loginIndexForMember(member: Member): MemberLoginIndex {
 }
 
 function buildMemberLoginIndex(): Record<string, MemberLoginIndex> {
-  return Object.fromEntries(data.members.map((m) => [normalizeEmailKey(m.loginEmail || m.email), loginIndexForMember(m)]))
+  const out: Record<string, MemberLoginIndex> = {}
+  for (const member of data.members) {
+    for (const key of loginEmailKeys(member)) {
+      out[key] = loginIndexForMember(member, key)
+    }
+  }
+  return out
 }
 
 function demoAttendanceId(dayKey: string, memberId: string) {
@@ -353,8 +359,9 @@ export function getMemberLogin(email: string) {
 
 export function syncMemberLoginIndex(_gymId: string, memberId: string, memberInput: Omit<Member, 'id'> | Member) {
   const member = 'id' in memberInput ? memberInput : ({ ...memberInput, id: memberId } as Member)
-  const entry = loginIndexForMember(member)
-  memberLoginIndex[entry.id] = entry
+  for (const key of loginEmailKeys(member)) {
+    memberLoginIndex[key] = loginIndexForMember(member, key)
+  }
   return ok(undefined)
 }
 

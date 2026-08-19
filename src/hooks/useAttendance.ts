@@ -10,6 +10,8 @@ import {
   subscribeTodayAttendance,
 } from '@/services/attendanceService'
 import { localDayKey } from '@/utils/dates'
+import { extractFirestoreCode } from '@/utils/firestoreErrors'
+import { reportOperational } from '@/utils/errorReporting'
 import { queryKeys } from './queryKeys'
 
 export function useCheckIn(gymId: string, memberId: string) {
@@ -17,6 +19,13 @@ export function useCheckIn(gymId: string, memberId: string) {
   const dayKey = localDayKey(new Date())
   return useMutation({
     mutationFn: () => checkInMember(gymId, memberId),
+    onError: (err) => {
+      reportOperational(
+        'check-in',
+        'Falló el registro de asistencia',
+        extractFirestoreCode(err) ?? (err instanceof Error ? err.message.slice(0, 120) : 'unknown'),
+      )
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.attendanceToday(gymId, dayKey) })
       qc.invalidateQueries({ queryKey: queryKeys.memberAttendance(gymId, memberId, dayKey) })
