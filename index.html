@@ -2,7 +2,16 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <!-- Íconos. El .ico va PRIMERO y existe como archivo real por dos razones:
+         Google y los navegadores lo piden por convención en /favicon.ico, y sin
+         el archivo el fallback SPA de _redirects respondía index.html (200 +
+         text/html) — o sea que Google pedía el ícono del sitio y recibía HTML.
+         Además la doc de favicons de Google no lista SVG entre los formatos
+         soportados, así que el SVG solo no alcanzaba para el ícono del resultado.
+         Se generan rasterizando favicon.svg (cuadrados, ver 48px+ recomendado). -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32 48x48" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -54,6 +63,44 @@
     <meta name="twitter:image" content="https://fit.rf-platform.com/brand/og-image.png" />
 
     <meta name="theme-color" content="#4f46e5" />
+
+    <!-- Structured data. Va en el HTML estático (no en React) a propósito: es lo
+         único que Googlebot lee sin tener que ejecutar el bundle de la SPA.
+         `WebSite.name` es la palanca del NOMBRE DEL SITIO que se ve arriba del
+         resultado — hoy Google muestra "RF Platform", derivado del dominio.
+         `alternateName` es el fallback que Google puede usar si no toma el
+         preferido, así que se declara el que ya viene usando en vez de pelearlo.
+         `Organization.logo` tiene que ser cuadrado y rastreable. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://fit.rf-platform.com/#organization",
+            "name": "RF FIT",
+            "url": "https://fit.rf-platform.com/",
+            "email": "hola@rf-platform.com",
+            "description": "Software de gestión para gimnasios: socios, pagos, rutinas y asistencia con QR.",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://fit.rf-platform.com/icon-512.png",
+              "width": 512,
+              "height": 512
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://fit.rf-platform.com/#website",
+            "name": "RF FIT",
+            "alternateName": "RF Platform",
+            "url": "https://fit.rf-platform.com/",
+            "inLanguage": "es-AR",
+            "publisher": { "@id": "https://fit.rf-platform.com/#organization" }
+          }
+        ]
+      }
+    </script>
     <style>
       /* Spinner del shell: visible mientras baja/parsea el bundle (mobile lento).
          React lo reemplaza al montar. Neutro a propósito: el tema se aplica después. */
