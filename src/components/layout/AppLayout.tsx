@@ -2,8 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { Menu, MessageSquarePlus, Sparkles } from 'lucide-react'
 import { useTenant } from '@/providers/TenantProvider'
 import { cn } from '@/utils/cn'
-import { ContactMenu } from '@/components/ui'
-import { APP_NAME, PLATFORM_EMAIL } from '@/config/app'
+import { mailtoLink } from '@/utils/contact'
+import { APP_NAME, APP_VERSION, PLATFORM_EMAIL } from '@/config/app'
 import { WhatsNewModal } from '@/features/whats-new/WhatsNewModal'
 import { useWhatsNew } from '@/features/whats-new/useWhatsNew'
 import { Sidebar } from './Sidebar'
@@ -27,10 +27,25 @@ export function AppLayout({
 
   // Contacto con RF FIT: solo para admins de gym (el super-admin es RF, no se
   // escribe a sí mismo). Vive en la barra superior —accesible desde cualquier
-  // pantalla— en vez de amontonarse en el sidebar. Menú: copiar / Gmail / mailto.
-  const supportSubject =
+  // pantalla— en vez de amontonarse en el sidebar.
+  //
+  // Es un mailto y no un menú propio: un mailto YA es el menú del sistema (en
+  // mobile abre el selector nativo de apps de correo), así que un solo link hace
+  // lo mismo con una fracción del código.
+  const supportHref =
     role === 'admin' && !isSuperAdmin && PLATFORM_EMAIL
-      ? `Sugerencia o reporte — ${activeMembership?.gymName ?? APP_NAME}`
+      ? mailtoLink(
+          PLATFORM_EMAIL,
+          `Sugerencia o reporte — ${activeMembership?.gymName ?? APP_NAME}`,
+          // Cuerpo pre-cargado con el contexto que siempre hay que pedir de vuelta.
+          // Se deja una línea en blanco arriba para que escriba ahí sin borrar nada.
+          `
+
+---
+Datos para soporte (no borrar)
+Gimnasio: ${activeMembership?.gymName ?? '—'}
+Versión: ${APP_VERSION}`,
+        )
       : null
   // Novedades: para TODOS los roles, no sólo admins. Antes vivía adentro del menú
   // de Soporte, que está gateado a admins de gym, así que un socio nunca podía
@@ -57,29 +72,17 @@ export function AppLayout({
     </button>
   )
 
-  const support = supportSubject ? (
-    <ContactMenu email={PLATFORM_EMAIL} subject={supportSubject} align="end">
-      {({ toggle }) => (
-        <button
-          type="button"
-          onClick={toggle}
-          title="Sugerí mejoras o reportá un problema"
-          aria-label="Sugerencias y soporte"
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          <span className="relative shrink-0">
-            <MessageSquarePlus className="size-5" aria-hidden />
-            {whatsNew.hasUnseen && (
-              <span
-                aria-hidden
-                className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-brand-500 ring-2 ring-surface"
-              />
-            )}
-          </span>
-          <span className="hidden sm:inline">Soporte</span>
-        </button>
-      )}
-    </ContactMenu>
+  const support = supportHref ? (
+    <a
+      href={supportHref}
+      // El label dice para qué sirve en vez de "Soporte" a secas: es la
+      // indicación de que ahí se puede escribir para reportar o pedir algo.
+      title="Escribinos si necesitás reportar un problema o pedir una mejora"
+      className="inline-flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+    >
+      <MessageSquarePlus className="size-5 shrink-0" aria-hidden />
+      <span className="hidden sm:inline">Escribinos</span>
+    </a>
   ) : null
 
   const hasHeaderContent = Boolean(subtitle || actions || support)

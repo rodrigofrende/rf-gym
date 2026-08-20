@@ -76,6 +76,7 @@ const LandingPage = lazyPage(() => import('@/features/landing/LandingPage'), (m)
 const SuperGymsPage = lazyPage(() => import('@/features/super/SuperGymsPage'), (m) => m.SuperGymsPage)
 const SuperDashboardPage = lazyPage(() => import('@/features/super/SuperDashboardPage'), (m) => m.SuperDashboardPage)
 const PlansListPage = lazyPage(() => import('@/features/super/PlansListPage'), (m) => m.PlansListPage)
+const BlockedEmailsPage = lazyPage(() => import('@/features/super/BlockedEmailsPage'), (m) => m.BlockedEmailsPage)
 
 /** Decide la home según el estado de auth/rol para la ruta raíz. */
 function HomeRedirect() {
@@ -125,6 +126,14 @@ export function AppRoutes() {
         element={
           <SuperAdminRoute>
             <PlansListPage />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path={ROUTES.SUPER_BLOCKED}
+        element={
+          <SuperAdminRoute>
+            <BlockedEmailsPage />
           </SuperAdminRoute>
         }
       />

@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { SubscriptionPlan } from '@/types'
+import { APP_NAME } from '@/config/app'
 
 /**
  * Contenido de la landing pública de RF FIT (copy es-AR). Separado de la vista
@@ -175,11 +176,16 @@ export const FAQS: LandingFaq[] = [
   },
 ]
 
-/** Asuntos de email pre-armados por contexto (CTA vía mailto). */
-export const EMAIL_GENERAL_SUBJECT = 'Quiero RF FIT en mi gimnasio'
+/**
+ * Asuntos pre-armados por contexto: el mail entra a la casilla ya clasificado,
+ * sin que el prospecto tenga que explicar de dónde salió. Usan `APP_NAME` en vez
+ * de "RF FIT" escrito a mano, que estaba duplicado en cuatro lugares.
+ */
+export const EMAIL_GENERAL_SUBJECT = `Quiero ${APP_NAME} en mi gimnasio`
+export const EMAIL_PLAN_HELP_SUBJECT = `No sé qué plan de ${APP_NAME} va con mi gimnasio`
 export function emailPlanSubject(plan: SubscriptionPlan): string {
-  if (plan.customPricing) return `Consulta por el plan ${plan.name} de RF FIT`
-  return `Me interesa el plan ${plan.name} de RF FIT`
+  if (plan.customPricing) return `Consulta por el plan ${plan.name} de ${APP_NAME}`
+  return `Me interesa el plan ${plan.name} de ${APP_NAME}`
 }
 
 /** Etiqueta del CTA según el rol del plan en la escalera de precios. */

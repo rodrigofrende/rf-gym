@@ -8,7 +8,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import { deleteDoc, doc, getDoc, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 
 /**
  * Tests de seguridad de firestore.rules contra el emulador. Verifican que un
@@ -472,5 +472,127 @@ describe('memberLoginIndex — índice de login world-readable', () => {
     })
     const db = asAdmin()
     await assertFails(setDoc(doc(db, indexDoc(NEW_EMAIL)), validIndex(NEW_EMAIL)))
+  })
+})
+
+/**
+ * blockedEmails: la lista de vetos. Es la única colección que se hace cumplir
+ * "desde afuera" — nadie la lee salvo el super-admin, pero las rules la consultan
+ * con `isBlockedEmail()` para negar altas. Esos son los tests que importan: el
+ * modo demo no ejecuta rules, así que sin esto el veto no está verificado en
+ * ninguna parte.
+ */
+describe('blockedEmails — veto de acceso a la plataforma', () => {
+  const VETADO = 'vetado@gmail.com'
+  const LIMPIO = 'limpio@gmail.com'
+  const blockedDoc = (email: string) => `blockedEmails/${email}`
+  const validBlock = (email: string) => ({ email, createdAt: new Date() })
+
+  async function seedBlocked(email: string) {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), blockedDoc(email)), { email, createdAt: new Date() })
+    })
+  }
+
+  it('solo el super-admin puede vetar', async () => {
+    await assertSucceeds(
+      setDoc(doc(asSuper(), blockedDoc(VETADO)), {
+        email: VETADO,
+        reason: 'spam',
+        createdAt: new Date(),
+      }),
+    )
+    await assertFails(setDoc(doc(asAdmin(), blockedDoc(LIMPIO)), validBlock(LIMPIO)))
+    await assertFails(setDoc(doc(asOutsider(), blockedDoc(LIMPIO)), validBlock(LIMPIO)))
+  })
+
+  it('la lista NO es legible por nadie más que el super-admin', async () => {
+    await seedBlocked(VETADO)
+    await assertSucceeds(getDoc(doc(asSuper(), blockedDoc(VETADO))))
+    // Que un admin de gym no pueda leerla es lo que evita que se sepa quién está
+    // vetado. El veto igual funciona: las rules leen con privilegios propios.
+    await assertFails(getDoc(doc(asAdmin(), blockedDoc(VETADO))))
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), blockedDoc(VETADO))))
+  })
+
+  it('la clave del doc tiene que ser el email (si no, isBlockedEmail no lo encuentra)', async () => {
+    await assertFails(setDoc(doc(asSuper(), blockedDoc('otro@gmail.com')), validBlock(VETADO)))
+  })
+
+  it('un admin NO puede dar de alta un socio con un email vetado', async () => {
+    await seedBlocked(VETADO)
+    await assertFails(
+      setDoc(doc(asAdmin(), `gyms/${GYM}/members/nuevo-vetado`), {
+        uid: '',
+        email: VETADO,
+        loginEmail: VETADO,
+        role: 'user',
+        fullName: 'Vetado',
+        authStatus: 'pending_password',
+      }),
+    )
+  })
+
+  it('el mismo alta SÍ funciona con un email no vetado', async () => {
+    // Contraprueba: sin esto, el test de arriba pasaría igual si todo estuviera roto.
+    await seedBlocked(VETADO)
+    await assertSucceeds(
+      setDoc(doc(asAdmin(), `gyms/${GYM}/members/nuevo-limpio`), {
+        uid: '',
+        email: LIMPIO,
+        loginEmail: LIMPIO,
+        role: 'user',
+        fullName: 'Limpio',
+        authStatus: 'pending_password',
+      }),
+    )
+  })
+
+  it('el índice de login de un email vetado no se puede (re)crear', async () => {
+    // Cubre las tres vías por las que reaparecería solo: alta, backfill de la
+    // lista de socios, y el updateMemberAuthStatus del propio socio al entrar.
+    await seedBlocked(VETADO)
+    await assertFails(
+      setDoc(doc(asAdmin(), `memberLoginIndex/${VETADO}`), {
+        email: VETADO,
+        gymId: GYM,
+        gymName: 'Gym A',
+        memberId: 'algun-member',
+      }),
+    )
+  })
+
+  it('un vetado no puede reclamar su membresía por el camino del claim', async () => {
+    // claimPendingMemberships usa un collectionGroup que NO pasa por el índice,
+    // así que borrarle el índice no alcanza: hace falta el chequeo en el claim.
+    await seedBlocked(VETADO)
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/members/sin-reclamar`), {
+        uid: '',
+        email: VETADO,
+        loginEmail: VETADO,
+        role: 'user',
+        fullName: 'Vetado',
+      })
+    })
+    const db = testEnv.authenticatedContext('vetado-uid', { email: VETADO }).firestore()
+    await assertFails(
+      updateDoc(doc(db, `gyms/${GYM}/members/sin-reclamar`), { uid: 'vetado-uid' }),
+    )
+  })
+
+  it('levantar el veto vuelve a permitir el alta', async () => {
+    await seedBlocked(VETADO)
+    await assertSucceeds(deleteDoc(doc(asSuper(), blockedDoc(VETADO))))
+    await assertSucceeds(
+      setDoc(doc(asAdmin(), `gyms/${GYM}/members/ya-no-vetado`), {
+        uid: '',
+        email: VETADO,
+        loginEmail: VETADO,
+        role: 'user',
+        fullName: 'Ya no vetado',
+        authStatus: 'pending_password',
+      }),
+    )
   })
 })

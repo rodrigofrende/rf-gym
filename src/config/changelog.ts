@@ -75,6 +75,11 @@ export const CHANGELOG: ChangelogRelease[] = [
         text: 'El alta y la edición de socios quedan guardadas de forma más confiable.',
         audience: 'admin',
       },
+      {
+        kind: 'improved',
+        text: 'Escribirnos es un solo toque: se abre tu app de correo con el asunto ya puesto.',
+        audience: 'admin',
+      },
     ],
   },
   {

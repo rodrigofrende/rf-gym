@@ -18,6 +18,11 @@ export const paths = {
   plans: () => 'plans',
   plan: (planId: string) => `plans/${planId}`,
 
+  // Emails vetados (top-level). La clave es el email normalizado, para que las
+  // rules puedan resolverlo por path con un exists() y sin queries.
+  blockedEmails: () => 'blockedEmails',
+  blockedEmail: (emailKey: string) => `blockedEmails/${emailKey}`,
+
   members: (gymId: string) => `gyms/${gymId}/members`,
   member: (gymId: string, uid: string) => `gyms/${gymId}/members/${uid}`,
 

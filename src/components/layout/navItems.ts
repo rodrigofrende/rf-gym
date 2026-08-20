@@ -1,4 +1,5 @@
 import {
+  Ban,
   LayoutDashboard,
   Users,
   Dumbbell,
@@ -114,6 +115,7 @@ export const SUPER_NAV_ITEM: NavItem = {
 export const PLATFORM_NAV: NavItem[] = [
   { to: ROUTES.SUPER_GYMS, label: 'Gimnasios', icon: Building2 },
   { to: ROUTES.SUPER_PLANS, label: 'Planes', icon: Layers },
+  { to: ROUTES.SUPER_BLOCKED, label: 'Emails vetados', icon: Ban },
   { to: ROUTES.SUPER_DASHBOARD, label: 'Panel', icon: LayoutDashboard, end: true },
 ]
 

@@ -2,10 +2,15 @@ import { Check, Mail, Sparkles } from 'lucide-react'
 import type { SubscriptionPlan } from '@/types'
 import { PLATFORM_EMAIL } from '@/config/app'
 import { usePlans } from '@/hooks/usePlans'
-import { ContactMenu } from '@/components/ui'
 import { formatCurrency } from '@/utils/format'
 import { cn } from '@/utils/cn'
-import { emailPlanSubject, planCtaLabel, resolveLandingPlans } from './landingContent'
+import { mailtoLink } from '@/utils/contact'
+import {
+  EMAIL_PLAN_HELP_SUBJECT,
+  emailPlanSubject,
+  planCtaLabel,
+  resolveLandingPlans,
+} from './landingContent'
 import { CtaButton, LandingSection } from './landingUi'
 
 /** Sección de planes: precios vivos desde `plans` con fallback estático. */
@@ -38,21 +43,15 @@ export function LandingPricing() {
       <div className="space-y-1 text-sm text-zinc-500">
         <p>Precios en pesos argentinos, por mes, por gimnasio. Tus socios no pagan nada por usar la app.</p>
         {PLATFORM_EMAIL && (
-          // <div> (no <p>): el ContactMenu monta un <div> y no puede anidarse en <p>.
-          <div>
+          <p>
             ¿No sabés cuál va con tu gimnasio?{' '}
-            <ContactMenu email={PLATFORM_EMAIL} subject="No sé qué plan de RF FIT va con mi gimnasio">
-              {({ toggle }) => (
-                <button
-                  type="button"
-                  onClick={toggle}
-                  className="font-semibold text-brand-400 hover:text-brand-300"
-                >
-                  Escribinos y lo vemos juntos.
-                </button>
-              )}
-            </ContactMenu>
-          </div>
+            <a
+              href={mailtoLink(PLATFORM_EMAIL, EMAIL_PLAN_HELP_SUBJECT) ?? undefined}
+              className="font-semibold text-brand-400 hover:text-brand-300"
+            >
+              Escribinos y lo vemos juntos.
+            </a>
+          </p>
         )}
       </div>
     </LandingSection>
@@ -101,13 +100,14 @@ function PricingCard({ plan, featured }: { plan: SubscriptionPlan; featured: boo
         ))}
       </ul>
       {PLATFORM_EMAIL && (
-        <ContactMenu email={PLATFORM_EMAIL} subject={emailPlanSubject(plan)} direction="up">
-          {({ toggle }) => (
-            <CtaButton onClick={toggle} primary={featured} icon={<Mail className="size-4" />}>
-              {planCtaLabel(plan)}
-            </CtaButton>
-          )}
-        </ContactMenu>
+        <CtaButton
+          href={mailtoLink(PLATFORM_EMAIL, emailPlanSubject(plan)) ?? undefined}
+          external={false}
+          primary={featured}
+          icon={<Mail className="size-4" />}
+        >
+          {planCtaLabel(plan)}
+        </CtaButton>
       )}
     </div>
   )

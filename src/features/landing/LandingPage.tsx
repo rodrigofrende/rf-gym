@@ -4,11 +4,12 @@ import { ArrowRight, Banknote, ChevronDown, LogIn, Mail, MonitorSmartphone } fro
 import { APP_NAME, PLATFORM_EMAIL, PLATFORM_TAGLINE } from '@/config/app'
 import { usePlans } from '@/hooks/usePlans'
 import { useGymPresentations } from '@/hooks/useGymPresentation'
-import { BrandLockup, ContactMenu, LogoImage } from '@/components/ui'
+import { BrandLockup, LogoImage } from '@/components/ui'
 import { publicGymRoute } from '@/routes/routePaths'
 import { formatCurrency } from '@/utils/format'
 import { buildThemeVars, PLATFORM_DEFAULT_THEME } from '@/utils/theme'
 import { cn } from '@/utils/cn'
+import { mailtoLink } from '@/utils/contact'
 import {
   EMAIL_GENERAL_SUBJECT,
   FAQS,
@@ -122,13 +123,14 @@ function LandingView() {
                 style={{ animationDelay: '320ms' }}
               >
                 {PLATFORM_EMAIL && (
-                  <ContactMenu email={PLATFORM_EMAIL} subject={EMAIL_GENERAL_SUBJECT}>
-                    {({ toggle }) => (
-                      <CtaButton onClick={toggle} primary icon={<Mail className="size-4" />}>
-                        Quiero {APP_NAME} en mi gimnasio
-                      </CtaButton>
-                    )}
-                  </ContactMenu>
+                  <CtaButton
+                    href={mailtoLink(PLATFORM_EMAIL, EMAIL_GENERAL_SUBJECT) ?? undefined}
+                    external={false}
+                    primary
+                    icon={<Mail className="size-4" />}
+                  >
+                    Quiero {APP_NAME} en mi gimnasio
+                  </CtaButton>
                 )}
                 <CtaButton href="#planes" external={false} onClick={() => scrollToId('planes')}>
                   Ver planes
@@ -236,13 +238,14 @@ function LandingView() {
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             {PLATFORM_EMAIL && (
-              <ContactMenu email={PLATFORM_EMAIL} subject={EMAIL_GENERAL_SUBJECT}>
-                {({ toggle }) => (
-                  <CtaButton onClick={toggle} primary icon={<Mail className="size-4" />}>
-                    Quiero {APP_NAME} en mi gimnasio
-                  </CtaButton>
-                )}
-              </ContactMenu>
+              <CtaButton
+                href={mailtoLink(PLATFORM_EMAIL, EMAIL_GENERAL_SUBJECT) ?? undefined}
+                external={false}
+                primary
+                icon={<Mail className="size-4" />}
+              >
+                Quiero {APP_NAME} en mi gimnasio
+              </CtaButton>
             )}
             <Link
               to="/login"
@@ -309,14 +312,13 @@ function NavBarItems() {
         Ingresar
       </Link>
       {PLATFORM_EMAIL && (
-        <ContactMenu email={PLATFORM_EMAIL} subject={EMAIL_GENERAL_SUBJECT} align="end">
-          {({ toggle }) => (
-            <button type="button" onClick={toggle} className={cn(PILL_LINK, 'bg-brand-500 text-white')}>
-              <Mail className="size-3.5" />
-              Escribinos
-            </button>
-          )}
-        </ContactMenu>
+        <a
+          href={mailtoLink(PLATFORM_EMAIL, EMAIL_GENERAL_SUBJECT) ?? undefined}
+          className={cn(PILL_LINK, 'bg-brand-500 text-white')}
+        >
+          <Mail className="size-3.5" />
+          Escribinos
+        </a>
       )}
     </>
   )

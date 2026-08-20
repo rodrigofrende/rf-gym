@@ -15,6 +15,7 @@ export const ROUTES = {
   SUPER_DASHBOARD: '/super',
   SUPER_GYMS: '/super/gyms',
   SUPER_PLANS: '/super/plans',
+  SUPER_BLOCKED: '/super/emails-vetados',
 
   // Admin
   ADMIN_DASHBOARD: '/admin',

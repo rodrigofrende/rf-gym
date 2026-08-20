@@ -3,6 +3,7 @@ import type {
   Assignment,
   Attendance,
   AttendancePaymentState,
+  BlockedEmail,
   ExerciseDefinition,
   Gym,
   GymPresentation,
@@ -268,6 +269,29 @@ export function updatePlan(planId: string, payload: Partial<SubscriptionPlan>) {
 }
 export function removePlan(planId: string) {
   data.plans = data.plans.filter((p) => p.id !== planId)
+  return ok(undefined)
+}
+
+// ---- Emails vetados (plataforma) ----
+// En demo no hay rules, así que esto sirve para probar la PANTALLA, no el
+// bloqueo: acá vetar un email no impide nada. El veto real lo hace cumplir
+// firestore.rules (isBlockedEmail), y eso sólo se prueba con el emulador.
+const blockedEmails: BlockedEmail[] = []
+
+export function listBlockedEmails() {
+  return ok([...blockedEmails])
+}
+export function blockEmail(emailKey: string, reason?: string) {
+  if (!blockedEmails.some((b) => b.id === emailKey)) {
+    blockedEmails.unshift({ id: emailKey, email: emailKey, reason, createdAt: new Date() })
+  }
+  // Mismo efecto que en Firestore: se le saca el índice de login.
+  delete memberLoginIndex[emailKey]
+  return ok(undefined)
+}
+export function unblockEmail(emailKey: string) {
+  const i = blockedEmails.findIndex((b) => b.id === emailKey)
+  if (i >= 0) blockedEmails.splice(i, 1)
   return ok(undefined)
 }
 

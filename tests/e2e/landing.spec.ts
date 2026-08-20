@@ -20,16 +20,26 @@ test.describe('Landing pública', () => {
     await expect(page.getByText('Software de gestión para gimnasios').first()).toBeVisible()
   })
 
-  test('el CTA principal abre el menú de contacto por email, no WhatsApp', async ({ page }) => {
-    const cta = page.getByRole('button', { name: /Quiero RF FIT en mi gimnasio/ }).first()
+  test('el CTA principal contacta por email con el asunto puesto, no por WhatsApp', async ({
+    page,
+  }) => {
+    // Un mailto directo: es el propio selector de apps del sistema, así que no hay
+    // menú intermedio que abrir (antes había uno con 3 opciones).
+    const cta = page.getByRole('link', { name: /Quiero RF FIT en mi gimnasio/ }).first()
     await expect(cta).toBeVisible()
-    await cta.click()
-    // El menú da opciones (no fuerza el cliente por defecto del SO) y muestra la dirección.
-    await expect(page.getByRole('menuitem', { name: 'Abrir en Gmail' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Abrir en mi app de correo' })).toBeVisible()
-    await expect(page.getByText('hola@rf-platform.com').first()).toBeVisible()
+    const href = await cta.getAttribute('href')
+    expect(href).toContain('mailto:hola@rf-platform.com')
+    // El asunto pre-armado es lo que hace que el mail llegue ya clasificado.
+    expect(href).toContain(`subject=${encodeURIComponent('Quiero RF FIT en mi gimnasio')}`)
     // Ya no debe quedar ningún link a WhatsApp en la landing.
     await expect(page.locator('a[href*="wa.me"]')).toHaveCount(0)
+  })
+
+  test('el CTA de un plan lleva el asunto de ESE plan', async ({ page }) => {
+    // Lo que distingue este contacto del genérico: el asunto dice qué plan miró.
+    const planCta = page.locator('a[href^="mailto:"][href*="plan"]').first()
+    await expect(planCta).toBeVisible()
+    expect(await planCta.getAttribute('href')).toContain(encodeURIComponent('plan'))
   })
 
   test('lista los 3 planes con "A medida" y "Recomendado"', async ({ page }) => {

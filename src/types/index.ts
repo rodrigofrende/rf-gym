@@ -198,6 +198,21 @@ export interface MemberLoginIndex {
   // están sin reclamar. El estado se resuelve tras autenticar, leyendo el member.
 }
 
+/**
+ * Email vetado por el super-admin (`blockedEmails/{emailKey}`, top-level).
+ *
+ * A diferencia de `MemberLoginIndex`, este doc NO es world-readable: sólo lo lee
+ * el super-admin. Las rules igual pueden consultarlo (leen con privilegios
+ * propios), así que el veto se hace cumplir sin exponer la lista ni el `reason`.
+ */
+export interface BlockedEmail {
+  id: string // = emailKey = email normalizado
+  email: string // debe coincidir con el id (lo validan las rules)
+  /** Nota interna del super-admin. Nunca se le muestra al usuario vetado. */
+  reason?: string
+  createdAt: DateValue
+}
+
 /** Tarifa / plan que ofrece el gym (`gyms/{gymId}/tariffs`). */
 export interface Tariff {
   id: string

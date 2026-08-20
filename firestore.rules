@@ -43,6 +43,28 @@ service cloud.firestore {
       return isGymAdmin(gymId) || isGymMember(gymId);
     }
 
+    /**
+     * Email vetado por el super-admin (ver match /blockedEmails).
+     *
+     * Funciona aunque la colección NO sea legible por el cliente: las rules leen
+     * con privilegios propios, un exists() de acá no vuelve a aplicar las reglas
+     * de lectura. Por eso la lista puede quedar cerrada al super-admin y el veto
+     * igual se hace cumplir.
+     *
+     * OJO con el costo: cada exists() es una lectura facturada y cuenta contra el
+     * límite de accesos por evaluación (10 por doc, 20 en batch). El alta de
+     * socios escribe socio + índice en un mismo batch, así que se chequea sólo el
+     * email de acceso y no todas las variantes.
+     */
+    function isBlockedEmail(email) {
+      // El guard NO es decorativo: un doc legacy sin `loginEmail`, o un token sin
+      // email, harían explotar el `.lower()` y la regla denegaría por error —
+      // dejando a un admin sin poder editar socios viejos. Con `&&` corta antes.
+      return email is string
+        && email.size() > 0
+        && exists(/databases/$(database)/documents/blockedEmails/$(email.lower()));
+    }
+
     // Data URL de imagen: valida header + size sin regex sobre el payload base64
     // (strings de 100–150KB con `.matches('...base64,.*')` pueden denegar la rule).
     function isDataImageUrl(s, maxSize) {
@@ -69,7 +91,11 @@ service cloud.firestore {
         && resource.data.uid == ''
         && resource.data.email == request.auth.token.email
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid'])
+        // Imprescindible: claimPendingMemberships busca por collectionGroup sobre
+        // (email, uid == '') y NO pasa por el índice de login, así que borrarle el
+        // índice a un vetado no alcanza — sin este chequeo entraría por acá.
+        && !isBlockedEmail(request.auth.token.email);
     }
 
     // photoURL editable por el socio: solo si no cambia, o si el nuevo valor es
@@ -128,6 +154,32 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // ---- Emails vetados (moderación de la plataforma) ----
+    // Lista cerrada: SOLO el super-admin la lee y la escribe. A diferencia de
+    // memberLoginIndex, no hace falta exponerla para que sirva — `isBlockedEmail()`
+    // la consulta desde las rules, que leen con privilegios propios. Mantenerla
+    // cerrada evita que se pueda enumerar/adivinar quién está vetado y que el
+    // campo `reason` (una nota interna) quede a la vista.
+    //
+    // Un email vetado no da un mensaje distinto en el login: al vetarlo se borra
+    // su entrada del índice, así que el flujo responde igual que con un email que
+    // nunca existió (ver blockedEmailsService.blockEmail).
+    match /blockedEmails/{emailKey} {
+      function validBlocked() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['email', 'reason', 'createdAt'])
+          && d.email is string && d.email.size() <= 200
+          // La clave del doc DEBE ser el email normalizado: es lo que hace que
+          // isBlockedEmail() pueda resolver por path, sin queries.
+          && emailKey == d.email.lower()
+          && (!('reason' in d) || (d.reason is string && d.reason.size() <= 300))
+          && d.createdAt == request.time;
+      }
+      allow read: if isSuperAdmin();
+      allow create, update: if isSuperAdmin() && validBlocked();
+      allow delete: if isSuperAdmin();
+    }
+
     // Índice de lookup por email para el login (legible sin auth para poder rutear
     // el flujo antes de autenticar). Como es world-readable, la forma se valida en
     // escritura para que NO contenga PII de más (nombre completo, rol): solo lo
@@ -152,6 +204,10 @@ service cloud.firestore {
       allow list: if false;
       allow create, update: if validLoginIndex()
         && keyMatchesEmail()
+        // Email vetado: el índice no se puede volver a crear. Cubre las tres vías
+        // por las que reaparecería solo — el alta de un socio, el backfill de la
+        // lista de socios, y el updateMemberAuthStatus del propio socio al entrar.
+        && !isBlockedEmail(request.resource.data.email)
         // No re-apuntar un índice existente a otro gym.
         && (resource == null || resource.data.gymId == request.resource.data.gymId)
         && (isGymAdmin(request.resource.data.gymId)
@@ -307,9 +363,16 @@ service cloud.firestore {
           || (isSignedIn() && resource.data.uid == request.auth.uid)
           || (isSignedIn() && resource.data.email == request.auth.token.email);
 
-        allow create, delete: if isGymAdmin(gymId);
+        // Un admin no puede dar de alta un socio con un email vetado. Se chequea
+        // `loginEmail` (el email de acceso) y no también `email`: son iguales en
+        // las altas por UI, y cada exists() extra gasta presupuesto de accesos
+        // dentro del batch que escribe socio + índice juntos.
+        allow create: if isGymAdmin(gymId) && !isBlockedEmail(request.resource.data.get('loginEmail', ''));
+        allow delete: if isGymAdmin(gymId);
 
-        allow update: if isGymAdmin(gymId)
+        // El blanqueo de acceso pasa por acá, así que también se bloquea reapuntar
+        // un socio existente a un email vetado.
+        allow update: if (isGymAdmin(gymId) && !isBlockedEmail(request.resource.data.get('loginEmail', '')))
           || isClaimingMembership()
           || isSelfProfileEdit()
           || isSelfAuthStatusUpdate();

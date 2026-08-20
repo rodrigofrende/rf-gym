@@ -10,24 +10,25 @@ export function whatsappLink(phone?: string, message?: string): string | null {
   return `https://wa.me/${digits}${text}`
 }
 
-/** Arma un link `mailto:`, opcionalmente con asunto. `null` si no hay email. */
-export function mailtoLink(email?: string, subject?: string): string | null {
+/**
+ * Arma un link `mailto:`, opcionalmente con asunto y cuerpo. `null` si no hay
+ * email.
+ *
+ * Un `mailto:` ES el menú del sistema: en mobile abre el selector nativo de apps
+ * de correo. Por eso no hace falta un menú propio con opciones — alcanza un link.
+ *
+ * OJO: se arma a mano y no con URLSearchParams porque éste codifica los espacios
+ * como `+`, y en el cuerpo de un mail los clientes los muestran literalmente
+ * como signos más. `encodeURIComponent` los deja como %20.
+ */
+export function mailtoLink(email?: string, subject?: string, body?: string): string | null {
   const value = email?.trim()
   if (!value) return null
-  const q = subject ? `?subject=${encodeURIComponent(subject)}` : ''
-  return `mailto:${value}${q}`
-}
-
-/**
- * URL del compositor web de Gmail, con destinatario y asunto pre-armados.
- * Alternativa a `mailto:` para quien no usa el cliente de correo por defecto
- * del sistema (ej. tiene Outlook asociado pero trabaja con Gmail en el navegador).
- */
-export function gmailComposeUrl(email: string, subject?: string, body?: string): string {
-  const params = new URLSearchParams({ view: 'cm', fs: '1', to: email })
-  if (subject) params.set('su', subject)
-  if (body) params.set('body', body)
-  return `https://mail.google.com/mail/?${params.toString()}`
+  const params = [
+    subject ? `subject=${encodeURIComponent(subject)}` : '',
+    body ? `body=${encodeURIComponent(body)}` : '',
+  ].filter(Boolean)
+  return `mailto:${value}${params.length ? `?${params.join('&')}` : ''}`
 }
 
 /**
