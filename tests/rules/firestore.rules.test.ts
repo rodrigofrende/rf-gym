@@ -8,7 +8,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 
 /**
  * Tests de seguridad de firestore.rules contra el emulador. Verifican que un
@@ -399,4 +399,78 @@ describe('members — photoURL del self-edit está acotado', () => {
 // Sanity: el módulo importó bien (falla temprano si el emulador no está arriba).
 it('el entorno de test se inicializó', () => {
   assert.ok(testEnv)
+})
+
+/**
+ * memberLoginIndex: la ÚNICA colección del ruleset que se lee sin autenticar (el
+ * login necesita resolver email → gym ANTES de que exista una sesión). No tenía
+ * ninguna cobertura, y el alta de socios ahora escribe el socio y su índice en un
+ * MISMO batch, así que estos tests fijan que ese batch pase las rules.
+ */
+describe('memberLoginIndex — índice de login world-readable', () => {
+  const NEW_MEMBER = 'nuevo-member'
+  const NEW_EMAIL = 'nuevo@gyma.com'
+  const indexDoc = (email: string) => `memberLoginIndex/${email}`
+  const validIndex = (email: string, gymId = GYM, memberId = NEW_MEMBER) => ({
+    email,
+    gymId,
+    gymName: 'Gym A',
+    memberId,
+  })
+
+  it('el admin puede crear el socio y su índice en UN SOLO batch (alta atómica)', async () => {
+    const db = asAdmin()
+    const batch = writeBatch(db)
+    batch.set(doc(db, `gyms/${GYM}/members/${NEW_MEMBER}`), {
+      uid: '',
+      email: NEW_EMAIL,
+      loginEmail: NEW_EMAIL,
+      role: 'user',
+      fullName: 'Socio Nuevo',
+      authStatus: 'pending_password',
+    })
+    batch.set(doc(db, indexDoc(NEW_EMAIL)), validIndex(NEW_EMAIL))
+    await assertSucceeds(batch.commit())
+  })
+
+  it('cualquiera puede LEER un índice sin autenticarse (lo necesita el login)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), indexDoc(NEW_EMAIL)), validIndex(NEW_EMAIL))
+    })
+    const db = testEnv.unauthenticatedContext().firestore()
+    await assertSucceeds(getDoc(doc(db, indexDoc(NEW_EMAIL))))
+  })
+
+  it('un tercero NO puede escribir el índice de otro gym', async () => {
+    const db = asOutsider()
+    await assertFails(setDoc(doc(db, indexDoc(NEW_EMAIL)), validIndex(NEW_EMAIL)))
+  })
+
+  it('el índice NO acepta claves de más (es world-readable: nada de PII extra)', async () => {
+    const db = asAdmin()
+    await assertFails(
+      setDoc(doc(db, indexDoc(NEW_EMAIL)), {
+        ...validIndex(NEW_EMAIL),
+        fullName: 'Socio Nuevo',
+      }),
+    )
+  })
+
+  it('la clave del doc DEBE ser el email del payload (anti-envenenamiento)', async () => {
+    const db = asAdmin()
+    await assertFails(
+      setDoc(doc(db, indexDoc('otro@gyma.com')), validIndex(NEW_EMAIL)),
+    )
+  })
+
+  it('el admin NO puede reapuntar un índice existente a su propio gym', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(
+        doc(ctx.firestore(), indexDoc(NEW_EMAIL)),
+        validIndex(NEW_EMAIL, OTHER_GYM, 'member-de-gymB'),
+      )
+    })
+    const db = asAdmin()
+    await assertFails(setDoc(doc(db, indexDoc(NEW_EMAIL)), validIndex(NEW_EMAIL)))
+  })
 })

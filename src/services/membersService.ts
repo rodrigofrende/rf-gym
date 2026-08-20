@@ -8,8 +8,21 @@ import {
   syncGymMembershipIndex,
 } from './membershipIndexService'
 import { listPlans } from './plansService'
-import { addToCollection, getMany, getOne, removeOne, updateOne } from './firestore'
-import { removeMemberLoginIndex, removeMemberLoginIndexes, syncMemberLoginIndex } from './memberLoginService'
+import {
+  batchSet,
+  batchUpdate,
+  createBatch,
+  getMany,
+  getOne,
+  newDocId,
+  removeOne,
+  updateOne,
+} from './firestore'
+import {
+  removeMemberLoginIndexes,
+  stageMemberLoginIndex,
+  stageMemberLoginIndexDeletes,
+} from './memberLoginService'
 import { paths } from './paths'
 import { canCreateAdmin } from '@/utils/plans'
 import { loginEmailKeys, normalizeEmailKey } from '@/utils/loginEmail'
@@ -67,8 +80,17 @@ export async function createMember(gymId: string, data: Omit<Member, 'id' | 'uid
     loginEmail,
     authStatus: data.authStatus ?? 'pending_password',
   } satisfies Omit<Member, 'id'>
-  const memberId = await addToCollection(paths.members(gymId), payload)
-  await syncMemberLoginIndex(gymId, memberId, payload)
+  // Lecturas ANTES de abrir el batch: adentro no se puede leer.
+  const gym = await getGym(gymId)
+  const memberId = newDocId(paths.members(gymId))
+  // ATÓMICO. Antes eran dos awaits separados (crear el socio, después indexarlo)
+  // y si el segundo fallaba quedaba un socio EXISTENTE sin índice de login: no
+  // podía crear su contraseña nunca, y para el admin parecía dado de alta igual
+  // porque aparecía en la lista. Ahora se escriben los dos o ninguno.
+  const batch = createBatch()
+  batchSet(batch, paths.member(gymId, memberId), payload)
+  stageMemberLoginIndex(batch, gymId, memberId, payload, gym?.name ?? 'Gimnasio')
+  await batch.commit()
   return memberId
 }
 
@@ -87,17 +109,22 @@ export async function updateMember(gymId: string, memberId: string, data: Partia
   if (prev && nextEmail && normalizeEmailKey(nextEmail) !== normalizeEmailKey(prev.loginEmail || prev.email)) {
     await assertUniqueLoginEmail(gymId, nextEmail, memberId)
   }
-  await updateOne(paths.member(gymId, memberId), data)
+  const gym = prev ? await getGym(gymId) : null
+  // ATÓMICO: el socio y su índice, juntos. Importa sobre todo cuando cambia el
+  // email, porque ahí se borra la clave vieja y se escribe la nueva: separados,
+  // un fallo en el medio dejaba al socio sin ningún índice.
+  const batch = createBatch()
+  batchUpdate(batch, paths.member(gymId, memberId), data)
   if (prev) {
     const nextMember = { ...prev, ...data }
     const nextKeys = new Set(loginEmailKeys(nextMember))
-    await Promise.all(
-      loginEmailKeys(prev)
-        .filter((key) => !nextKeys.has(key))
-        .map(removeMemberLoginIndex),
+    stageMemberLoginIndexDeletes(
+      batch,
+      loginEmailKeys(prev).filter((key) => !nextKeys.has(key)),
     )
-    await syncMemberLoginIndex(gymId, memberId, nextMember)
+    stageMemberLoginIndex(batch, gymId, memberId, nextMember, gym?.name ?? 'Gimnasio')
   }
+  await batch.commit()
   const nextRole = data.role ?? prev?.role
   const uid = data.uid ?? prev?.uid ?? ''
   if (uid && nextRole) {
@@ -137,22 +164,37 @@ export async function reissueMemberAccess(gymId: string, memberId: string, newLo
     await removeGymMembershipIndex(prev.uid, gymId)
     if (prev.role === 'admin') await removeGymAdmin(gymId, prev.uid)
   }
-  // Reset del member: email nuevo + primer acceso (uid vacío hasta reclamar).
-  await updateOne(paths.member(gymId, memberId), {
-    loginEmail: email,
-    email,
-    authStatus: 'pending_password',
-    uid: '',
-  })
-  // Reapuntar el índice de login: sacar el viejo, crear el nuevo (pending).
-  await removeMemberLoginIndexes(prev)
-  await syncMemberLoginIndex(gymId, memberId, {
+  const gym = await getGym(gymId)
+  const nextMember = {
     ...prev,
     loginEmail: email,
     email,
+    authStatus: 'pending_password' as const,
+    uid: '',
+  }
+
+  // ATÓMICO, y acá es lo más crítico de todo: antes se borraba el índice viejo y
+  // DESPUÉS se escribía el nuevo, en dos awaits. Un fallo en el medio dejaba al
+  // socio sin NINGÚN índice — o sea sin poder entrar ni crear contraseña — y el
+  // blanqueo es justo lo que un admin usa cuando un socio no puede entrar, así
+  // que el intento de arreglarlo podía dejarlo peor.
+  //
+  // Los borrados excluyen las claves que se van a reescribir, para no depender
+  // del orden de operaciones sobre el mismo doc dentro del batch.
+  const nextKeys = new Set(loginEmailKeys(nextMember))
+  const batch = createBatch()
+  batchUpdate(batch, paths.member(gymId, memberId), {
+    loginEmail: email,
+    email,
     authStatus: 'pending_password',
     uid: '',
   })
+  stageMemberLoginIndexDeletes(
+    batch,
+    loginEmailKeys(prev).filter((key) => !nextKeys.has(key)),
+  )
+  stageMemberLoginIndex(batch, gymId, memberId, nextMember, gym?.name ?? 'Gimnasio')
+  await batch.commit()
 }
 
 /** Edición acotada de datos personales (usada por el propio socio). */

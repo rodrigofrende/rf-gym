@@ -38,6 +38,10 @@ export const CHANGELOG: ChangelogRelease[] = [
         kind: 'improved',
         text: 'La app carga más rápido en visitas repetidas desde el celular.',
       },
+      {
+        kind: 'fixed',
+        text: 'Al dar de alta, editar o blanquear un socio, su acceso se guarda junto con la ficha: ya no puede quedar un socio cargado que después no pueda crear su contraseña.',
+      },
     ],
   },
   {

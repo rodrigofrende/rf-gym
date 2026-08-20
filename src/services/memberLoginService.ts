@@ -1,4 +1,4 @@
-import { deleteDoc, doc, setDoc } from 'firebase/firestore'
+import { deleteDoc, doc, setDoc, type WriteBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { env } from '@/config/env'
 import type { Gym, Member, MemberAuthStatus, MemberLoginIndex } from '@/types'
@@ -11,7 +11,7 @@ import {
 import { extractFirestoreCode } from '@/utils/firestoreErrors'
 import { reportOperational } from '@/utils/errorReporting'
 import * as demo from '@/demo/store'
-import { getOne, getOneFromServer, updateOne } from './firestore'
+import { batchDelete, batchSet, getOne, getOneFromServer, updateOne } from './firestore'
 import { getGym } from './gymsService'
 import { paths } from './paths'
 
@@ -101,6 +101,38 @@ export async function syncMemberLoginIndex(
       } satisfies Omit<MemberLoginIndex, 'id'>),
     ),
   )
+}
+
+/**
+ * Prepara las escrituras del índice SOBRE UN BATCH, para que el doc del socio y
+ * su índice se escriban —o fallen— juntos. Misma forma exacta que
+ * `syncMemberLoginIndex` (overwrite sin merge, ver el comentario de arriba).
+ *
+ * Pide el `gymName` ya resuelto porque dentro de un batch no se puede leer: el
+ * caller tiene que hacer el `getGym` ANTES de abrirlo.
+ */
+export function stageMemberLoginIndex(
+  batch: WriteBatch,
+  gymId: string,
+  memberId: string,
+  member: Omit<Member, 'id'> | Member,
+  gymName: string,
+) {
+  for (const email of loginEmailKeys(member)) {
+    batchSet(batch, paths.memberLoginIndex(email), {
+      email,
+      gymId,
+      gymName,
+      memberId,
+    } satisfies Omit<MemberLoginIndex, 'id'>)
+  }
+}
+
+/** Borra claves del índice sobre un batch. Los emails se normalizan acá. */
+export function stageMemberLoginIndexDeletes(batch: WriteBatch, emails: string[]) {
+  for (const email of emails) {
+    batchDelete(batch, paths.memberLoginIndex(normalizeEmailKey(email)))
+  }
 }
 
 export async function removeMemberLoginIndex(email: string) {

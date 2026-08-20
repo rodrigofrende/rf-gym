@@ -76,3 +76,30 @@ export async function removeOne(path: string): Promise<void> {
 export function createBatch(): WriteBatch {
   return writeBatch(db)
 }
+
+/**
+ * Id para un doc nuevo SIN escribirlo (no hace ningún round-trip).
+ *
+ * Sirve para armar un batch que escriba el doc y sus índices juntos: sin esto
+ * habría que crear el doc primero para conocer su id, que es justo lo que rompe
+ * la atomicidad.
+ */
+export function newDocId(collectionPath: string): string {
+  return doc(collection(db, collectionPath)).id
+}
+
+/**
+ * Helpers de batch, para que los services no tengan que tocar `db` ni armar refs.
+ * `batchSet` sobrescribe (sin merge), igual que `setDoc(ref, data)`.
+ */
+export function batchSet(batch: WriteBatch, path: string, data: DocumentData): void {
+  batch.set(doc(db, path), data)
+}
+
+export function batchUpdate(batch: WriteBatch, path: string, data: DocumentData): void {
+  batch.update(doc(db, path), data)
+}
+
+export function batchDelete(batch: WriteBatch, path: string): void {
+  batch.delete(doc(db, path))
+}
