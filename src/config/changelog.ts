@@ -107,7 +107,7 @@ export const CHANGELOG: ChangelogRelease[] = [
       },
       {
         kind: 'new',
-        text: 'En la lista de socios ves de un vistazo quién está al día y quién se atrasó con la cuota.',
+        text: 'En la lista de socios ves de una quién está al día.',
         audience: 'admin',
       },
       {
