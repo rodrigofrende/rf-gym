@@ -43,8 +43,17 @@ export function WhatsNewModal({ open, onClose }: { open: boolean; onClose: () =>
             <ul className="mt-2.5 space-y-2.5">
               {release.items.map((item, i) => (
                 <li key={i} className="flex items-start gap-2.5">
-                  <span className="shrink-0 pt-px">
+                  <span className="flex shrink-0 flex-wrap items-center gap-1 pt-px">
                     <Badge tone={KIND_META[item.kind].tone}>{KIND_META[item.kind].label}</Badge>
+                    {/* El tag de audiencia SOLO se le muestra al admin: es el
+                        único que ve la lista mezclada, y le sirve para saber qué
+                        van a leer también sus socios. A un socio le aparecería
+                        "Socio" en todas las líneas, que es puro ruido. */}
+                    {seesAdminItems && (
+                      <Badge tone={item.audience === 'admin' ? 'sky' : 'neutral'}>
+                        {item.audience === 'admin' ? 'Admin' : 'Socio'}
+                      </Badge>
+                    )}
                   </span>
                   <span className="text-sm leading-relaxed text-zinc-600">{item.text}</span>
                 </li>
