@@ -32,21 +32,39 @@ export function AppLayout({
     role === 'admin' && !isSuperAdmin && PLATFORM_EMAIL
       ? `Sugerencia o reporte — ${activeMembership?.gymName ?? APP_NAME}`
       : null
-  const support = supportSubject ? (
-    <ContactMenu
-      email={PLATFORM_EMAIL}
-      subject={supportSubject}
-      align="end"
-      extraItems={[
-        { icon: <Sparkles className="size-4" />, label: 'Novedades de la app', onClick: whatsNew.show },
-      ]}
+  // Novedades: para TODOS los roles, no sólo admins. Antes vivía adentro del menú
+  // de Soporte, que está gateado a admins de gym, así que un socio nunca podía
+  // ver qué cambió. Botón propio para que haya una sola puerta y sea la misma
+  // para todos (el contenido se filtra por audiencia dentro del modal).
+  const novedades = (
+    <button
+      type="button"
+      onClick={whatsNew.show}
+      title="Mirá las novedades de la app"
+      aria-label="Novedades de la app"
+      className="inline-flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
     >
+      <span className="relative shrink-0">
+        <Sparkles className="size-5" aria-hidden />
+        {whatsNew.hasUnseen && (
+          <span
+            aria-hidden
+            className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-brand-500 ring-2 ring-surface"
+          />
+        )}
+      </span>
+      <span className="hidden sm:inline">Novedades</span>
+    </button>
+  )
+
+  const support = supportSubject ? (
+    <ContactMenu email={PLATFORM_EMAIL} subject={supportSubject} align="end">
       {({ toggle }) => (
         <button
           type="button"
           onClick={toggle}
-          title="Sugerí mejoras, reportá un problema o mirá las novedades"
-          aria-label="Sugerencias, soporte y novedades"
+          title="Sugerí mejoras o reportá un problema"
+          aria-label="Sugerencias y soporte"
           className="inline-flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
         >
           <span className="relative shrink-0">
@@ -82,7 +100,10 @@ export function AppLayout({
             <Menu className="size-5" />
           </button>
           <h1 className="truncate text-base font-semibold text-zinc-900">{title}</h1>
-          {support && <div className="ml-auto shrink-0">{support}</div>}
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {novedades}
+            {support}
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">
@@ -100,12 +121,13 @@ export function AppLayout({
                 <h1 className="hidden text-xl font-bold text-zinc-900 lg:block">{title}</h1>
                 {subtitle && <p className="text-sm text-zinc-500 lg:mt-1">{subtitle}</p>}
               </div>
-              {(actions || support) && (
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {actions}
-                  {support && <div className="hidden lg:block">{support}</div>}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {actions}
+                <div className="hidden items-center gap-1 lg:flex">
+                  {novedades}
+                  {support}
                 </div>
-              )}
+              </div>
             </div>
 
             {children}

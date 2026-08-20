@@ -16,8 +16,11 @@ import {
   getMemberLogin,
   loginMissMessage,
   updateMemberAuthStatus,
+  type LoginMiss,
 } from '@/services/memberLoginService'
 import { emailDomain } from '@/utils/loginEmail'
+import { whatsappLink } from '@/utils/contact'
+import { useGymPresentation } from '@/hooks/useGymPresentation'
 import { getOne } from '@/services/firestore'
 import { paths } from '@/services/paths'
 import type { ClaimedMembership } from '@/services/membershipsService'
@@ -25,7 +28,7 @@ import { claimMembership, claimPendingMemberships } from '@/services/memberships
 import { extractAuthCode, mapAuthError } from '@/utils/authErrors'
 import { extractFirestoreCode, mapFirestoreError } from '@/utils/firestoreErrors'
 import { BrandLockup, Button, Card, FormField, Input, PasswordInput, Text } from '@/components/ui'
-import { ROUTES } from '@/routes/routePaths'
+import { publicGymRoute, ROUTES } from '@/routes/routePaths'
 import { persistActiveGymId } from '@/providers/TenantProvider'
 import { reportOperational } from '@/utils/errorReporting'
 
@@ -47,9 +50,10 @@ export function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [forgotSending, setForgotSending] = useState(false)
   const [createAccessLoading, setCreateAccessLoading] = useState(false)
-  // Email corregido que sí existe en el índice (typo del socio). Sólo se setea
-  // cuando está confirmado contra el índice, así que nunca se ofrece un invento.
-  const [suggestion, setSuggestion] = useState<string | null>(null)
+  // Diagnóstico del último intento fallido de "primera vez". La sugerencia que
+  // trae adentro sólo existe si está confirmada contra el índice, así que nunca
+  // se le ofrece al socio un email inventado.
+  const [miss, setMiss] = useState<LoginMiss | null>(null)
   const canUseGoogle = env.googleLoginEnabled
   const redirect = new URLSearchParams(location.search).get('redirect')
   // Solo rutas internas: rechazar también '//' y '/\' (URLs protocolo-relativas)
@@ -58,6 +62,13 @@ export function LoginPage() {
     redirect && redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/\\')
       ? redirect
       : '/'
+  // Si llegó escaneando el QR de check-in, el redirect nos dice a QUÉ gym. Sirve
+  // para dos cosas: darle contexto (si no, es un login anónimo que no explica por
+  // qué está ahí) y, si su email no está dado de alta, poder ofrecerle el
+  // contacto del gym en vez de dejarlo en un callejón sin salida.
+  // `publicProfiles` es world-readable, así que esto funciona sin sesión.
+  const checkInGymId = /^\/check-in\/([^/?#]+)/.exec(safeRedirect)?.[1] ?? ''
+  const { data: checkInGym } = useGymPresentation(checkInGymId)
 
   const {
     register,
@@ -160,7 +171,7 @@ export function LoginPage() {
   const resetStep = () => {
     setStep('email')
     setResolvedEmail('')
-    setSuggestion(null)
+    setMiss(null)
     setValue('password', '')
   }
 
@@ -169,7 +180,7 @@ export function LoginPage() {
     const target = emailOverride ?? resolvedEmail
     if (!target || createAccessLoading) return
     setCreateAccessLoading(true)
-    setSuggestion(null)
+    setMiss(null)
     if (emailOverride) {
       setResolvedEmail(emailOverride)
       setValue('email', emailOverride)
@@ -177,15 +188,21 @@ export function LoginPage() {
     try {
       const login = await getMemberLogin(target)
       if (!login) {
-        const miss = await diagnoseLoginMiss(target)
+        const diagnosis = await diagnoseLoginMiss(target)
         reportOperational('login-index-miss', 'Alta de contraseña: no hay índice de login', undefined, {
           email: target,
-          motivo: miss.reason,
-          sug: miss.suggestion ? emailDomain(miss.suggestion) : undefined,
+          motivo: diagnosis.reason,
+          sug: diagnosis.suggestion ? emailDomain(diagnosis.suggestion) : undefined,
           paso: 'primera-vez',
+          // Saber que venía del QR es lo que distingue "socio confundido" de
+          // "alguien parado en la puerta que no está dado de alta".
+          qr: checkInGymId ? 'si' : undefined,
         })
-        setSuggestion(miss.suggestion ?? null)
-        notify(loginMissMessage(miss), 'error')
+        setMiss(diagnosis)
+        // Sin sugerencia, el bloque inline de abajo ya explica lo mismo y encima
+        // nombra al gym y ofrece acciones: el toast sería el mismo texto dos
+        // veces en pantalla.
+        if (diagnosis.suggestion) notify(loginMissMessage(diagnosis), 'error')
         return
       }
       navigate(`${ROUTES.SET_PASSWORD}?email=${encodeURIComponent(target)}&mode=create`, {
@@ -223,6 +240,12 @@ export function LoginPage() {
     }
   }
 
+  // Mensaje pre-armado: el socio no tiene que explicar nada, sólo enviar.
+  const gymWhatsapp = whatsappLink(
+    checkInGym?.whatsapp,
+    `Hola! Quise marcar asistencia con ${resolvedEmail} y no me reconoce. ¿Me pueden dar de alta?`,
+  )
+
   const onPasswordSubmit = handleSubmit(onSubmit)
 
   const onGoogle = async () => {
@@ -244,7 +267,9 @@ export function LoginPage() {
             <BrandLockup variant="onLight" size="lg" />
           </Link>
           <Text variant="caption" className="mt-6">
-            Ingresá con tu email de acceso
+            {checkInGym?.name
+              ? `Ingresá para marcar asistencia en ${checkInGym.name}`
+              : 'Ingresá con tu email de acceso'}
           </Text>
         </div>
 
@@ -325,10 +350,10 @@ export function LoginPage() {
 
             {/* Sugerencia de typo. No se autocorrige a propósito: hace falta un
                 click explícito para no mandar al socio al alta de otra cuenta. */}
-            {suggestion && (
+            {miss?.suggestion && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center">
                 <p className="text-sm text-amber-900">
-                  ¿Quisiste decir <span className="font-semibold break-all">{suggestion}</span>?
+                  ¿Quisiste decir <span className="font-semibold break-all">{miss.suggestion}</span>?
                 </p>
                 <Button
                   type="button"
@@ -336,10 +361,44 @@ export function LoginPage() {
                   fullWidth
                   className="mt-2"
                   loading={createAccessLoading}
-                  onClick={() => void goToCreatePassword(suggestion)}
+                  onClick={() => void goToCreatePassword(miss.suggestion)}
                 >
                   Sí, usar ese email
                 </Button>
+              </div>
+            )}
+
+            {/* Salida del callejón: el email no está dado de alta y no hay
+                corrección posible. Sin esto, quien escanea el QR sin estar dado
+                de alta queda mirando un error sin ninguna acción disponible. */}
+            {miss && !miss.suggestion && (
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center">
+                <p className="text-sm text-zinc-700">
+                  {checkInGym?.name
+                    ? `Ese email no está dado de alta en ${checkInGym.name}.`
+                    : 'Ese email no está dado de alta.'}{' '}
+                  Pedile al gimnasio que te agregue o que te diga con qué email entrás.
+                </p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {gymWhatsapp && (
+                    <a
+                      href={gymWhatsapp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-10 items-center justify-center rounded-[var(--radius-control)] bg-brand-600 text-sm font-medium text-white"
+                    >
+                      Escribirle al gimnasio
+                    </a>
+                  )}
+                  {checkInGymId && (
+                    <Link
+                      to={publicGymRoute(checkInGymId)}
+                      className="text-sm font-medium text-brand-600 hover:text-brand-700"
+                    >
+                      Ver la página de {checkInGym?.name ?? 'el gimnasio'}
+                    </Link>
+                  )}
+                </div>
               </div>
             )}
           </form>

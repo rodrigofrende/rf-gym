@@ -37,6 +37,20 @@ export function maskEmail(email: string): string {
  * un SHA-256 truncado tampoco sería secreto — el espacio de emails es chico y se
  * revierte por fuerza bruta. El control de privacidad real es `maskEmail`.
  */
+/**
+ * Enmascara cualquier email que aparezca DENTRO de un texto libre.
+ *
+ * Los mensajes de error y los stacks no los controlamos: un `unhandledrejection`
+ * manda `String(reason)`, y ahí puede venir embebido el email del socio (un
+ * mensaje de Firebase Auth, una URL con `?email=`, un error que interpola input).
+ * Como el canal es público, se enmascara antes de salir.
+ */
+const EMAIL_IN_TEXT = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
+
+export function redactEmails(text: string): string {
+  return text.replace(EMAIL_IN_TEXT, (match) => maskEmail(match))
+}
+
 export function emailFingerprint(email: string): string {
   const normalized = email.trim().toLowerCase()
   let hash = 0x811c9dc5

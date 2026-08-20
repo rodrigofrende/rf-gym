@@ -129,6 +129,18 @@ const DOMAIN_TYPOS: Record<string, string> = {
  *
  * Máximo 2 candidatos, para no encadenar lecturas en el camino de error.
  */
+/**
+ * Corrección más probable del dominio, o null si no parece haber typo.
+ *
+ * Para avisar en el ALTA, del lado del admin: la validación de email es un regex
+ * genérico, así que `socio@tigerfit.con` pasa y el typo queda persistido. Es un
+ * aviso blando a propósito (no bloquea): `.co` es un TLD real, y el admin puede
+ * tener un dominio raro legítimo.
+ */
+export function suggestDomainFix(email: string): string | null {
+  return emailTypoCandidates(email)[0] ?? null
+}
+
 export function emailTypoCandidates(email: string): string[] {
   const normalized = normalizeEmailKey(email)
   const [local, domain] = normalized.split('@')

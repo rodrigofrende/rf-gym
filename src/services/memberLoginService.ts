@@ -26,8 +26,12 @@ export function getMemberLogin(email: string): Promise<MemberLoginIndex | null> 
 export const LOGIN_INDEX_MISSING_MESSAGE =
   'Este email no está dado de alta. Pedile a tu gimnasio que te agregue, o usá el email de acceso que te dieron.'
 
+// A propósito NO afirma que el acceso sea un alias del gym: hay gimnasios que dan
+// de alta a sus socios con el email personal (en TigerFit, 4 de 7 asistencias de
+// una noche eran gmail/hotmail). Decirle "tu acceso es nombre@tugimnasio.com"
+// sería mandarlo a buscar algo que quizá no existe.
 export const PERSONAL_EMAIL_MESSAGE =
-  'Ese parece tu email personal. Tu acceso al gimnasio es un usuario tipo nombre@tugimnasio.com: pedíselo a tu gimnasio si no lo tenés.'
+  'No encontramos ese email. Si el gimnasio te dio un usuario de acceso, probá con ese; si no, pedile que te dé de alta.'
 
 // Redactado para servir con y sin botón de sugerencia en pantalla (LoginPage lo
 // muestra; SetPasswordPage, al que se llega por deep-link, no).

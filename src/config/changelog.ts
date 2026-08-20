@@ -1,17 +1,36 @@
 /**
- * Historial de novedades ("¿Qué hay de nuevo?") que ven los admins desde el
- * menú de Soporte. Lenguaje de USUARIO FINAL: qué mejora o arregla cada
+ * Historial de novedades que ve CUALQUIER usuario (socios incluidos) desde el
+ * botón de Novedades. Lenguaje de USUARIO FINAL: qué mejora o arregla cada
  * versión, sin jerga técnica.
+ *
+ * QUÉ VA: features que el usuario puede usar, y arreglos de cosas que el usuario
+ * vivió como un problema ("no podía entrar", "quedaba cargando").
+ *
+ * QUÉ NO VA:
+ *  - Detalles internos: nombres de colecciones, índices, caché, chunks, reglas.
+ *  - La FORMA del bug si le sirve a alguien para abusarlo, o si expone que hubo
+ *    datos en un estado inconsistente.
+ *  - Cambios que el usuario no puede ver (refactors, tests, observabilidad).
+ *  - Nada de lo que se pueda deducir la arquitectura o el stack.
+ * Ante la duda, describí el SÍNTOMA que dejó de pasar, no la causa.
  *
  * Al sacar una versión: agregar la entrada acá (la más nueva PRIMERO) y
  * mantener `version` en sync con package.json. El punto de "hay novedades"
- * del botón de Soporte se enciende solo comparando contra la primera entrada.
+ * del botón de Novedades se enciende solo comparando contra la primera entrada.
  */
 export type ChangeKind = 'new' | 'improved' | 'fixed'
 
 export interface ChangelogItem {
   kind: ChangeKind
   text: string
+  /**
+   * 'admin' → solo lo ven los admins del gym. Omitido = lo ve TODO el mundo,
+   * socios incluidos (Novedades es accesible para todos los roles).
+   *
+   * Usalo para lo que pasa en pantallas de gestión: a un socio, "la lista de
+   * socios ahora muestra el vencimiento" no le dice nada.
+   */
+  audience?: 'admin'
 }
 
 export interface ChangelogRelease {
@@ -23,9 +42,17 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
-    version: '1.2.3',
-    date: '2026-08-19',
+    version: '1.3.0',
+    date: '2026-08-20',
     items: [
+      {
+        kind: 'new',
+        text: 'Ahora podés ver las novedades de la app desde cualquier pantalla, con el botón de Novedades.',
+      },
+      {
+        kind: 'new',
+        text: 'Si escaneás el QR del gimnasio y tu email no está dado de alta, ahora podés escribirle al gimnasio directo desde ahí.',
+      },
       {
         kind: 'fixed',
         text: 'Si dejás la app abierta muchos días y sacamos una versión nueva, ya no queda cargando para siempre: se actualiza sola.',
@@ -39,8 +66,14 @@ export const CHANGELOG: ChangelogRelease[] = [
         text: 'La app carga más rápido en visitas repetidas desde el celular.',
       },
       {
+        kind: 'improved',
+        text: 'Al cargar el email de un socio, si el dominio parece tener un error de tipeo se te sugiere el correcto.',
+        audience: 'admin',
+      },
+      {
         kind: 'fixed',
-        text: 'Al dar de alta, editar o blanquear un socio, su acceso se guarda junto con la ficha: ya no puede quedar un socio cargado que después no pueda crear su contraseña.',
+        text: 'El alta y la edición de socios quedan guardadas de forma más confiable.',
+        audience: 'admin',
       },
     ],
   },
@@ -54,15 +87,11 @@ export const CHANGELOG: ChangelogRelease[] = [
       },
       {
         kind: 'improved',
-        text: 'Cuando el socio intenta entrar con su email personal, ahora se le aclara que su acceso es el usuario que le dio el gimnasio.',
+        text: 'Si el email no está dado de alta, el mensaje ahora explica mejor qué hacer.',
       },
       {
         kind: 'fixed',
         text: 'Sin señal ya no aparece “este email no está dado de alta”: ahora avisa que hubo un problema de conexión y que reintente.',
-      },
-      {
-        kind: 'fixed',
-        text: 'Al abrir la lista de socios, un socio con problemas ya no impide que se reparen los accesos de los demás.',
       },
     ],
   },
@@ -73,6 +102,7 @@ export const CHANGELOG: ChangelogRelease[] = [
       {
         kind: 'fixed',
         text: 'El QR de recepción registra la asistencia aunque el código se haya generado en otra pantalla o dominio.',
+        audience: 'admin',
       },
       {
         kind: 'fixed',
@@ -95,18 +125,22 @@ export const CHANGELOG: ChangelogRelease[] = [
       {
         kind: 'new',
         text: 'La lista de socios ahora muestra la fecha de vencimiento de la cuota y señala los pagos atrasados.',
+        audience: 'admin',
       },
       {
         kind: 'fixed',
         text: 'Se corrigió un error que impedía subir fotos de productos desde iPhone.',
+        audience: 'admin',
       },
       {
         kind: 'improved',
         text: 'Mejoras visuales en la página pública del gimnasio: logo más grande y datos de contacto en Info rápida.',
+        audience: 'admin',
       },
       {
         kind: 'improved',
         text: 'La ficha del socio muestra información más útil, sin datos repetidos.',
+        audience: 'admin',
       },
     ],
   },
@@ -121,10 +155,12 @@ export const CHANGELOG: ChangelogRelease[] = [
       {
         kind: 'new',
         text: 'Nuevo botón para compartir el enlace público del gimnasio.',
+        audience: 'admin',
       },
       {
         kind: 'improved',
         text: 'Mejoras de visibilidad en buscadores y en la vista previa al compartir el sitio.',
+        audience: 'admin',
       },
     ],
   },

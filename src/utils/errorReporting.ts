@@ -6,7 +6,7 @@ import {
   REPORTS_SENT_KEY,
   SESSION_ID_KEY,
 } from '@/config/storageKeys'
-import { emailFingerprint, maskEmail } from './privacy'
+import { emailFingerprint, maskEmail, redactEmails } from './privacy'
 import { isStaleChunkError, staleRecoveryFailed } from './staleDeploy'
 
 /**
@@ -205,9 +205,13 @@ function report(
 
   const { sid, did } = ids()
   const gymId = readStore('local', ACTIVE_GYM_STORAGE_KEY)
+  // redactEmails sobre el texto libre: `msg` y `detail` vienen de mensajes de
+  // error y stacks que no controlamos, y pueden traer un email embebido. Es el
+  // último punto antes del POST, así que cubre TODOS los caminos (los handlers
+  // globales, el ErrorBoundary y los reportes de negocio) de una sola vez.
   const body = [
-    msg.slice(0, 400),
-    detail?.slice(0, 400),
+    redactEmails(msg).slice(0, 400),
+    detail ? redactEmails(detail).slice(0, 400) : undefined,
     ctx && `ctx: ${ctx}`,
     `url: ${window.location.host}${safeUrl()}`,
     gymId && `gym: ${gymId}`,

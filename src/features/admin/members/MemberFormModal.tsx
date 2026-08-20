@@ -11,7 +11,13 @@ import { useTariffs } from '@/hooks/useTariffs'
 import { Button, DateInput, FormField, Input, Modal, MoneyInput, Select, Text } from '@/components/ui'
 import { toDateInput } from '@/utils/format'
 import { dateInputToTimestamp, parseDateInput, todayDateInput } from '@/utils/dates'
-import { emailLocalPart, normalizeEmailKey, suggestLoginEmail, tenantEmailDomain } from '@/utils/loginEmail'
+import {
+  emailLocalPart,
+  normalizeEmailKey,
+  suggestDomainFix,
+  suggestLoginEmail,
+  tenantEmailDomain,
+} from '@/utils/loginEmail'
 import { canCreateAdmin, usageLabel } from '@/utils/plans'
 import { frequencyLabel, tariffLabel } from '@/utils/tariffs'
 import { cn } from '@/utils/cn'
@@ -115,6 +121,8 @@ export function MemberFormModal({
   const fullName = useWatch({ control, name: 'fullName' })
   const role = useWatch({ control, name: 'role' })
   const accessMode = useWatch({ control, name: 'accessMode' })
+  const realEmail = useWatch({ control, name: 'realEmail' })
+  const emailTypoFix = accessMode === 'real' ? suggestDomainFix(realEmail ?? '') : null
   const tariffId = useWatch({ control, name: 'tariffId' })
   const selectedTariff = tariffs.find((t) => t.id === tariffId)
   const plan = plans.find((p) => p.id === gym?.subscription?.planId)
@@ -275,12 +283,26 @@ export function MemberFormModal({
                   </div>
 
                   {accessMode === 'real' ? (
-                    <Input
-                      type="email"
-                      placeholder="socio@gmail.com"
-                      invalid={!!errors.realEmail}
-                      {...register('realEmail')}
-                    />
+                    <div className="space-y-1.5">
+                      <Input
+                        type="email"
+                        placeholder="socio@gmail.com"
+                        invalid={!!errors.realEmail}
+                        {...register('realEmail')}
+                      />
+                      {/* Aviso blando de typo de dominio. El regex de validación
+                          acepta `socio@tigerfit.con`, así que sin esto el typo se
+                          persiste y después el socio no puede entrar nunca. */}
+                      {emailTypoFix && (
+                        <button
+                          type="button"
+                          onClick={() => setValue('realEmail', emailTypoFix)}
+                          className="text-left text-xs font-medium text-amber-700 hover:text-amber-800"
+                        >
+                          ¿Quisiste decir <span className="underline">{emailTypoFix}</span>?
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                       <div className="flex min-w-0 flex-1 rounded-[var(--radius-control)] border border-zinc-200 bg-surface focus-within:ring-2 focus-within:ring-brand-500">
