@@ -63,12 +63,7 @@ export const CHANGELOG: ChangelogRelease[] = [
       },
       {
         kind: 'improved',
-        text: 'Si al cargar un socio le falta una letra al email, te lo marcamos antes de guardar. Un typo ahí es un socio que después no puede entrar.',
-        audience: 'admin',
-      },
-      {
-        kind: 'improved',
-        text: 'Escribinos en un toque: se abre tu correo con el asunto ya puesto.',
+        text: '¿Necesitás una mano o se te ocurre una mejora? Escribinos desde cualquier pantalla, estamos para ayudarte.',
         audience: 'admin',
       },
     ],
