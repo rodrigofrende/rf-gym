@@ -58,6 +58,11 @@ const IGNORED = [
   /ResizeObserver loop/i,
   // Scripts cross-origin (extensiones, etc.): el navegador oculta el detalle.
   /^Script error\.?$/i,
+  // Firebase Auth en Safari/iOS: IndexedDB se cierra al backgroundear o bloquear
+  // el teléfono. El SDK lo tira como promesa suelta; la sesión en memoria sigue.
+  /Database is closing/i,
+  /Indexed Database server lost/i,
+  /The database connection is closing/i,
 ]
 // Los chunks de un deploy viejo YA NO van acá. Estaban descartando EXACTAMENTE el
 // error que dejaba a un socio mirando un spinner gris para siempre: el aviso que
