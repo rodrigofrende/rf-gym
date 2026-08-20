@@ -43,7 +43,11 @@ export function WhatsNewModal({ open, onClose }: { open: boolean; onClose: () =>
             <ul className="mt-2.5 space-y-2.5">
               {release.items.map((item, i) => (
                 <li key={i} className="flex items-start gap-2.5">
-                  <span className="flex shrink-0 flex-wrap items-center gap-1 pt-px">
+                  {/* Apilados y no en fila: en mobile los dos badges al lado
+                      comían ~50px de ancho y dejaban el texto en una columna
+                      finita. Uno sobre otro, la columna mide lo que el badge más
+                      ancho. */}
+                  <span className="flex shrink-0 flex-col items-start gap-1 pt-px">
                     <Badge tone={KIND_META[item.kind].tone}>{KIND_META[item.kind].label}</Badge>
                     {/* El tag de audiencia SOLO se le muestra al admin: es el
                         único que ve la lista mezclada, y le sirve para saber qué
