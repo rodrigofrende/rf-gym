@@ -1,18 +1,22 @@
 /**
  * Historial de novedades que ve CUALQUIER usuario (socios incluidos) desde el
- * botón de Novedades. Lenguaje de USUARIO FINAL: qué mejora o arregla cada
- * versión, sin jerga técnica.
+ * botón de Novedades.
  *
- * QUÉ VA: features que el usuario puede usar, y arreglos de cosas que el usuario
- * vivió como un problema ("no podía entrar", "quedaba cargando").
+ * CÓMO SE ESCRIBE. Es lo primero que un socio lee de nosotros, así que se escribe
+ * como se le habla a una persona, no como se documenta un commit:
+ *  - **El beneficio primero.** Qué puede hacer ahora, o qué dejó de sufrir. No
+ *    qué tocamos nosotros. "Ya no te dice que tu email no existe" y no "se
+ *    corrigió la validación del índice".
+ *  - **Voseo, frases cortas, cero jerga.** Si aparece la palabra caché, índice,
+ *    chunk, batch o validación, está mal escrito.
+ *  - **Pocas líneas y contundentes.** Mejor 3 que se entienden que 8 que se
+ *    hojean. Si dos arreglos se viven como una sola mejora, van juntos.
+ *  - **Nada invisible.** Si el usuario no lo puede ver ni sentir, no va: los
+ *    refactors, los tests y la observabilidad no son novedades.
  *
- * QUÉ NO VA:
- *  - Detalles internos: nombres de colecciones, índices, caché, chunks, reglas.
- *  - La FORMA del bug si le sirve a alguien para abusarlo, o si expone que hubo
- *    datos en un estado inconsistente.
- *  - Cambios que el usuario no puede ver (refactors, tests, observabilidad).
- *  - Nada de lo que se pueda deducir la arquitectura o el stack.
- * Ante la duda, describí el SÍNTOMA que dejó de pasar, no la causa.
+ * QUÉ NO VA, además: detalles internos, la forma de un bug que alguien pueda
+ * aprovechar, y nada que sugiera que hubo datos en un estado inconsistente. Ante
+ * la duda, contá el síntoma que dejó de pasar, no la causa.
  *
  * Al sacar una versión: agregar la entrada acá (la más nueva PRIMERO) y
  * mantener `version` en sync con package.json. El punto de "hay novedades"
@@ -47,37 +51,24 @@ export const CHANGELOG: ChangelogRelease[] = [
     items: [
       {
         kind: 'new',
-        text: 'Ahora podés ver las novedades de la app desde cualquier pantalla, con el botón de Novedades.',
+        text: '¿Escaneaste el QR del gimnasio y no te reconoció? Ahora le escribís al gimnasio en el momento, desde la misma pantalla.',
+      },
+      {
+        kind: 'improved',
+        text: 'La app abre más rápido. Y si sacamos una versión nueva mientras la tenías abierta, se actualiza sola en vez de quedarse cargando.',
       },
       {
         kind: 'new',
-        text: 'Si escaneás el QR del gimnasio y tu email no está dado de alta, ahora podés escribirle al gimnasio directo desde ahí.',
-      },
-      {
-        kind: 'fixed',
-        text: 'Si dejás la app abierta muchos días y sacamos una versión nueva, ya no queda cargando para siempre: se actualiza sola.',
+        text: 'Novedades: entrá cuando quieras a ver qué cambió, desde cualquier pantalla.',
       },
       {
         kind: 'improved',
-        text: 'Cuando algo falla al cargar, ahora aparece un mensaje claro con un botón para reintentar en vez de una pantalla en blanco.',
-      },
-      {
-        kind: 'improved',
-        text: 'La app carga más rápido en visitas repetidas desde el celular.',
-      },
-      {
-        kind: 'improved',
-        text: 'Al cargar el email de un socio, si el dominio parece tener un error de tipeo se te sugiere el correcto.',
-        audience: 'admin',
-      },
-      {
-        kind: 'fixed',
-        text: 'El alta y la edición de socios quedan guardadas de forma más confiable.',
+        text: 'Si al cargar un socio le falta una letra al email, te lo marcamos antes de guardar. Un typo ahí es un socio que después no puede entrar.',
         audience: 'admin',
       },
       {
         kind: 'improved',
-        text: 'Escribirnos es un solo toque: se abre tu app de correo con el asunto ya puesto.',
+        text: 'Escribinos en un toque: se abre tu correo con el asunto ya puesto.',
         audience: 'admin',
       },
     ],
@@ -88,15 +79,11 @@ export const CHANGELOG: ChangelogRelease[] = [
     items: [
       {
         kind: 'improved',
-        text: 'Si el socio se equivoca en el email al crear su contraseña, la app le sugiere el correcto en vez de dejarlo trabado.',
-      },
-      {
-        kind: 'improved',
-        text: 'Si el email no está dado de alta, el mensaje ahora explica mejor qué hacer.',
+        text: 'Crear tu contraseña por primera vez es más fácil: si te equivocás al escribir tu email, te sugerimos el correcto en vez de dejarte trabado.',
       },
       {
         kind: 'fixed',
-        text: 'Sin señal ya no aparece “este email no está dado de alta”: ahora avisa que hubo un problema de conexión y que reintente.',
+        text: 'Si se te corta la señal, te decimos que es la conexión. Antes parecía que tu email no estaba dado de alta.',
       },
     ],
   },
@@ -106,16 +93,12 @@ export const CHANGELOG: ChangelogRelease[] = [
     items: [
       {
         kind: 'fixed',
-        text: 'El QR de recepción registra la asistencia aunque el código se haya generado en otra pantalla o dominio.',
+        text: 'Si ya marcaste presente hoy, te lo avisamos y no te suma otro.',
+      },
+      {
+        kind: 'fixed',
+        text: 'El QR de recepción registra la asistencia siempre, sin importar desde qué pantalla se generó.',
         audience: 'admin',
-      },
-      {
-        kind: 'fixed',
-        text: 'Si el socio ya marcó presente hoy, se lo informa y no puede sumar otro hasta mañana.',
-      },
-      {
-        kind: 'fixed',
-        text: 'El primer ingreso con email real ya no falla con “no encontramos un socio” cuando la ficha sí existía.',
       },
     ],
   },
@@ -125,26 +108,16 @@ export const CHANGELOG: ChangelogRelease[] = [
     items: [
       {
         kind: 'improved',
-        text: 'El menú lateral se reorganizó en secciones para encontrar cada función más rápido.',
+        text: 'El menú está ordenado por secciones: llegás a cada cosa en menos toques.',
       },
       {
         kind: 'new',
-        text: 'La lista de socios ahora muestra la fecha de vencimiento de la cuota y señala los pagos atrasados.',
-        audience: 'admin',
-      },
-      {
-        kind: 'fixed',
-        text: 'Se corrigió un error que impedía subir fotos de productos desde iPhone.',
+        text: 'En la lista de socios ves de un vistazo quién está al día y quién se atrasó con la cuota.',
         audience: 'admin',
       },
       {
         kind: 'improved',
-        text: 'Mejoras visuales en la página pública del gimnasio: logo más grande y datos de contacto en Info rápida.',
-        audience: 'admin',
-      },
-      {
-        kind: 'improved',
-        text: 'La ficha del socio muestra información más útil, sin datos repetidos.',
+        text: 'Tu página pública quedó mejor: logo más grande y los datos de contacto a la vista.',
         audience: 'admin',
       },
     ],
@@ -155,16 +128,11 @@ export const CHANGELOG: ChangelogRelease[] = [
     items: [
       {
         kind: 'new',
-        text: 'Nueva página para restablecer la contraseña.',
+        text: 'Si te olvidás la contraseña, la recuperás solo, sin depender de nadie.',
       },
       {
         kind: 'new',
-        text: 'Nuevo botón para compartir el enlace público del gimnasio.',
-        audience: 'admin',
-      },
-      {
-        kind: 'improved',
-        text: 'Mejoras de visibilidad en buscadores y en la vista previa al compartir el sitio.',
+        text: 'Compartí el link de tu gimnasio con un botón, listo para mandar por WhatsApp.',
         audience: 'admin',
       },
     ],
