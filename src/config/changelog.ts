@@ -46,6 +46,38 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.3.1',
+    date: '2026-08-21',
+    items: [
+      {
+        kind: 'new',
+        text: 'Después de marcar presente, podés decir qué vas a entrenar hoy. Es opcional: si no elegís, todo sigue igual.',
+      },
+      {
+        kind: 'improved',
+        text: 'Si elegiste músculos, en Mis rutinas ves primero los ejercicios de esos grupos.',
+      },
+      {
+        kind: 'new',
+        text: 'En el ranking ves qué se entrenó más en el gym este mes y el músculo más frecuente de cada socio.',
+      },
+      {
+        kind: 'improved',
+        text: 'El ranking se lee mejor cuando hay empates: ves a todos los que comparten el puesto, sin podios raros.',
+      },
+      {
+        kind: 'improved',
+        text: 'En Asistencias de hoy ves los músculos que eligió cada socio.',
+        audience: 'admin',
+      },
+      {
+        kind: 'improved',
+        text: 'Las tarifas quedan agrupadas por servicio, con el precio a la vista.',
+        audience: 'admin',
+      },
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-08-20',
     items: [

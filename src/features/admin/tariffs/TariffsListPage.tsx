@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import type { Tariff } from '@/types'
 import { useTenant } from '@/providers/TenantProvider'
+import { useMembers } from '@/hooks/useMembers'
 import {
   useCreateTariff,
   useRemoveTariff,
@@ -10,18 +11,92 @@ import {
 } from '@/hooks/useTariffs'
 import { useToastAction } from '@/hooks/useToastAction'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { Badge, Button, Card, ConfirmDialog, EmptyState, FullPageSpinner, Heading, IconButton, Text } from '@/components/ui'
+import {
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  FullPageSpinner,
+  Money,
+  Text,
+} from '@/components/ui'
 import { cn } from '@/utils/cn'
-import { formatCurrency } from '@/utils/format'
-import { frequencyLabel } from '@/utils/tariffs'
+import { frequencyLongLabel, groupTariffsByName, type TariffGroup } from '@/utils/tariffs'
 import { tariffIconMeta } from '@/utils/tariffIcons'
 import { TariffFormModal } from './TariffFormModal'
+
+function memberCountLabel(count: number): string {
+  if (count <= 0) return ''
+  return count === 1 ? '1 socio' : `${count} socios`
+}
+
+function TariffGroupCard({
+  group,
+  memberCountByTariff,
+  onEdit,
+}: {
+  group: TariffGroup
+  memberCountByTariff: Map<string, number>
+  onEdit: (tariff: Tariff) => void
+}) {
+  const { icon: TariffIcon } = tariffIconMeta(group.icon)
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3">
+        <div
+          className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600"
+          aria-hidden
+        >
+          <TariffIcon className="size-4" />
+        </div>
+        <h2 className="min-w-0 truncate text-sm font-semibold text-zinc-900">{group.name}</h2>
+      </div>
+
+      <ul>
+        {group.items.map((tariff, index) => {
+          const membersOnPlan = memberCountByTariff.get(tariff.id) ?? 0
+          const countLabel = memberCountLabel(membersOnPlan)
+          return (
+            <li key={tariff.id}>
+              <button
+                type="button"
+                onClick={() => onEdit(tariff)}
+                aria-label={`Editar ${tariff.name}, ${frequencyLongLabel(tariff.weeklyFrequency)}`}
+                className={cn(
+                  'flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500',
+                  index > 0 && 'border-t border-zinc-100',
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-zinc-900">
+                    {frequencyLongLabel(tariff.weeklyFrequency)}
+                  </p>
+                  {tariff.description ? (
+                    <p className="mt-0.5 truncate text-xs text-zinc-500">{tariff.description}</p>
+                  ) : null}
+                  {countLabel ? <p className="mt-0.5 text-xs text-zinc-500">{countLabel}</p> : null}
+                </div>
+                <div className="shrink-0 text-right">
+                  <Money className="text-base font-semibold tabular-nums text-zinc-900" value={tariff.price} />
+                  <span className="block text-xs text-zinc-400">/mes</span>
+                </div>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </Card>
+  )
+}
 
 export function TariffsListPage() {
   const { activeGymId } = useTenant()
   const gymId = activeGymId as string
   const run = useToastAction()
   const { data: tariffs = [], isLoading } = useTariffs(gymId)
+  const { data: members = [] } = useMembers(gymId)
   const create = useCreateTariff(gymId)
   const update = useUpdateTariff(gymId)
   const remove = useRemoveTariff(gymId)
@@ -30,12 +105,34 @@ export function TariffsListPage() {
   const [editing, setEditing] = useState<Tariff | null>(null)
   const [toDelete, setToDelete] = useState<Tariff | null>(null)
 
+  const memberCountByTariff = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const member of members) {
+      if (member.role !== 'user' || !member.tariffId) continue
+      counts.set(member.tariffId, (counts.get(member.tariffId) ?? 0) + 1)
+    }
+    return counts
+  }, [members])
+
+  const activeGroups = useMemo(
+    () => groupTariffsByName(tariffs.filter((tariff) => tariff.active)),
+    [tariffs],
+  )
+  const inactiveGroups = useMemo(
+    () => groupTariffsByName(tariffs.filter((tariff) => !tariff.active)),
+    [tariffs],
+  )
+
+  const activeCount = tariffs.filter((tariff) => tariff.active).length
+  const inactiveCount = tariffs.length - activeCount
+  const membersOnDelete = toDelete ? (memberCountByTariff.get(toDelete.id) ?? 0) : 0
+
   const openNew = () => {
     setEditing(null)
     setModalOpen(true)
   }
-  const openEdit = (t: Tariff) => {
-    setEditing(t)
+  const openEdit = (tariff: Tariff) => {
+    setEditing(tariff)
     setModalOpen(true)
   }
 
@@ -57,15 +154,29 @@ export function TariffsListPage() {
       success: 'Tarifa eliminada',
       error: 'No se pudo eliminar',
     })
-    if (ok) setToDelete(null)
+    if (ok) {
+      setToDelete(null)
+      setModalOpen(false)
+    }
   }
+
+  const summary = [
+    activeCount > 0 ? (activeCount === 1 ? '1 plan activo' : `${activeCount} planes activos`) : null,
+    inactiveCount > 0
+      ? inactiveCount === 1
+        ? '1 inactivo'
+        : `${inactiveCount} inactivos`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <AppLayout
       title="Tarifas"
-      subtitle="Planes y precios que ofrece tu gimnasio."
+      subtitle="Lo que cobrás por cada plan. Se usa al dar de alta un socio."
       actions={
-        <Button leftIcon={<Plus className="size-4" />} onClick={openNew}>
+        <Button leftIcon={<Plus className="size-4" />} fullWidth className="sm:w-auto" onClick={openNew}>
           Nueva tarifa
         </Button>
       }
@@ -76,49 +187,62 @@ export function TariffsListPage() {
         <EmptyState
           icon={tariffIconMeta().icon}
           title="Sin tarifas"
-          description="Creá los planes que ofrecés (servicio, frecuencia y precio) para asignarlos a tus socios."
+          description="Creá los planes que ofrecés (servicio, días por semana y precio) para asignarlos a tus socios."
+          action={
+            <Button leftIcon={<Plus className="size-4" />} onClick={openNew}>
+              Crear primera tarifa
+            </Button>
+          }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {tariffs.map((t) => {
-            const { icon: TariffIcon } = tariffIconMeta(t.icon)
-            return (
-            <Card key={t.id} className={cn('flex flex-col p-5', !t.active && 'opacity-60')}>
-              <div className="flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                  <TariffIcon className="size-5" />
-                </div>
-                <div className="flex gap-1">
-                  <IconButton
-                    icon={<Pencil className="size-4" />}
-                    label={`Editar ${t.name}`}
-                    onClick={() => openEdit(t)}
-                  />
-                  <IconButton
-                    icon={<Trash2 className="size-4" />}
-                    label={`Eliminar ${t.name}`}
-                    tone="danger"
-                    onClick={() => setToDelete(t)}
-                  />
-                </div>
+        <div className="space-y-6">
+          {activeGroups.length > 0 && summary ? (
+            <Text variant="caption" as="p">
+              {summary}
+            </Text>
+          ) : null}
+
+          {activeGroups.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {activeGroups.map((group) => (
+                <TariffGroupCard
+                  key={group.name}
+                  group={group}
+                  memberCountByTariff={memberCountByTariff}
+                  onEdit={openEdit}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={tariffIconMeta().icon}
+              title="Ningún plan activo"
+              description="Los planes inactivos no aparecen al asignar el servicio a un socio. Activá uno o creá uno nuevo."
+            />
+          )}
+
+          {inactiveGroups.length > 0 ? (
+            <section className="space-y-3" aria-labelledby="inactive-tariffs-heading">
+              <div>
+                <h2 id="inactive-tariffs-heading" className="text-sm font-semibold text-zinc-900">
+                  Inactivas
+                </h2>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  No aparecen al asignar un plan a un socio.
+                </p>
               </div>
-              <div className="mt-3 flex items-center gap-2">
-                <Heading variant="card">{t.name}</Heading>
-                <Badge tone="neutral">{frequencyLabel(t.weeklyFrequency)}</Badge>
-                {!t.active && <Badge tone="amber">Inactiva</Badge>}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {inactiveGroups.map((group) => (
+                  <TariffGroupCard
+                    key={group.name}
+                    group={group}
+                    memberCountByTariff={memberCountByTariff}
+                    onEdit={openEdit}
+                  />
+                ))}
               </div>
-              {t.description && (
-                <Text variant="caption" className="mt-1">
-                  {t.description}
-                </Text>
-              )}
-              <Text variant="metric" className="mt-3">
-                {formatCurrency(t.price)}
-                <span className="text-sm font-normal text-zinc-400"> /mes</span>
-              </Text>
-            </Card>
-            )
-          })}
+            </section>
+          ) : null}
         </div>
       )}
 
@@ -126,6 +250,7 @@ export function TariffsListPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
+        onRequestDelete={editing ? () => setToDelete(editing) : undefined}
         initial={editing}
         saving={create.isPending || update.isPending}
       />
@@ -135,7 +260,26 @@ export function TariffsListPage() {
         onClose={() => setToDelete(null)}
         onConfirm={confirmDelete}
         title="Eliminar tarifa"
-        description={`¿Querés eliminar la tarifa "${toDelete?.name}"? Esta acción no se puede deshacer.`}
+        description={
+          toDelete ? (
+            <>
+              ¿Querés eliminar{' '}
+              <span className="font-medium text-zinc-800">
+                {toDelete.name} · {frequencyLongLabel(toDelete.weeklyFrequency)}
+              </span>
+              ?
+              {membersOnDelete > 0 ? (
+                <>
+                  {' '}
+                  {membersOnDelete === 1
+                    ? '1 socio tiene este plan y va a quedar sin tarifa asignada.'
+                    : `${membersOnDelete} socios tienen este plan y van a quedar sin tarifa asignada.`}
+                </>
+              ) : null}{' '}
+              Esta acción no se puede deshacer.
+            </>
+          ) : null
+        }
         loading={remove.isPending}
       />
     </AppLayout>

@@ -1,19 +1,25 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Navigate, useLocation, useParams } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, Clock, Dumbbell, LogIn } from 'lucide-react'
-import type { AttendancePaymentState, MemberStatus } from '@/types'
+import type { AttendancePaymentState, MemberStatus, MuscleGroup } from '@/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useTenant } from '@/providers/TenantProvider'
-import { useCheckIn } from '@/hooks/useAttendance'
+import { useToast } from '@/providers/ToastProvider'
+import { useCheckIn, useSetAttendanceMuscles } from '@/hooks/useAttendance'
 import { useGymPresentation } from '@/hooks/useGymPresentation'
 import { Badge, Button, Card, FullPageSpinner, Heading, Text } from '@/components/ui'
 import { ROUTES } from '@/routes/routePaths'
 import { formatDate } from '@/utils/format'
 import { mapFirestoreError } from '@/utils/firestoreErrors'
 import { resolvePresentation } from '@/utils/presentation'
+import { muscleGroupLabel } from '@/utils/exercises'
 import { SponsorSpot } from '@/features/sponsors/SponsorsShowcase'
+import { CheckInMuscleStep } from './MusclePicker'
 
-const PAYMENT_COPY: Record<AttendancePaymentState, { title: string; description: string; tone: 'green' | 'amber' | 'red' }> = {
+const PAYMENT_COPY: Record<
+  AttendancePaymentState,
+  { title: string; description: string; tone: 'green' | 'amber' | 'red' }
+> = {
   al_dia: {
     title: 'Membresía al día',
     description: 'Tu asistencia quedó registrada. Ya podés cargar los pesos de tu rutina de hoy.',
@@ -56,8 +62,11 @@ export function CheckInPage() {
   const { memberships, isLoading, selectGym, activeGymId } = useTenant()
   const membership = memberships.find((m) => m.gymId === gymId)
   const { mutate, data, isError, error, isPending } = useCheckIn(gymId ?? '', membership?.memberId ?? '')
+  const setMuscles = useSetAttendanceMuscles(gymId ?? '', membership?.memberId ?? '')
   const { data: presentation } = useGymPresentation(gymId ?? '')
+  const { notify } = useToast()
   const fired = useRef(false)
+  const [savedMuscles, setSavedMuscles] = useState<MuscleGroup[] | null>(null)
 
   useEffect(() => {
     if (!gymId || !membership || membership.role !== 'user' || fired.current) return
@@ -65,6 +74,10 @@ export function CheckInPage() {
     fired.current = true
     mutate()
   }, [activeGymId, mutate, gymId, membership, selectGym])
+
+  useEffect(() => {
+    if (data?.muscleGroups) setSavedMuscles(data.muscleGroups)
+  }, [data])
 
   if (!gymId) return <Navigate to="/" replace />
   if (!isInitialized || (user && isLoading)) return <FullPageSpinner />
@@ -126,44 +139,73 @@ export function CheckInPage() {
     )
   }
 
-  if (data.alreadyCheckedInToday) {
-    return (
-      <CheckInShell>
-        <StatusCard
-          icon={<Clock className="size-7" />}
-          tone="amber"
-          title="Ya registraste tu presente de hoy"
-          description="Este gimnasio ya sumó tu asistencia de hoy. El próximo presente lo podés cargar mañana."
-        >
-          <div className="mt-5 rounded-xl bg-surface-muted p-3 text-sm text-zinc-600">
-            <Clock className="mr-1 inline size-4 align-[-2px]" />
-            Ingreso de hoy: {formatDate(data.checkedInAt)}
-          </div>
-        </StatusCard>
-      </CheckInShell>
-    )
-  }
-
   const copy = PAYMENT_COPY[data.paymentState]
   const isPaused = data.memberStatus === 'paused'
   const sponsors = resolvePresentation(presentation).sponsors
+  const muscles = savedMuscles ?? data.muscleGroups ?? []
+  const alreadyToday = data.alreadyCheckedInToday
+
+  const handleSaveMuscles = async (next: MuscleGroup[]) => {
+    if (next.length === 0 && !(savedMuscles?.length || data.muscleGroups?.length)) {
+      return
+    }
+    try {
+      const updated = await setMuscles.mutateAsync(next)
+      setSavedMuscles(updated.muscleGroups ?? next)
+      notify('Listo, guardamos qué vas a entrenar.', 'success')
+    } catch {
+      notify('No pudimos guardar los músculos. Probá de nuevo.', 'error')
+    }
+  }
 
   return (
     <CheckInShell>
       <StatusCard
-        icon={<CheckCircle2 className="size-7" />}
-        tone={isPaused ? 'amber' : copy.tone}
-        title={isPaused ? 'Membresía pausada' : copy.title}
-        description={isPaused ? 'Tu visita quedó registrada. Hablá con administración antes de entrenar.' : copy.description}
+        icon={alreadyToday ? <Clock className="size-7" /> : <CheckCircle2 className="size-7" />}
+        tone={alreadyToday || isPaused ? 'amber' : copy.tone}
+        title={
+          alreadyToday
+            ? 'Ya registraste tu presente de hoy'
+            : isPaused
+              ? 'Membresía pausada'
+              : copy.title
+        }
+        description={
+          alreadyToday
+            ? 'Podés indicar o cambiar qué vas a entrenar. El próximo presente es mañana.'
+            : isPaused
+              ? 'Tu visita quedó registrada. Hablá con administración antes de entrenar.'
+              : copy.description
+        }
+        hideRoutinesCta
       >
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <Badge tone={isPaused ? 'amber' : copy.tone}>{MEMBER_COPY[data.memberStatus]}</Badge>
-          <Badge tone={copy.tone}>{copy.title}</Badge>
-        </div>
+        {!alreadyToday && (
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <Badge tone={isPaused ? 'amber' : copy.tone}>{MEMBER_COPY[data.memberStatus]}</Badge>
+            <Badge tone={copy.tone}>{copy.title}</Badge>
+          </div>
+        )}
         <div className="mt-5 rounded-xl bg-surface-muted p-3 text-sm text-zinc-600">
           <Clock className="mr-1 inline size-4 align-[-2px]" />
-          Ingreso registrado: {formatDate(data.checkedInAt)}
+          Ingreso {alreadyToday ? 'de hoy' : 'registrado'}: {formatDate(data.checkedInAt)}
         </div>
+
+        {muscles.length > 0 ? (
+          <div className="mt-4 space-y-2 text-left">
+            <p className="text-sm font-medium text-zinc-800">Hoy: {muscles.map(muscleGroupLabel).join(' · ')}</p>
+            <CheckInMuscleStep
+              initial={muscles}
+              saving={setMuscles.isPending}
+              onSave={handleSaveMuscles}
+            />
+          </div>
+        ) : (
+          <CheckInMuscleStep saving={setMuscles.isPending} onSave={handleSaveMuscles} />
+        )}
+
+        <Button className="mt-6" fullWidth onClick={() => window.location.assign(ROUTES.APP_ROUTINES)}>
+          Ir a mis rutinas
+        </Button>
       </StatusCard>
       <div className="mt-4">
         <SponsorSpot sponsors={sponsors} variant="light" />
@@ -194,12 +236,14 @@ function StatusCard({
   title,
   description,
   children,
+  hideRoutinesCta,
 }: {
   icon: ReactNode
   tone: 'green' | 'amber' | 'red'
   title: string
   description: string
   children?: ReactNode
+  hideRoutinesCta?: boolean
 }) {
   const toneClass = {
     green: 'bg-emerald-100 text-emerald-700',
@@ -215,9 +259,11 @@ function StatusCard({
       </Heading>
       <Text className="mt-2">{description}</Text>
       {children}
-      <Button className="mt-6" fullWidth onClick={() => window.location.assign(ROUTES.APP_ROUTINES)}>
-        Ir a mis rutinas
-      </Button>
+      {!hideRoutinesCta && (
+        <Button className="mt-6" fullWidth onClick={() => window.location.assign(ROUTES.APP_ROUTINES)}>
+          Ir a mis rutinas
+        </Button>
+      )}
     </Card>
   )
 }

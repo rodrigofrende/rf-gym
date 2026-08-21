@@ -13,6 +13,7 @@ import type {
   MemberLoginIndex,
   Membership,
   MonthlyAttendance,
+  MuscleGroup,
   Note,
   Payment,
   Product,
@@ -559,13 +560,21 @@ export function checkInMember(_gymId: string, memberId: string) {
   return ok({ ...created, alreadyCheckedInToday: false as const })
 }
 
-function bumpDemoMonthly(member: Member, dayKey: string) {
+function bumpDemoMonthly(member: Member, dayKey: string, muscles: MuscleGroup[] = []) {
   const mk = dayKey.slice(0, 7)
   const rows = (monthlyLeaderboard[mk] ??= [])
   const existing = rows.find((r) => r.memberId === member.id)
   if (existing) {
     existing.days += 1
+    existing.lastDay = dayKey
+    if (muscles.length) {
+      const counts = { ...(existing.muscleCounts ?? {}) }
+      for (const m of muscles) counts[m] = (counts[m] ?? 0) + 1
+      existing.muscleCounts = counts
+    }
   } else {
+    const counts: Partial<Record<MuscleGroup, number>> = {}
+    for (const m of muscles) counts[m] = 1
     rows.push({
       id: `${mk}_${member.id}`,
       monthKey: mk,
@@ -573,8 +582,38 @@ function bumpDemoMonthly(member: Member, dayKey: string) {
       memberUid: member.uid,
       displayName: displayNameShort(member.fullName),
       days: 1,
+      lastDay: dayKey,
+      ...(muscles.length ? { muscleCounts: counts } : {}),
     })
   }
+}
+
+export function setAttendanceMuscles(
+  _gymId: string,
+  memberId: string,
+  dayKey: string,
+  muscles: MuscleGroup[],
+) {
+  const id = demoAttendanceId(dayKey, memberId)
+  const list = attendance[dayKey] ?? []
+  const existing = list.find((a) => a.id === id)
+  if (!existing) return Promise.reject(new Error('attendance-not-found'))
+  const hadMuscles = (existing.muscleGroups?.length ?? 0) > 0
+  existing.muscleGroups = muscles
+  if (!hadMuscles && muscles.length > 0) {
+    const member = data.members.find((m) => m.id === memberId)
+    if (member) {
+      const mk = dayKey.slice(0, 7)
+      const rows = (monthlyLeaderboard[mk] ??= [])
+      const row = rows.find((r) => r.memberId === memberId)
+      if (row) {
+        const counts = { ...(row.muscleCounts ?? {}) }
+        for (const m of muscles) counts[m] = (counts[m] ?? 0) + 1
+        row.muscleCounts = counts
+      }
+    }
+  }
+  return ok({ ...existing })
 }
 
 // ---- Ranking mensual ----

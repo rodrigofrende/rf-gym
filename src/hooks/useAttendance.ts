@@ -7,12 +7,14 @@ import {
   getMemberAttendance,
   listMemberAttendanceForMonth,
   listTodayAttendance,
+  setAttendanceMuscles,
   subscribeTodayAttendance,
 } from '@/services/attendanceService'
 import { localDayKey } from '@/utils/dates'
 import { extractFirestoreCode } from '@/utils/firestoreErrors'
 import { reportOperational } from '@/utils/errorReporting'
 import { queryKeys } from './queryKeys'
+import type { MuscleGroup } from '@/types'
 
 export function useCheckIn(gymId: string, memberId: string) {
   const qc = useQueryClient()
@@ -30,6 +32,19 @@ export function useCheckIn(gymId: string, memberId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.attendanceToday(gymId, dayKey) })
       qc.invalidateQueries({ queryKey: queryKeys.memberAttendance(gymId, memberId, dayKey) })
+      qc.invalidateQueries({ queryKey: queryKeys.monthlyLeaderboard(gymId, dayKey.slice(0, 7)) })
+    },
+  })
+}
+
+export function useSetAttendanceMuscles(gymId: string, memberId: string) {
+  const qc = useQueryClient()
+  const dayKey = localDayKey(new Date())
+  return useMutation({
+    mutationFn: (muscles: MuscleGroup[]) => setAttendanceMuscles(gymId, memberId, dayKey, muscles),
+    onSuccess: (attendance) => {
+      qc.setQueryData(queryKeys.memberAttendance(gymId, memberId, dayKey), attendance)
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceToday(gymId, dayKey) })
       qc.invalidateQueries({ queryKey: queryKeys.monthlyLeaderboard(gymId, dayKey.slice(0, 7)) })
     },
   })

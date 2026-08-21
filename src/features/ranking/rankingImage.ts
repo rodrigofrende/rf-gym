@@ -1,5 +1,6 @@
 import type { GymTheme } from '@/types'
 import { APP_NAME } from '@/config/app'
+import { podiumIsReadable } from '@/utils/ranking'
 import { buildBrandScale, PLATFORM_DEFAULT_THEME } from '@/utils/theme'
 import { initials } from '@/utils/format'
 
@@ -116,24 +117,62 @@ export async function drawRankingStoryImage(opts: RankingImageOpts): Promise<Blo
   ctx.font = '500 34px Montserrat, sans-serif'
   ctx.fillText('Días entrenados en el mes', W / 2, 700)
 
-  // Podio por PUESTO (2°-1°-3°): empatados comparten pedestal (hasta 2 visibles
-  // + "+N"); un empate puede dejar vacante el puesto siguiente (1, 1, 3).
   const PODIUM_CAP = 2
   const groupOf = (place: number) => opts.rows.filter((r) => r.rank === place)
   const groups: Record<1 | 2 | 3, RankingImageRow[]> = { 1: groupOf(1), 2: groupOf(2), 3: groupOf(3) }
-  const baseY = 1200
-  drawPodiumColumn(ctx, groups[2], { x: 230, baseY, pedestal: 165, place: 2, scaleDark: scale[900] })
-  drawPodiumColumn(ctx, groups[1], { x: 540, baseY, pedestal: 230, place: 1, scaleDark: scale[900] })
-  drawPodiumColumn(ctx, groups[3], { x: 850, baseY, pedestal: 125, place: 3, scaleDark: scale[900] })
+  const showPodium = podiumIsReadable(groups[1], groups[2], groups[3])
 
-  // Filas: lo del top que no entró en el podio.
-  const drawnOnPodium = new Set(
-    ([1, 2, 3] as const).flatMap((p) => groups[p].slice(0, PODIUM_CAP)).map((r) => r.memberId),
-  )
-  const listRows = opts.rows.filter((r) => !drawnOnPodium.has(r.memberId)).slice(0, 4)
+  const drawnOnPodium = new Set<string>()
+  let listStartY = 760
+  if (showPodium) {
+    const baseY = 1200
+    if (groups[2].length > 0) {
+      drawPodiumColumn(ctx, groups[2], {
+        x: 230,
+        baseY,
+        pedestal: 165,
+        place: 2,
+        scaleDark: scale[900],
+      })
+    }
+    drawPodiumColumn(ctx, groups[1], {
+      x: 540,
+      baseY,
+      pedestal: 230,
+      place: 1,
+      scaleDark: scale[900],
+    })
+    if (groups[3].length > 0) {
+      drawPodiumColumn(ctx, groups[3], {
+        x: 850,
+        baseY,
+        pedestal: 125,
+        place: 3,
+        scaleDark: scale[900],
+      })
+    }
+    for (const place of [1, 2, 3] as const) {
+      for (const row of groups[place].slice(0, PODIUM_CAP)) drawnOnPodium.add(row.memberId)
+    }
+    listStartY = 1248
+  } else if (groups[1].length > 0) {
+    const lead = groups[1]
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'
+    ctx.font = '700 40px Montserrat, sans-serif'
+    ctx.fillText(
+      lead.length > 1
+        ? `${lead.length} socios · ${daysLabel(lead[0].days)}`
+        : `${lead[0].displayName} · ${daysLabel(lead[0].days)}`,
+      W / 2,
+      760,
+    )
+    listStartY = 800
+  }
+
+  const listRows = opts.rows.filter((r) => !drawnOnPodium.has(r.memberId)).slice(0, showPodium ? 4 : 8)
   const rowH = 94
   const rowGap = 12
-  let y = 1248
+  let y = listStartY
   for (const row of listRows) {
     const isMine = !!opts.mine && row.memberId === opts.mine.memberId
     drawListRow(ctx, row, y, rowH, isMine, scale[800])

@@ -11,6 +11,7 @@ import { adminMemberDetail } from '@/routes/routePaths'
 import { formatDate, toDate } from '@/utils/format'
 import { todayDateInput } from '@/utils/dates'
 import { STATUS_LABEL } from '@/utils/roles'
+import { muscleGroupLabel } from '@/utils/exercises'
 
 const PAYMENT_LABEL: Record<AttendancePaymentState, string> = {
   al_dia: 'Al día',
@@ -155,6 +156,16 @@ export function TodayAttendancePage() {
                       {a.scanCount} escaneos
                     </span>
                   ) : null}
+                  {a.muscleGroups?.length
+                    ? a.muscleGroups.map((m) => (
+                        <span
+                          key={m}
+                          className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700"
+                        >
+                          {muscleGroupLabel(m)}
+                        </span>
+                      ))
+                    : null}
                 </div>
               </button>
             </Card>

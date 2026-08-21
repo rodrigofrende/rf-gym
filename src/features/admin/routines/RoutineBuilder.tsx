@@ -86,6 +86,7 @@ const exerciseSchema = z.object({
   loadType: z.enum(LOAD_TYPE_VALUES).optional(),
   restSec: z.number().min(0),
   notes: z.string().optional(),
+  muscleGroups: z.array(z.enum(MUSCLE_GROUP_OPTIONS)).optional(),
 })
 
 const normalizeExerciseName = (name: string) => name.trim().toLowerCase()
@@ -131,6 +132,7 @@ const EMPTY_EXERCISE: FormExercise = {
   loadType: 'weight',
   restSec: 60,
   notes: '',
+  muscleGroups: [],
 }
 
 const sortableId = (fieldId: string) => `routine:${fieldId}`
@@ -147,6 +149,7 @@ function toFormExercises(exercises?: Exercise[]): FormExercise[] {
     loadType: normalizeLoadType(e.loadType),
     restSec: e.restSec ?? 0,
     notes: e.notes ?? '',
+    muscleGroups: e.muscleGroups ?? [],
   }))
 }
 
@@ -161,6 +164,7 @@ function exerciseFromDefinition(exercise: ExerciseDefinition): FormExercise {
     loadType: exercise.loadType,
     restSec: exercise.defaultRestSec ?? 60,
     notes: exercise.description ?? '',
+    muscleGroups: exercise.muscleGroups ?? [],
   }
 }
 
@@ -253,7 +257,10 @@ export function RoutineBuilder({
       description: v.description,
       icon: v.icon,
       createdBy,
-      exercises: v.exercises,
+      exercises: v.exercises.map((exercise) => ({
+        ...exercise,
+        muscleGroups: exercise.muscleGroups?.length ? exercise.muscleGroups : undefined,
+      })),
     })
   }
 

@@ -132,14 +132,76 @@ describe('plans — lectura pública, escritura solo super-admin', () => {
   })
 })
 
+describe('attendance — músculos opcionales el mismo día', () => {
+  const dayKey = '2026-08-20'
+  const attendanceDocId = `${dayKey}_${SOCIO_MEMBER}`
+  const baseAttendance = {
+    memberId: SOCIO_MEMBER,
+    memberUid: SOCIO_UID,
+    memberName: 'Rodrigo Frende',
+    email: 'socio@gymA.com',
+    dayKey,
+    scanCount: 1,
+    paymentState: 'al_dia',
+    memberStatus: 'active',
+  }
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${SOCIO_UID}/gymMemberships/${GYM}`), {
+        memberId: SOCIO_MEMBER,
+        role: 'user',
+      })
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendance/${attendanceDocId}`), baseAttendance)
+    })
+  })
+
+  it('el socio puede setear muscleGroups en su asistencia del día', async () => {
+    const db = asSocio()
+    await assertSucceeds(
+      updateDoc(doc(db, `gyms/${GYM}/attendance/${attendanceDocId}`), {
+        ...baseAttendance,
+        muscleGroups: ['back', 'arms'],
+      }),
+    )
+  })
+
+  it('el socio NO puede poner un músculo inválido', async () => {
+    const db = asSocio()
+    await assertFails(
+      updateDoc(doc(db, `gyms/${GYM}/attendance/${attendanceDocId}`), {
+        ...baseAttendance,
+        muscleGroups: ['biceps'],
+      }),
+    )
+  })
+})
+
 describe('attendanceMonthly — el ranking no se puede inflar sin techo', () => {
   const entryId = `2026-08_${SOCIO_MEMBER}`
+  const dayKey = '2026-08-10'
   const base = {
     monthKey: '2026-08',
     memberId: SOCIO_MEMBER,
     memberUid: SOCIO_UID,
     displayName: 'Rodrigo F.',
+    lastDay: dayKey,
   }
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendance/${dayKey}_${SOCIO_MEMBER}`), {
+        memberId: SOCIO_MEMBER,
+        memberUid: SOCIO_UID,
+        dayKey,
+        scanCount: 1,
+      })
+      await setDoc(doc(ctx.firestore(), `users/${SOCIO_UID}/gymMemberships/${GYM}`), {
+        memberId: SOCIO_MEMBER,
+        role: 'user',
+      })
+    })
+  })
 
   it('el socio puede crear su contador con days = 1', async () => {
     const db = asSocio()
@@ -153,26 +215,62 @@ describe('attendanceMonthly — el ranking no se puede inflar sin techo', () => 
 
   it('el socio puede incrementar de a 1', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendanceMonthly/${entryId}`), { ...base, days: 3 })
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 3,
+        lastDay: '2026-08-09',
+      })
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendance/2026-08-10_${SOCIO_MEMBER}`), {
+        memberId: SOCIO_MEMBER,
+        memberUid: SOCIO_UID,
+        dayKey: '2026-08-10',
+        scanCount: 1,
+      })
     })
     const db = asSocio()
-    await assertSucceeds(updateDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`), { ...base, days: 4 }))
+    await assertSucceeds(
+      updateDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 4,
+        lastDay: '2026-08-10',
+      }),
+    )
   })
 
   it('el socio NO puede saltar de a más de 1', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendanceMonthly/${entryId}`), { ...base, days: 3 })
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 3,
+        lastDay: '2026-08-09',
+      })
     })
     const db = asSocio()
-    await assertFails(updateDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`), { ...base, days: 10 }))
+    await assertFails(
+      updateDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 10,
+        lastDay: '2026-08-10',
+      }),
+    )
   })
 
   it('nadie puede superar el tope de 31 días', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendanceMonthly/${entryId}`), { ...base, days: 31 })
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 31,
+        lastDay: '2026-08-09',
+      })
     })
     const db = asSocio()
-    await assertFails(updateDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`), { ...base, days: 32 }))
+    await assertFails(
+      updateDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 32,
+        lastDay: '2026-08-10',
+      }),
+    )
   })
 
   it('el socio NO puede escribir el contador de OTRO socio', async () => {
@@ -193,6 +291,42 @@ describe('attendanceMonthly — el ranking no se puede inflar sin techo', () => 
     })
     const db = asSocio()
     await assertSucceeds(getDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`)))
+  })
+
+  it('el socio puede sumar músculos el mismo día sin tocar days', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 3,
+        muscleCounts: { back: 1 },
+      })
+    })
+    const db = asSocio()
+    await assertSucceeds(
+      updateDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 3,
+        muscleCounts: { back: 1, arms: 1 },
+      }),
+    )
+  })
+
+  it('el socio NO puede inflar un músculo de a más de 1', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 3,
+        muscleCounts: { back: 1 },
+      })
+    })
+    const db = asSocio()
+    await assertFails(
+      updateDoc(doc(db, `gyms/${GYM}/attendanceMonthly/${entryId}`), {
+        ...base,
+        days: 3,
+        muscleCounts: { back: 5 },
+      }),
+    )
   })
 })
 

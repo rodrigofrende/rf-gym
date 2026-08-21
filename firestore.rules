@@ -451,11 +451,20 @@ service cloud.firestore {
       }
 
       match /attendance/{attendanceId} {
+        function validMuscleGroupsList(list) {
+          return list is list
+            && list.size() <= 9
+            && list.hasOnly([
+              'chest', 'back', 'legs', 'glutes', 'shoulders',
+              'arms', 'core', 'fullBody', 'cardio'
+            ]);
+        }
         function validAttendance() {
           let d = request.resource.data;
           return d.keys().hasOnly([
               'memberId', 'memberUid', 'memberName', 'email',
-              'dayKey', 'checkedInAt', 'lastSeenAt', 'scanCount', 'paymentState', 'memberStatus'
+              'dayKey', 'checkedInAt', 'lastSeenAt', 'scanCount', 'paymentState', 'memberStatus',
+              'muscleGroups'
             ])
             && d.memberId is string && d.memberId.size() <= 200
             && d.memberUid == request.auth.uid
@@ -466,7 +475,8 @@ service cloud.firestore {
             && (!('paymentState' in d) || (d.paymentState is string && d.paymentState.size() <= 20))
             && (!('memberStatus' in d) || (d.memberStatus is string && d.memberStatus.size() <= 20))
             && (!('checkedInAt' in d) || d.checkedInAt is timestamp)
-            && (!('lastSeenAt' in d) || d.lastSeenAt is timestamp);
+            && (!('lastSeenAt' in d) || d.lastSeenAt is timestamp)
+            && (!('muscleGroups' in d) || validMuscleGroupsList(d.muscleGroups));
         }
         // Ata el doc-id a (dayKey, memberId): un doc por día por socio; no se puede
         // sobrescribir la asistencia de otro ni desdoblar el día.
@@ -490,7 +500,7 @@ service cloud.firestore {
         allow list: if isGymAdmin(gymId);
         allow create: if isOwnAttendanceWrite() && validAttendance() && attendanceIdBound()
           && request.resource.data.scanCount == 1;
-        // Re-scan del mismo día: solo cambia contadores; día y socio quedan fijos.
+        // Re-scan del mismo día / setear músculos: día y socio quedan fijos.
         allow update: if isOwnAttendanceWrite() && validAttendance() && attendanceIdBound()
           && request.resource.data.dayKey == resource.data.dayKey
           && request.resource.data.memberId == resource.data.memberId;
@@ -502,9 +512,56 @@ service cloud.firestore {
       // check-in (incremento de a 1 validado: increment() se aplica ANTES de
       // evaluar las rules) o el admin (recompute con cualquier valor).
       match /attendanceMonthly/{entryId} {
+        function muscleCountValueOk(v) {
+          return v is int && v >= 0 && v <= 31;
+        }
+        function validMuscleCountsMap(m) {
+          return m is map
+            && m.keys().hasOnly([
+              'chest', 'back', 'legs', 'glutes', 'shoulders',
+              'arms', 'core', 'fullBody', 'cardio'
+            ])
+            && (!('chest' in m) || muscleCountValueOk(m.chest))
+            && (!('back' in m) || muscleCountValueOk(m.back))
+            && (!('legs' in m) || muscleCountValueOk(m.legs))
+            && (!('glutes' in m) || muscleCountValueOk(m.glutes))
+            && (!('shoulders' in m) || muscleCountValueOk(m.shoulders))
+            && (!('arms' in m) || muscleCountValueOk(m.arms))
+            && (!('core' in m) || muscleCountValueOk(m.core))
+            && (!('fullBody' in m) || muscleCountValueOk(m.fullBody))
+            && (!('cardio' in m) || muscleCountValueOk(m.cardio));
+        }
+        // En create, cada músculo arranca en 0 o 1 (un día).
+        function muscleCreateBumpOk(m) {
+          return (!('chest' in m) || m.chest <= 1)
+            && (!('back' in m) || m.back <= 1)
+            && (!('legs' in m) || m.legs <= 1)
+            && (!('glutes' in m) || m.glutes <= 1)
+            && (!('shoulders' in m) || m.shoulders <= 1)
+            && (!('arms' in m) || m.arms <= 1)
+            && (!('core' in m) || m.core <= 1)
+            && (!('fullBody' in m) || m.fullBody <= 1)
+            && (!('cardio' in m) || m.cardio <= 1);
+        }
+        // En update, ningún músculo puede subir más de +1 por write.
+        function muscleUpdateBumpOk() {
+          let prev = resource.data.get('muscleCounts', {});
+          let next = request.resource.data.get('muscleCounts', {});
+          return (!('chest' in next) || next.chest <= prev.get('chest', 0) + 1)
+            && (!('back' in next) || next.back <= prev.get('back', 0) + 1)
+            && (!('legs' in next) || next.legs <= prev.get('legs', 0) + 1)
+            && (!('glutes' in next) || next.glutes <= prev.get('glutes', 0) + 1)
+            && (!('shoulders' in next) || next.shoulders <= prev.get('shoulders', 0) + 1)
+            && (!('arms' in next) || next.arms <= prev.get('arms', 0) + 1)
+            && (!('core' in next) || next.core <= prev.get('core', 0) + 1)
+            && (!('fullBody' in next) || next.fullBody <= prev.get('fullBody', 0) + 1)
+            && (!('cardio' in next) || next.cardio <= prev.get('cardio', 0) + 1);
+        }
         function validMonthly() {
           let d = request.resource.data;
-          return d.keys().hasOnly(['monthKey', 'memberId', 'memberUid', 'displayName', 'days', 'lastDay'])
+          return d.keys().hasOnly([
+              'monthKey', 'memberId', 'memberUid', 'displayName', 'days', 'lastDay', 'muscleCounts'
+            ])
             && d.monthKey is string && d.monthKey.matches('[0-9]{4}-[0-9]{2}')
             && d.memberId is string && d.memberId.size() <= 200
             && d.memberUid is string && d.memberUid.size() <= 128
@@ -512,7 +569,8 @@ service cloud.firestore {
             // Tope 31 = máximo de días de un mes. Acota el inflado del ranking vía
             // API directa (nadie puede mostrar más días que los que tiene el mes).
             && d.days is int && d.days >= 1 && d.days <= 31
-            && (!('lastDay' in d) || (d.lastDay is string && d.lastDay.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')));
+            && (!('lastDay' in d) || (d.lastDay is string && d.lastDay.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+            && (!('muscleCounts' in d) || validMuscleCountsMap(d.muscleCounts));
         }
         // Identidad como en attendance: el doc referencia un member reclamado por este uid.
         function isOwnMonthly() {
@@ -530,15 +588,24 @@ service cloud.firestore {
         allow get, list: if canAccessGym(gymId);
         allow create: if validMonthly()
           && (isGymAdmin(gymId)
-            || (isOwnMonthly() && request.resource.data.days == 1 && ownDayHasAttendance()));
-        // Update propio: +1, con asistencia real de ese día y SOLO hacia adelante
-        // (lastDay creciente) → no se puede recontar un día ni inflar el contador.
+            || (isOwnMonthly()
+                && request.resource.data.days == 1
+                && ownDayHasAttendance()
+                && (!('muscleCounts' in request.resource.data)
+                  || muscleCreateBumpOk(request.resource.data.muscleCounts))));
+        // Update propio: (a) +1 día hacia adelante, o (b) mismos días/lastDay y
+        // solo sumar músculos (elegidos después del check-in).
         allow update: if validMonthly()
           && (isGymAdmin(gymId)
             || (isOwnMonthly()
-                && request.resource.data.days == resource.data.days + 1
                 && ownDayHasAttendance()
-                && request.resource.data.lastDay > resource.data.get('lastDay', '')));
+                && muscleUpdateBumpOk()
+                && (
+                  (request.resource.data.days == resource.data.days + 1
+                    && request.resource.data.lastDay > resource.data.get('lastDay', ''))
+                  || (request.resource.data.days == resource.data.days
+                    && request.resource.data.get('lastDay', '') == resource.data.get('lastDay', ''))
+                )));
         allow delete: if isGymAdmin(gymId);
       }
 

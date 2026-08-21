@@ -327,6 +327,8 @@ export interface Exercise {
   loadType?: StoredLoadType // tipo de carga (default 'weight')
   restSec?: number
   notes?: string
+  /** Copiado del catálogo al armar la rutina (rutinas viejas pueden no tenerlo). */
+  muscleGroups?: MuscleGroup[]
 }
 
 /** Ejercicio del catálogo del gym (`gyms/{gymId}/exercises/{exerciseId}`). */
@@ -380,6 +382,8 @@ export interface Attendance {
   scanCount: number
   paymentState: AttendancePaymentState
   memberStatus: MemberStatus
+  /** Opcional: músculos que el socio eligió entrenar ese día. */
+  muscleGroups?: MuscleGroup[]
 }
 
 /**
@@ -397,6 +401,8 @@ export interface MonthlyAttendance {
   // Último día contado (YYYY-MM-DD). Las rules solo dejan sumar hacia adelante
   // (lastDay creciente) y con asistencia real → el socio no puede inflar el ranking.
   lastDay?: string
+  /** Días del mes en que eligió cada músculo (para ranking anónimo del gym). */
+  muscleCounts?: Partial<Record<MuscleGroup, number>>
 }
 
 /** Registro de carga del propio user (`.../members/{uid}/logs`). */

@@ -6,20 +6,22 @@ import {
   orderBy,
   query,
   setDoc,
+  updateDoc,
   where,
   collection,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { env } from '@/config/env'
 import { db } from '@/lib/firebase'
-import type { Attendance } from '@/types'
+import type { Attendance, MuscleGroup } from '@/types'
 import { localDayKey, monthDayKeys } from '@/utils/dates'
+import { sanitizeMuscleGroups } from '@/utils/muscles'
 import { getPaymentStatus } from '@/utils/payments'
 import * as demo from '@/demo/store'
 import { getMany } from './firestore'
 import { getMember } from './membersService'
 import { paths } from './paths'
-import { bumpMonthlyAttendance } from './rankingService'
+import { bumpMonthlyAttendance, bumpMonthlyMuscles } from './rankingService'
 
 export type CheckInResult = Attendance & { alreadyCheckedInToday: boolean }
 
@@ -68,6 +70,45 @@ export async function checkInMember(gymId: string, memberId: string): Promise<Ch
   }
 
   return { id, ...created, alreadyCheckedInToday: false }
+}
+
+/**
+ * Guarda los músculos del día (opcional). Si es la primera vez que elige ese día,
+ * también suma al ranking mensual de músculos (sin tocar el contador de días).
+ */
+export async function setAttendanceMuscles(
+  gymId: string,
+  memberId: string,
+  dayKey: string,
+  muscles: MuscleGroup[],
+): Promise<Attendance> {
+  const unique = sanitizeMuscleGroups(muscles)
+  if (env.demoMode) return demo.setAttendanceMuscles(gymId, memberId, dayKey, unique)
+
+  const member = await getMember(gymId, memberId)
+  if (!member) throw new Error('member-not-found')
+  if (!member.uid) throw new Error('member-not-claimed')
+
+  const id = attendanceId(dayKey, memberId)
+  const ref = doc(db, paths.attendanceRecord(gymId, id))
+  const existing = await getDoc(ref)
+  if (!existing.exists()) throw new Error('attendance-not-found')
+
+  const prev = { id: existing.id, ...(existing.data() as Omit<Attendance, 'id'>) }
+  if (prev.memberUid !== member.uid) throw new Error('attendance-not-owned')
+
+  const hadMuscles = (prev.muscleGroups?.length ?? 0) > 0
+  await updateDoc(ref, { muscleGroups: unique })
+
+  if (!hadMuscles && unique.length > 0) {
+    try {
+      await bumpMonthlyMuscles(gymId, member, dayKey, unique)
+    } catch (rankErr) {
+      console.warn('muscle-bump-failed', rankErr)
+    }
+  }
+
+  return { ...prev, muscleGroups: unique }
 }
 
 export function listTodayAttendance(gymId: string, dayKey = localDayKey(new Date())) {

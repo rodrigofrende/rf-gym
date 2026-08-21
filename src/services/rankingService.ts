@@ -1,8 +1,9 @@
-import { doc, increment, setDoc, where } from 'firebase/firestore'
-import type { Attendance, Member, MonthlyAttendance } from '@/types'
+import { doc, increment, setDoc, updateDoc, where } from 'firebase/firestore'
+import type { Attendance, Member, MonthlyAttendance, MuscleGroup } from '@/types'
 import { env } from '@/config/env'
 import { db } from '@/lib/firebase'
 import { displayNameShort } from '@/utils/format'
+import { muscleCountsFromAttendanceDays, sanitizeMuscleGroups } from '@/utils/muscles'
 import * as demo from '@/demo/store'
 import { createBatch, getMany } from './firestore'
 import { paths } from './paths'
@@ -50,6 +51,27 @@ export async function bumpMonthlyAttendance(
 }
 
 /**
+ * Primera vez que el socio elige músculos el mismo día (después del check-in).
+ * No toca `days` ni `lastDay` — solo +1 por músculo nuevo.
+ */
+export async function bumpMonthlyMuscles(
+  gymId: string,
+  member: Member,
+  dayKey: string,
+  muscles: MuscleGroup[],
+): Promise<void> {
+  const unique = sanitizeMuscleGroups(muscles)
+  if (unique.length === 0) return
+  const monthKey = dayKey.slice(0, 7)
+  const ref = doc(db, paths.attendanceMonthlyRecord(gymId, monthlyAttendanceId(monthKey, member.id)))
+  const payload: Record<string, unknown> = {}
+  for (const muscle of unique) {
+    payload[`muscleCounts.${muscle}`] = increment(1)
+  }
+  await updateDoc(ref, payload)
+}
+
+/**
  * Backfill/reparación (solo admin): re-agrega los días distintos por socio desde
  * `attendance` (el admin SÍ puede listar con rango de dayKey) y reescribe los
  * contadores del mes, borrando huérfanos. Siembra el mes vigente post-deploy y
@@ -67,12 +89,30 @@ export async function recomputeMonthlyLeaderboard(gymId: string, monthKey: strin
     listMonthlyLeaderboard(gymId, monthKey),
   ])
 
-  const agg = new Map<string, { days: Set<string>; memberUid: string; memberName: string }>()
+  const agg = new Map<
+    string,
+    {
+      days: Set<string>
+      memberUid: string
+      memberName: string
+      musclesByDay: Map<string, MuscleGroup[]>
+    }
+  >()
   for (const a of records) {
-    const entry = agg.get(a.memberId) ?? { days: new Set(), memberUid: a.memberUid, memberName: a.memberName }
+    const entry =
+      agg.get(a.memberId) ??
+      {
+        days: new Set<string>(),
+        memberUid: a.memberUid,
+        memberName: a.memberName,
+        musclesByDay: new Map<string, MuscleGroup[]>(),
+      }
     entry.days.add(a.dayKey)
     entry.memberUid = a.memberUid
     entry.memberName = a.memberName
+    if (a.muscleGroups?.length) {
+      entry.musclesByDay.set(a.dayKey, sanitizeMuscleGroups(a.muscleGroups))
+    }
     agg.set(a.memberId, entry)
   }
 
@@ -82,14 +122,19 @@ export async function recomputeMonthlyLeaderboard(gymId: string, monthKey: strin
     // lastDay = día más reciente con asistencia (deja el contador listo para que
     // los próximos bumps del socio comparen "hacia adelante" contra este valor).
     const lastDay = [...entry.days].sort().slice(-1)[0]
-    batch.set(doc(db, paths.attendanceMonthlyRecord(gymId, monthlyAttendanceId(monthKey, memberId))), {
+    const muscleCounts = muscleCountsFromAttendanceDays(entry.musclesByDay.values())
+    const payload: Record<string, unknown> = {
       monthKey,
       memberId,
       memberUid: entry.memberUid,
       displayName: displayNameShort(entry.memberName),
       days: entry.days.size,
       lastDay,
-    })
+    }
+    if (Object.keys(muscleCounts).length > 0) {
+      payload.muscleCounts = muscleCounts
+    }
+    batch.set(doc(db, paths.attendanceMonthlyRecord(gymId, monthlyAttendanceId(monthKey, memberId))), payload)
   }
   for (const row of existing) {
     if (!agg.has(row.memberId)) {
@@ -98,4 +143,3 @@ export async function recomputeMonthlyLeaderboard(gymId: string, monthKey: strin
   }
   await batch.commit()
 }
-
